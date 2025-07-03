@@ -3,6 +3,7 @@ import logging
 import json
 import faiss
 import numpy as np
+import random
 from typing import List, Dict, Any
 from openai import OpenAI
 
@@ -18,19 +19,85 @@ class RAGChain:
         self.chat_model = "gpt-4o"
         self.top_k = 3
         
-        # Small talk responses
+        # Small talk responses with multiple variations
         self.small_talk_responses = {
-            "hi": "Hi there! How can I assist you?",
-            "hello": "Hello! What can I help you with today?",
-            "how are you": "I'm great, thank you! What can I help you with?",
-            "hey": "Hey! How can I help you today?",
-            "good morning": "Good morning! How can I assist you?",
-            "good afternoon": "Good afternoon! What can I help you with?",
-            "good evening": "Good evening! How can I help you today?",
-            "thanks": "You're welcome! Is there anything else I can help you with?",
-            "thank you": "You're welcome! Is there anything else I can help you with?",
-            "bye": "Goodbye! Feel free to ask if you need any help.",
-            "goodbye": "Goodbye! Have a great day!"
+            "hi": [
+                "Hi there! How can I assist you?",
+                "Hello! What brings you here today?",
+                "Hey! How can I help you?",
+                "Hi! What can I do for you today?",
+                "Hello there! Ready to chat?"
+            ],
+            "hello": [
+                "Hello! What can I help you with today?",
+                "Hi there! How can I assist you?",
+                "Hello! What would you like to know?",
+                "Hey! How can I help?",
+                "Hello! What's on your mind today?"
+            ],
+            "how are you": [
+                "I'm great, thank you! What can I help you with?",
+                "I'm doing well! How can I assist you today?",
+                "I'm fantastic! What brings you here?",
+                "I'm doing great! What can I help you with?",
+                "I'm wonderful! How can I help you today?"
+            ],
+            "hey": [
+                "Hey! How can I help you today?",
+                "Hi there! What can I do for you?",
+                "Hey! What's up?",
+                "Hello! How can I assist you?",
+                "Hey there! What can I help you with?"
+            ],
+            "good morning": [
+                "Good morning! How can I assist you?",
+                "Good morning! What can I help you with today?",
+                "Morning! How can I help you?",
+                "Good morning! Ready to get started?",
+                "Good morning! What's on your agenda today?"
+            ],
+            "good afternoon": [
+                "Good afternoon! What can I help you with?",
+                "Good afternoon! How can I assist you?",
+                "Afternoon! What can I do for you?",
+                "Good afternoon! How are things going?",
+                "Good afternoon! What brings you here?"
+            ],
+            "good evening": [
+                "Good evening! How can I help you today?",
+                "Good evening! What can I assist you with?",
+                "Evening! How can I help?",
+                "Good evening! What's on your mind?",
+                "Good evening! How can I be of service?"
+            ],
+            "thanks": [
+                "You're welcome! Is there anything else I can help you with?",
+                "Happy to help! Anything else you need?",
+                "No problem! What else can I do for you?",
+                "You're very welcome! Any other questions?",
+                "Glad I could help! Is there more I can assist with?"
+            ],
+            "thank you": [
+                "You're welcome! Is there anything else I can help you with?",
+                "My pleasure! What else can I do for you?",
+                "Happy to help! Any other questions?",
+                "You're very welcome! How else can I assist?",
+                "Glad I could help! Anything else you need?"
+            ],
+            "bye": [
+                "Goodbye! Feel free to ask if you need any help.",
+                "See you later! Come back anytime!",
+                "Take care! Happy to help again anytime.",
+                "Bye! Don't hesitate to return if you need assistance.",
+                "Farewell! Hope to chat again soon!"
+            ],
+            "goodbye": [
+                "Goodbye! Have a great day!",
+                "See you later! Take care!",
+                "Farewell! Hope you have a wonderful day!",
+                "Goodbye! It was great chatting with you!",
+                "Take care! Come back anytime!"
+            ]
         }
     
     def is_small_talk(self, question: str) -> bool:
@@ -41,7 +108,10 @@ class RAGChain:
     def get_small_talk_response(self, question: str) -> str:
         """Get response for small talk"""
         question_lower = question.lower().strip()
-        return self.small_talk_responses.get(question_lower, "")
+        responses = self.small_talk_responses.get(question_lower, [])
+        if responses:
+            return random.choice(responses)
+        return ""
     
     def get_embedding(self, text: str) -> List[float]:
         """Get embedding for a single text"""
