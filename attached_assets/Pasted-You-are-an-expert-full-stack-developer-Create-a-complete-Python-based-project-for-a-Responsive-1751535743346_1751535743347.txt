@@ -1,0 +1,120 @@
+You are an expert full-stack developer.
+
+Create a complete Python-based project for a **Responsive AI Chatbot with Admin Panel**, suitable for deployment on Replit.
+
+---
+
+### ✅ OVERVIEW
+
+Build a full-stack AI chatbot app with:
+
+1. Admin Panel (Python Flask)
+2. PDF/DOCX Upload + Vectorization (LangChain + FAISS)
+3. RAG-based Retrieval using OpenAI
+4. Small Talk Handling (hi, hello, how are you)
+5. Separate Client UI for Chatbot
+6. ChatGPT-style Message UI with Typing Effect
+7. Polite Fallback when No Relevant Answer Found
+
+---
+
+### 🧠 FUNCTIONAL REQUIREMENTS
+
+#### 🛠️ Admin Panel (`/admin`)
+- Built with Flask
+- Upload DOCX or PDF
+- Store uploaded files in `/uploads/`
+- Click “Vectorize” → Extracts text, chunks it, embeds via OpenAI (`text-embedding-ada-002`)
+- Save FAISS index to `/faiss_index/`
+- Show status messages (e.g., vectorization complete)
+
+#### 🤖 Chatbot Backend (`/ask`)
+- POST endpoint that receives a user question
+- Loads FAISS vector DB and retrieves top 3–4 matches
+- Uses LangChain’s ConversationalRetrievalChain
+- Query LLM (GPT 3.5/4) using relevant chunks
+- Returns short, clear answers (no lengthy explanation)
+- If nothing found:  
+  > “I couldn’t find any relevant information. Please try a different question.”
+
+#### 💬 Small Talk Handling
+- Handle basic conversational inputs:
+  - hi → “Hi there! How can I assist you?”
+  - hello → “Hello! What can I help you with today?”
+  - how are you → “I’m great, thank you! What can I help you with?”
+
+---
+
+### 💻 Chatbot Frontend (`/chatbot`)
+- Responsive HTML/CSS/JS frontend
+- Styled like ChatGPT
+- Input box at bottom, typing animation effect
+- Messages show with alternating alignment (User/Bot)
+- Fetches response from `/ask` endpoint
+- If fallback, show it in gray text politely
+
+---
+
+### 📁 FILE STRUCTURE
+
+```
+rag-chatbot/
+├── backend/
+│   ├── app.py              # Flask API routes: upload, vectorize, ask
+│   ├── rag_chain.py        # LangChain + small talk logic
+│   ├── vectorizer.py       # Extract, chunk, and embed DOCX/PDF
+│   └── faiss_index/        # Local FAISS index storage
+├── frontend/
+│   ├── index.html          # Chatbot interface
+│   ├── style.css           # ChatGPT-style design
+│   └── app.js              # Typing effect and API calls
+├── uploads/                # Uploaded DOCX/PDF files
+├── .env                    # OpenAI API key
+├── requirements.txt
+└── README.md
+```
+
+---
+
+### 📦 `requirements.txt`
+
+```
+flask
+flask-cors
+langchain
+openai
+faiss-cpu
+python-docx
+PyPDF2
+python-dotenv
+tiktoken
+```
+
+---
+
+### 🔐 `.env`
+
+```
+OPENAI_API_KEY=your_openai_key_here
+```
+
+---
+
+### 🔗 OUTPUT ROUTES
+
+- `/admin` – Admin panel for upload and vectorization
+- `/ask` – Chatbot backend
+- `/chatbot` – End-user UI
+
+---
+
+### ✅ ADDITIONAL NOTES
+
+- Use CORS for frontend/backend connection
+- Save embeddings to disk using FAISS (not memory)
+- Chunk text before embedding (e.g., 500–700 tokens with overlap)
+- Use OpenAI chat model (gpt-3.5-turbo) for answers
+
+---
+
+💡 Generate this full working application with all files, code, and folder structure in one Replit project.
