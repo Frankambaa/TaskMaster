@@ -8,7 +8,10 @@ from openai import OpenAI
 
 class RAGChain:
     def __init__(self):
-        self.openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        api_key = os.getenv("OPENAI_API_KEY")
+        if api_key:
+            api_key = api_key.strip()  # Remove any whitespace
+        self.openai_client = OpenAI(api_key=api_key)
         self.embedding_model = "text-embedding-ada-002"
         # the newest OpenAI model is "gpt-4o" which was released May 13, 2024.
         # do not change this unless explicitly requested by the user

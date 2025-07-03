@@ -11,7 +11,10 @@ import tiktoken
 
 class DocumentVectorizer:
     def __init__(self):
-        self.openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        api_key = os.getenv("OPENAI_API_KEY")
+        if api_key:
+            api_key = api_key.strip()  # Remove any whitespace
+        self.openai_client = OpenAI(api_key=api_key)
         self.embedding_model = "text-embedding-ada-002"
         self.chunk_size = 500
         self.chunk_overlap = 50
