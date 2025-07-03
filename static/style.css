@@ -203,14 +203,50 @@ body {
     width: 40px;
     height: 40px;
     margin-left: 0.5rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     border: none;
     transition: all 0.2s ease;
 }
 
-.chat-input .btn:hover {
+.chat-input .btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.chat-input .btn-primary:hover {
     transform: scale(1.05);
     background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+}
+
+.chat-input .btn-outline-secondary {
+    border: 2px solid #6c757d;
+    color: #6c757d;
+}
+
+.chat-input .btn-outline-secondary:hover {
+    background-color: #6c757d;
+    color: white;
+    transform: scale(1.05);
+}
+
+.chat-input .btn-outline-secondary.recording {
+    background-color: #dc3545;
+    color: white;
+    border-color: #dc3545;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+    }
+    70% {
+        transform: scale(1.05);
+        box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+    }
 }
 
 .chat-input .btn:disabled {

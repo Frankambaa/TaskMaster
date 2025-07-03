@@ -69,8 +69,11 @@
         <div class="chat-input">
             <div class="input-group">
                 <input type="text" class="form-control" id="messageInput" 
-                       placeholder="Type your message..." 
+                       placeholder="Type your message or click the microphone to speak..." 
                        onkeypress="handleKeyPress(event)">
+                <button class="btn btn-outline-secondary" type="button" id="voiceButton" onclick="toggleVoiceInput()">
+                    <i class="fas fa-microphone"></i>
+                </button>
                 <button class="btn btn-primary" type="button" id="sendButton" onclick="sendMessage()">
                     <i class="fas fa-paper-plane"></i>
                 </button>

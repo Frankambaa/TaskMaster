@@ -3,17 +3,23 @@ class ChatApp {
     constructor() {
         this.messageInput = document.getElementById('messageInput');
         this.sendButton = document.getElementById('sendButton');
+        this.voiceButton = document.getElementById('voiceButton');
         this.chatMessages = document.getElementById('chatMessages');
         this.typingIndicator = document.getElementById('typingIndicator');
         this.connectionStatus = document.getElementById('connectionStatus');
         
         this.isWaiting = false;
+        this.isRecording = false;
+        this.recognition = null;
         this.init();
     }
 
     init() {
         // Focus on input
         this.messageInput.focus();
+        
+        // Initialize speech recognition
+        this.initSpeechRecognition();
         
         // Add event listeners
         this.messageInput.addEventListener('keypress', (e) => {
@@ -27,8 +33,115 @@ class ChatApp {
             this.sendMessage();
         });
 
+        this.voiceButton.addEventListener('click', () => {
+            this.toggleVoiceInput();
+        });
+
         // Test connection
         this.testConnection();
+    }
+
+    initSpeechRecognition() {
+        // Check if browser supports speech recognition
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            this.recognition = new SpeechRecognition();
+            
+            // Configure recognition
+            this.recognition.continuous = false;
+            this.recognition.interimResults = false;
+            this.recognition.lang = 'en-US';
+            
+            // Event handlers
+            this.recognition.onstart = () => {
+                this.isRecording = true;
+                this.voiceButton.classList.add('recording');
+                this.voiceButton.innerHTML = '<i class="fas fa-stop"></i>';
+                this.messageInput.placeholder = 'Listening... Speak now!';
+            };
+
+            this.recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                this.messageInput.value = transcript;
+                this.messageInput.focus();
+            };
+
+            this.recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                this.stopRecording();
+                
+                let errorMessage = 'Voice input failed. ';
+                switch(event.error) {
+                    case 'network':
+                        errorMessage += 'Please check your internet connection.';
+                        break;
+                    case 'not-allowed':
+                        errorMessage += 'Please allow microphone access.';
+                        break;
+                    case 'no-speech':
+                        errorMessage += 'No speech detected. Please try again.';
+                        break;
+                    default:
+                        errorMessage += 'Please try again.';
+                }
+                
+                this.showVoiceError(errorMessage);
+            };
+
+            this.recognition.onend = () => {
+                this.stopRecording();
+            };
+        } else {
+            // Hide voice button if not supported
+            this.voiceButton.style.display = 'none';
+            console.warn('Speech recognition not supported in this browser');
+        }
+    }
+
+    toggleVoiceInput() {
+        if (!this.recognition) return;
+        
+        if (this.isRecording) {
+            this.recognition.stop();
+        } else {
+            this.recognition.start();
+        }
+    }
+
+    stopRecording() {
+        this.isRecording = false;
+        this.voiceButton.classList.remove('recording');
+        this.voiceButton.innerHTML = '<i class="fas fa-microphone"></i>';
+        this.messageInput.placeholder = 'Type your message or click the microphone to speak...';
+    }
+
+    showVoiceError(message) {
+        // Create temporary error message
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'voice-error';
+        errorDiv.style.cssText = `
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #dc3545;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+        `;
+        errorDiv.textContent = message;
+        
+        document.body.appendChild(errorDiv);
+        
+        // Remove after 3 seconds
+        setTimeout(() => {
+            if (errorDiv.parentNode) {
+                errorDiv.parentNode.removeChild(errorDiv);
+            }
+        }, 3000);
     }
 
     async testConnection() {
@@ -206,6 +319,12 @@ function handleKeyPress(event) {
 function sendMessage() {
     if (window.chatApp) {
         window.chatApp.sendMessage();
+    }
+}
+
+function toggleVoiceInput() {
+    if (window.chatApp) {
+        window.chatApp.toggleVoiceInput();
     }
 }
 
