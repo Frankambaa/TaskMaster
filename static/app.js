@@ -207,27 +207,37 @@ class ChatApp {
 
             // Add bot response with typing effect
             if (data.error) {
-                this.addMessage(data.error, 'bot', true);
+                this.addMessage(data.error, 'bot', true, data.logo);
             } else {
-                this.addMessage(data.answer, 'bot');
+                this.addMessage(data.answer, 'bot', false, data.logo);
             }
 
         } catch (error) {
             console.error('Error:', error);
             this.hideTypingIndicator();
-            this.addMessage('Sorry, I encountered an error. Please try again.', 'bot', true);
+            this.addMessage('Sorry, I encountered an error. Please try again.', 'bot', true, null);
         } finally {
             this.setWaiting(false);
         }
     }
 
-    addMessage(text, sender, isError = false) {
+    addMessage(text, sender, isError = false, logo = null) {
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${sender}-message`;
 
         const avatarDiv = document.createElement('div');
         avatarDiv.className = 'message-avatar';
-        avatarDiv.innerHTML = sender === 'user' ? '<i class="fas fa-user"></i>' : '<i class="fas fa-robot"></i>';
+        
+        if (sender === 'user') {
+            avatarDiv.innerHTML = '<i class="fas fa-user"></i>';
+        } else {
+            // For bot messages, use logo if available, otherwise use robot icon
+            if (logo) {
+                avatarDiv.innerHTML = `<img src="${logo}" alt="Bot" class="message-logo">`;
+            } else {
+                avatarDiv.innerHTML = '<i class="fas fa-robot"></i>';
+            }
+        }
 
         const contentDiv = document.createElement('div');
         contentDiv.className = 'message-content';

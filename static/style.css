@@ -98,6 +98,13 @@ body {
     flex-shrink: 0;
 }
 
+.message-logo {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
 .user-message .message-avatar {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;

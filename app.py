@@ -183,9 +183,18 @@ def ask():
         # Get answer from RAG chain
         answer = rag_chain.get_answer(question, FAISS_INDEX_FOLDER)
         
+        # Get current logo
+        current_logo = None
+        if os.path.exists(LOGO_FOLDER):
+            for filename in os.listdir(LOGO_FOLDER):
+                if allowed_image_file(filename):
+                    current_logo = f'/static/logos/{filename}'
+                    break
+        
         return jsonify({
             'answer': answer,
-            'status': 'success'
+            'status': 'success',
+            'logo': current_logo
         })
         
     except Exception as e:
