@@ -44,6 +44,21 @@ body {
     font-size: 1.2rem;
 }
 
+.logo-container {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.chat-logo {
+    max-width: 40px;
+    max-height: 40px;
+    border-radius: 8px;
+    object-fit: contain;
+}
+
 /* Messages Area */
 .chat-messages {
     flex: 1;
@@ -118,6 +133,30 @@ body {
     border: 1px solid #e5e5e5;
     color: #333;
     border-bottom-left-radius: 4px;
+}
+
+/* Formatting for bot responses */
+.bot-message .message-bubble strong {
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.bot-message .message-bubble em {
+    font-style: italic;
+    color: #34495e;
+}
+
+.bot-message .message-bubble code {
+    background-color: #f8f9fa;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+    color: #e83e8c;
+}
+
+.bot-message .message-bubble br {
+    line-height: 1.6;
 }
 
 .message-time {

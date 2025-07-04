@@ -255,6 +255,9 @@ class ChatApp {
         // Typing effect for bot messages
         if (sender === 'bot' && !isError) {
             this.typeMessage(bubbleDiv, text);
+        } else if (sender === 'bot') {
+            // For error messages, still format but don't type
+            bubbleDiv.innerHTML = this.formatBotResponse(text);
         } else {
             bubbleDiv.textContent = text;
         }
@@ -274,9 +277,31 @@ class ChatApp {
 
     typeMessage(element, text, index = 0) {
         if (index < text.length) {
-            element.textContent += text[index];
+            // Process text character by character but handle formatting
+            const currentText = text.substring(0, index + 1);
+            element.innerHTML = this.formatBotResponse(currentText);
             setTimeout(() => this.typeMessage(element, text, index + 1), 30);
         }
+    }
+
+    formatBotResponse(text) {
+        // Convert markdown-like formatting to HTML
+        let formatted = text
+            // Convert line breaks
+            .replace(/\n/g, '<br>')
+            // Convert **bold** to <strong>
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            // Convert *italic* to <em>
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            // Convert `code` to <code>
+            .replace(/`(.*?)`/g, '<code>$1</code>')
+            // Convert bullet points
+            .replace(/^\• (.*?)$/gm, '• $1')
+            .replace(/^- (.*?)$/gm, '• $1')
+            // Convert numbered lists
+            .replace(/^(\d+)\. (.*?)$/gm, '$1. $2');
+        
+        return formatted;
     }
 
     showTypingIndicator() {

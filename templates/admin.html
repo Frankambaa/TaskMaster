@@ -100,6 +100,49 @@
         {% endwith %}
 
         <div class="row">
+            <!-- Logo Upload Section -->
+            <div class="col-md-12 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-image"></i> Chatbot Logo
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <form action="{{ url_for('upload_logo') }}" method="post" enctype="multipart/form-data">
+                                    <div class="mb-3">
+                                        <label for="logoFile" class="form-label">Upload Logo</label>
+                                        <input type="file" class="form-control" id="logoFile" name="logo" accept=".png,.jpg,.jpeg,.gif,.svg" required>
+                                        <div class="form-text">Accepted formats: PNG, JPG, JPEG, GIF, SVG (Max 5MB)</div>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-upload"></i> Upload Logo
+                                    </button>
+                                </form>
+                            </div>
+                            <div class="col-md-4">
+                                {% if current_logo %}
+                                    <div class="text-center">
+                                        <p class="mb-2"><strong>Current Logo:</strong></p>
+                                        <img src="{{ url_for('static', filename='logos/' + current_logo) }}" 
+                                             alt="Current Logo" 
+                                             class="img-fluid border rounded" 
+                                             style="max-height: 100px;">
+                                    </div>
+                                {% else %}
+                                    <div class="text-center text-muted">
+                                        <i class="fas fa-image fa-3x mb-2"></i>
+                                        <p>No logo uploaded</p>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
             <!-- Upload Section -->
             <div class="col-md-6">
                 <div class="card">

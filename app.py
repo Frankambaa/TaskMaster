@@ -21,11 +21,14 @@ CORS(app)
 # Configuration
 UPLOAD_FOLDER = 'uploads'
 FAISS_INDEX_FOLDER = 'faiss_index'
+LOGO_FOLDER = 'static/logos'
 ALLOWED_EXTENSIONS = {'pdf', 'docx'}
+ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'svg'}
 
 # Ensure directories exist
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(FAISS_INDEX_FOLDER, exist_ok=True)
+os.makedirs(LOGO_FOLDER, exist_ok=True)
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
@@ -36,6 +39,9 @@ rag_chain = RAGChain()
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def allowed_image_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_IMAGE_EXTENSIONS
 
 @app.route('/')
 def index():
@@ -54,14 +60,31 @@ def admin():
     # Check if vector index exists
     index_exists = os.path.exists(os.path.join(FAISS_INDEX_FOLDER, 'index.faiss'))
     
+    # Get current logo
+    current_logo = None
+    if os.path.exists(LOGO_FOLDER):
+        for filename in os.listdir(LOGO_FOLDER):
+            if allowed_image_file(filename):
+                current_logo = filename
+                break
+    
     return render_template('admin.html', 
                          uploaded_files=uploaded_files, 
-                         index_exists=index_exists)
+                         index_exists=index_exists,
+                         current_logo=current_logo)
 
 @app.route('/chatbot')
 def chatbot():
     """Chatbot interface for end users"""
-    return render_template('chatbot.html')
+    # Get current logo
+    current_logo = None
+    if os.path.exists(LOGO_FOLDER):
+        for filename in os.listdir(LOGO_FOLDER):
+            if allowed_image_file(filename):
+                current_logo = f'/static/logos/{filename}'
+                break
+    
+    return render_template('chatbot.html', current_logo=current_logo)
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -83,6 +106,39 @@ def upload_file():
         logging.info(f"File uploaded: {filename}")
     else:
         flash('Invalid file type. Please upload PDF or DOCX files only.')
+    
+    return redirect(url_for('admin'))
+
+@app.route('/upload_logo', methods=['POST'])
+def upload_logo():
+    """Handle logo upload"""
+    if 'logo' not in request.files:
+        flash('No logo file selected')
+        return redirect(url_for('admin'))
+    
+    file = request.files['logo']
+    if file.filename == '':
+        flash('No logo file selected')
+        return redirect(url_for('admin'))
+    
+    if file and allowed_image_file(file.filename):
+        # Remove existing logo files
+        if os.path.exists(LOGO_FOLDER):
+            for filename in os.listdir(LOGO_FOLDER):
+                if allowed_image_file(filename):
+                    os.remove(os.path.join(LOGO_FOLDER, filename))
+        
+        # Save new logo
+        filename = secure_filename(file.filename)
+        # Keep original extension but use consistent name
+        ext = filename.rsplit('.', 1)[1].lower()
+        logo_filename = f'logo.{ext}'
+        filepath = os.path.join(LOGO_FOLDER, logo_filename)
+        file.save(filepath)
+        flash(f'Logo uploaded successfully!')
+        logging.info(f"Logo uploaded: {logo_filename}")
+    else:
+        flash('Invalid file type. Please upload PNG, JPG, JPEG, GIF, or SVG files only.')
     
     return redirect(url_for('admin'))
 

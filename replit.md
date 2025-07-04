@@ -45,6 +45,8 @@ This is a full-stack AI-powered chatbot application built with Flask that implem
 ### 4. Frontend Chat Interface
 - **Real-time Chat**: AJAX-based messaging system
 - **Voice Input**: Speech-to-text functionality using Web Speech API
+- **Markdown Support**: Rich text formatting for bot responses (bold, italic, code, line breaks)
+- **Custom Logo**: Configurable branding with image upload
 - **Typing Effects**: Simulated typing indicator for better UX
 - **Connection Status**: Visual feedback for API connectivity
 - **Responsive Design**: Works on desktop and mobile devices
@@ -99,6 +101,8 @@ templates/        # HTML templates
 - July 03, 2025: Initial RAG chatbot setup with admin panel
 - July 03, 2025: Added dynamic small talk responses with random selection
 - July 03, 2025: Implemented voice input functionality using Web Speech API
+- July 04, 2025: Fixed line break rendering and added markdown support for bot responses
+- July 04, 2025: Added logo upload functionality for custom branding
 
 ## User Preferences
 
