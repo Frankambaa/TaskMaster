@@ -33,14 +33,23 @@ This is a full-stack AI-powered chatbot application built with Flask that implem
 - **Small Talk Handling**: Built-in responses for common greetings and pleasantries
 - **Retrieval**: Top-k similarity search (k=3) for relevant document chunks
 
-### 3. Flask Application (`app.py`)
+### 3. API Management System (`api_executor.py`, `models.py`)
+- **Smart Routing**: Automatically decides between API calls and knowledge base queries
+- **Keyword Matching**: Configurable keywords trigger specific API rules
+- **Curl Integration**: Execute any curl command with dynamic placeholder replacement
+- **Priority System**: Rules with higher priority are checked first
+- **Database Storage**: PostgreSQL backend for persistent API rule management
+
+### 4. Flask Application (`app.py`)
 - **Routes**: 
   - `/` - Redirects to chatbot interface
-  - `/admin` - File upload and vectorization management
+  - `/admin` - File upload, vectorization, and API rules management
   - `/chatbot` - Main chat interface
-  - `/ask` - API endpoint for chat queries
+  - `/ask` - API endpoint for chat queries (with smart routing)
+  - `/api_rules/*` - API rules CRUD operations
 - **File Handling**: Secure file upload with size limits (16MB)
 - **Session Management**: Flash messages for user feedback
+- **Database Integration**: PostgreSQL with SQLAlchemy ORM
 
 ### 4. Frontend Chat Interface
 - **Real-time Chat**: AJAX-based messaging system
@@ -53,6 +62,7 @@ This is a full-stack AI-powered chatbot application built with Flask that implem
 
 ## Data Flow
 
+### Standard RAG Flow
 1. **Document Upload**: Admin uploads PDF/DOCX files through the admin panel
 2. **Text Extraction**: System extracts text from uploaded documents
 3. **Chunking**: Text is split into overlapping chunks for better retrieval
@@ -60,6 +70,13 @@ This is a full-stack AI-powered chatbot application built with Flask that implem
 5. **Index Storage**: FAISS index is saved to disk for persistence
 6. **Query Processing**: User questions are embedded and matched against stored vectors
 7. **Response Generation**: Relevant chunks are used as context for GPT-4o to generate answers
+
+### Smart API Routing Flow
+1. **Question Analysis**: Incoming user question is analyzed for keyword matches
+2. **Rule Matching**: System checks active API rules by priority for keyword matches
+3. **API Execution**: If matched, executes configured curl command with placeholders replaced
+4. **Fallback to RAG**: If no API rule matches, falls back to standard RAG flow
+5. **Response Formatting**: API responses are formatted for display in chat interface
 
 ## External Dependencies
 
@@ -103,6 +120,9 @@ templates/        # HTML templates
 - July 03, 2025: Implemented voice input functionality using Web Speech API
 - July 04, 2025: Fixed line break rendering and added markdown support for bot responses
 - July 04, 2025: Added logo upload functionality for custom branding
+- July 04, 2025: Implemented smart API routing system with keyword-based rules
+- July 04, 2025: Added PostgreSQL database backend for API rules management
+- July 04, 2025: Created comprehensive admin interface for API rules configuration
 
 ## User Preferences
 
