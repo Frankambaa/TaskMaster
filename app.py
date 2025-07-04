@@ -22,7 +22,21 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 # Database configuration
 database_url = os.environ.get('DATABASE_URL')
-if database_url:
+mysql_url = os.environ.get('MYSQL_DATABASE_URL')
+
+if mysql_url:
+    # MySQL configuration
+    app.config['SQLALCHEMY_DATABASE_URI'] = mysql_url
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'pool_recycle': 3600,
+        'pool_pre_ping': True,
+        'pool_timeout': 20,
+        'pool_size': 10,
+        'max_overflow': 20
+    }
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+elif database_url:
+    # PostgreSQL configuration (fallback)
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
     app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
         'pool_recycle': 300,
@@ -30,7 +44,7 @@ if database_url:
     }
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 else:
-    # Fallback to SQLite for development
+    # SQLite for local development
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///chatbot.db'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 

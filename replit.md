@@ -113,6 +113,8 @@ templates/        # HTML templates
 - CORS enabled for cross-origin requests
 - ProxyFix middleware for proper header handling
 - Debug mode configurable for development/production
+- Multi-database support (SQLite, MySQL, PostgreSQL)
+- Connection pooling and database optimization for production
 
 ## Changelog
 - July 03, 2025: Initial RAG chatbot setup with admin panel
@@ -123,6 +125,7 @@ templates/        # HTML templates
 - July 04, 2025: Implemented smart API routing system with keyword-based rules
 - July 04, 2025: Added PostgreSQL database backend for API rules management
 - July 04, 2025: Created comprehensive admin interface for API rules configuration
+- July 04, 2025: Added MySQL support and comprehensive local database setup documentation
 
 ## User Preferences
 
