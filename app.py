@@ -1,6 +1,7 @@
 import os
 import logging
-from flask import Flask, request, jsonify, render_template, redirect, url_for, flash
+import uuid
+from flask import Flask, request, jsonify, render_template, redirect, url_for, flash, session
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import secure_filename
@@ -9,6 +10,7 @@ from vectorizer import DocumentVectorizer
 from rag_chain import RAGChain
 from models import db, ApiRule
 from api_executor import ApiExecutor
+from session_memory import session_manager
 import json
 import subprocess
 import shlex
@@ -20,10 +22,11 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "your-secret-key-here")
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
-# Database configuration
-database_url = os.environ.get('DATABASE_URL')
+# Database configuration - prioritize local development
 mysql_url = os.environ.get('MYSQL_DATABASE_URL')
+database_url = os.environ.get('DATABASE_URL')
 
+# For now, use SQLite by default to avoid connection issues
 if mysql_url:
     # MySQL configuration
     app.config['SQLALCHEMY_DATABASE_URI'] = mysql_url
@@ -35,18 +38,12 @@ if mysql_url:
         'max_overflow': 20
     }
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-elif database_url:
-    # PostgreSQL configuration (fallback)
-    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
-    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-        'pool_recycle': 300,
-        'pool_pre_ping': True,
-    }
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    print("Using MySQL database")
 else:
-    # SQLite for local development
+    # SQLite for local development (default)
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///chatbot.db'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    print("Using SQLite database for local development")
 
 # Initialize database
 db.init_app(app)
@@ -215,7 +212,7 @@ def vectorize():
 
 @app.route('/ask', methods=['POST'])
 def ask():
-    """Chat endpoint for answering questions"""
+    """Chat endpoint for answering questions with session-based memory"""
     try:
         data = request.get_json()
         if not data or 'question' not in data:
@@ -224,6 +221,13 @@ def ask():
         question = data['question'].strip()
         if not question:
             return jsonify({'error': 'Question cannot be empty'}), 400
+        
+        # Get or create session ID
+        if 'session_id' not in session:
+            session['session_id'] = str(uuid.uuid4())
+        
+        session_id = session['session_id']
+        logging.info(f"Processing question for session: {session_id}")
         
         # First check if we have any API rules that match this question
         api_rules = ApiRule.query.filter_by(active=True).all()
@@ -235,10 +239,14 @@ def ask():
             api_result = api_executor.execute_curl_command(matching_rule.curl_command, question)
             answer = api_executor.format_api_response(api_result, matching_rule.name)
             response_type = 'api'
+            
+            # Add to session memory for API responses too
+            session_manager.add_user_message(session_id, question)
+            session_manager.add_ai_message(session_id, answer)
         else:
-            # Fall back to RAG chain
-            logging.info("No API rule matched, using RAG chain")
-            answer = rag_chain.get_answer(question, FAISS_INDEX_FOLDER)
+            # Fall back to RAG chain with session memory
+            logging.info(f"No API rule matched, using RAG chain with session memory")
+            answer = rag_chain.get_answer(question, FAISS_INDEX_FOLDER, session_id)
             response_type = 'rag'
         
         # Get current logo
@@ -387,6 +395,44 @@ def toggle_api_rule(rule_id):
         db.session.rollback()
         logging.error(f"Error toggling API rule: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/clear_session', methods=['POST'])
+def clear_session():
+    """Clear current session memory"""
+    try:
+        if 'session_id' in session:
+            session_id = session['session_id']
+            session_manager.clear_session(session_id)
+            session.pop('session_id', None)
+            logging.info(f"Session memory cleared for session: {session_id}")
+            return jsonify({'success': True, 'message': 'Session memory cleared'})
+        else:
+            return jsonify({'success': True, 'message': 'No active session to clear'})
+    
+    except Exception as e:
+        logging.error(f"Error clearing session: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/session_info', methods=['GET'])
+def session_info():
+    """Get information about current session"""
+    try:
+        if 'session_id' in session:
+            session_id = session['session_id']
+            stats = session_manager.get_session_stats(session_id)
+            return jsonify({
+                'session_id': session_id,
+                'stats': stats
+            })
+        else:
+            return jsonify({
+                'session_id': None,
+                'stats': {'exists': False}
+            })
+    
+    except Exception as e:
+        logging.error(f"Error getting session info: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

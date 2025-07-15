@@ -28,12 +28,22 @@ This is a full-stack AI-powered chatbot application built with Flask that implem
 - **Embedding Model**: Uses OpenAI's `text-embedding-ada-002`
 
 ### 2. RAG Chain (`rag_chain.py`)
-- **Purpose**: Implements the retrieval-augmented generation logic
-- **Chat Model**: Uses GPT-4o for response generation
+- **Purpose**: Implements the retrieval-augmented generation logic with LangChain integration
+- **Chat Model**: Uses GPT-4o for response generation via LangChain
+- **Session Memory**: Maintains conversation context per user session
 - **Small Talk Handling**: Built-in responses for common greetings and pleasantries
 - **Retrieval**: Top-k similarity search (k=3) for relevant document chunks
+- **Memory Management**: Conversation history with session isolation
 
-### 3. API Management System (`api_executor.py`, `models.py`)
+### 3. Session Memory System (`session_memory.py`)
+- **Purpose**: Manages conversation memory with session isolation for multi-user privacy
+- **LangChain Integration**: Uses LangChain's memory components for conversation tracking
+- **Session Isolation**: Each user gets unique session ID with isolated memory
+- **Memory Persistence**: Maintains conversation context across multiple interactions
+- **Privacy Protection**: No cross-user data sharing or leakage
+- **Memory Management**: Automatic cleanup and session management
+
+### 4. API Management System (`api_executor.py`, `models.py`)
 - **Smart Routing**: Automatically decides between API calls and knowledge base queries
 - **Keyword Matching**: Configurable keywords trigger specific API rules
 - **Curl Integration**: Execute any curl command with dynamic placeholder replacement
@@ -62,14 +72,17 @@ This is a full-stack AI-powered chatbot application built with Flask that implem
 
 ## Data Flow
 
-### Standard RAG Flow
+### Standard RAG Flow with Session Memory
 1. **Document Upload**: Admin uploads PDF/DOCX files through the admin panel
 2. **Text Extraction**: System extracts text from uploaded documents
 3. **Chunking**: Text is split into overlapping chunks for better retrieval
 4. **Vectorization**: Each chunk is converted to embeddings using OpenAI API
 5. **Index Storage**: FAISS index is saved to disk for persistence
-6. **Query Processing**: User questions are embedded and matched against stored vectors
-7. **Response Generation**: Relevant chunks are used as context for GPT-4o to generate answers
+6. **Session Management**: User gets unique session ID for conversation isolation
+7. **Query Processing**: User questions are embedded and matched against stored vectors
+8. **Memory Integration**: Previous conversation context is retrieved for the user's session
+9. **Response Generation**: Relevant chunks and conversation history are used as context for GPT-4o via LangChain
+10. **Memory Update**: New conversation turns are stored in session memory
 
 ### Smart API Routing Flow
 1. **Question Analysis**: Incoming user question is analyzed for keyword matches
@@ -126,6 +139,9 @@ templates/        # HTML templates
 - July 04, 2025: Added PostgreSQL database backend for API rules management
 - July 04, 2025: Created comprehensive admin interface for API rules configuration
 - July 04, 2025: Added MySQL support and comprehensive local database setup documentation
+- July 15, 2025: Integrated LangChain with session-based memory management for conversation tracking
+- July 15, 2025: Added privacy-focused session isolation ensuring no cross-user data sharing
+- July 15, 2025: Enhanced chatbot with memory management features including clear memory functionality
 
 ## User Preferences
 

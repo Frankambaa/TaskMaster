@@ -363,6 +363,76 @@ function toggleVoiceInput() {
     }
 }
 
+async function clearMemory() {
+    if (confirm('Are you sure you want to clear the conversation memory? This action cannot be undone.')) {
+        try {
+            const response = await fetch('/clear_session', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            
+            if (data.success) {
+                // Clear the visual chat messages
+                const chatMessages = document.getElementById('chatMessages');
+                chatMessages.innerHTML = `
+                    <div class="message bot-message">
+                        <div class="message-avatar">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <div class="message-content">
+                            <div class="message-bubble">
+                                Hello! I'm your AI assistant. I can help you find information from uploaded documents or have a casual conversation. What would you like to know?
+                            </div>
+                            <div class="message-time">
+                                <span>${new Date().toLocaleTimeString()}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // Show success message
+                const successMessage = document.createElement('div');
+                successMessage.className = 'message bot-message';
+                successMessage.innerHTML = `
+                    <div class="message-avatar">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="message-content">
+                        <div class="message-bubble" style="background-color: #d4edda; color: #155724;">
+                            <i class="fas fa-check-circle"></i> Conversation memory cleared successfully!
+                        </div>
+                        <div class="message-time">
+                            <span>${new Date().toLocaleTimeString()}</span>
+                        </div>
+                    </div>
+                `;
+                chatMessages.appendChild(successMessage);
+                
+                // Scroll to bottom
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                
+                // Remove success message after 3 seconds
+                setTimeout(() => {
+                    successMessage.remove();
+                }, 3000);
+            } else {
+                alert('Error clearing memory: ' + (data.error || 'Unknown error'));
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error clearing memory: ' + error.message);
+        }
+    }
+}
+
 // Initialize the chat app when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     window.chatApp = new ChatApp();

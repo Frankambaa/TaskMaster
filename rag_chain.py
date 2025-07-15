@@ -6,6 +6,10 @@ import numpy as np
 import random
 from typing import List, Dict, Any
 from openai import OpenAI
+from langchain_openai import ChatOpenAI
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from session_memory import session_manager
 
 class RAGChain:
     def __init__(self):
@@ -18,6 +22,27 @@ class RAGChain:
         # do not change this unless explicitly requested by the user
         self.chat_model = "gpt-4o"
         self.top_k = 3
+        
+        # Initialize LangChain components
+        self.langchain_llm = ChatOpenAI(
+            model="gpt-4o",
+            temperature=0.7,
+            api_key=api_key
+        )
+        
+        # Create conversation prompt template
+        self.conversation_prompt = ChatPromptTemplate.from_messages([
+            ("system", """You are a helpful AI assistant with access to a knowledge base. 
+            Use the provided context and conversation history to answer questions accurately.
+            If you don't know something, say so clearly.
+            
+            Context from knowledge base:
+            {context}
+            
+            Previous conversation:
+            {conversation_history}"""),
+            MessagesPlaceholder(variable_name="messages"),
+        ])
         
         # Small talk responses with multiple variations
         self.small_talk_responses = {
@@ -216,16 +241,67 @@ class RAGChain:
             logging.error(f"Error generating answer: {str(e)}")
             return "I'm sorry, I encountered an error while processing your question. Please try again."
     
-    def get_answer(self, question: str, index_folder: str) -> str:
-        """Get answer for a question"""
+    def generate_answer_with_memory(self, question: str, relevant_chunks: List[Dict[str, Any]], session_id: str = None) -> str:
+        """Generate answer using LangChain with session memory"""
+        if not relevant_chunks:
+            return "I couldn't find any relevant information. Please try a different question."
+        
+        # Create context from relevant chunks
+        context = "\n\n".join([
+            f"From {chunk['source']}:\n{chunk['text']}"
+            for chunk in relevant_chunks
+        ])
+        
+        # Get conversation history if session_id provided
+        conversation_history = ""
+        if session_id:
+            conversation_history = session_manager.get_memory_context(session_id)
+        
+        try:
+            # Create messages for LangChain
+            messages = [
+                SystemMessage(content=f"""You are a helpful AI assistant with access to a knowledge base. 
+                Use the provided context and conversation history to answer questions accurately.
+                If you don't know something, say so clearly.
+                
+                Context from knowledge base:
+                {context}
+                
+                Previous conversation:
+                {conversation_history}"""),
+                HumanMessage(content=question)
+            ]
+            
+            # Generate response using LangChain
+            response = self.langchain_llm.invoke(messages)
+            answer = response.content.strip()
+            
+            # Add to session memory if session_id provided
+            if session_id:
+                session_manager.add_user_message(session_id, question)
+                session_manager.add_ai_message(session_id, answer)
+            
+            return answer
+            
+        except Exception as e:
+            logging.error(f"Error generating answer with memory: {str(e)}")
+            return "I'm sorry, I encountered an error while processing your question. Please try again."
+    
+    def get_answer(self, question: str, index_folder: str, session_id: str = None) -> str:
+        """Get answer for a question with optional session memory"""
         # Check for small talk
         if self.is_small_talk(question):
-            return self.get_small_talk_response(question)
+            response = self.get_small_talk_response(question)
+            # Add to session memory if session_id provided
+            if session_id:
+                session_manager.add_user_message(session_id, question)
+                session_manager.add_ai_message(session_id, response)
+            return response
         
         # Retrieve relevant chunks
         relevant_chunks = self.retrieve_relevant_chunks(question, index_folder)
         
-        # Generate answer
-        answer = self.generate_answer(question, relevant_chunks)
+        # Generate answer with memory
+        answer = self.generate_answer_with_memory(question, relevant_chunks, session_id)
         
         return answer
