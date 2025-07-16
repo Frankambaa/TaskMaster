@@ -324,6 +324,224 @@
             </div>
         </div>
 
+        <!-- Widget Integration Section -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-code"></i> Widget Integration
+                        <div class="float-end">
+                            <a href="{{ url_for('widget_demo') }}" class="btn btn-sm btn-outline-primary" target="_blank">
+                                <i class="fas fa-external-link-alt"></i> Live Demo
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6><i class="fas fa-rocket"></i> Quick Integration</h6>
+                                <p class="text-muted">Add this script to your website's HTML head section:</p>
+                                <div class="position-relative">
+                                    <pre class="bg-light p-3 rounded" style="font-size: 0.9rem; max-height: 200px; overflow-y: auto;"><code id="basicWidgetScript">&lt;!-- Add to &lt;head&gt; section --&gt;
+&lt;script src="{{ request.url_root }}static/chatwidget.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+    ChatWidget.init({
+        apiUrl: '{{ request.url_root.rstrip('/') }}',
+        user_id: 'your_user_id',
+        username: 'User Name',
+        email: 'user@example.com',
+        device_id: 'web_browser',
+        position: 'bottom-right',
+        title: 'AI Assistant'
+    });
+&lt;/script&gt;</code></pre>
+                                    <button class="btn btn-sm btn-outline-secondary position-absolute top-0 end-0 m-2" 
+                                            onclick="copyToClipboard('basicWidgetScript')" title="Copy to clipboard">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h6><i class="fas fa-cogs"></i> Configuration Options</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Parameter</th>
+                                                <th>Description</th>
+                                                <th>Required</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td><code>apiUrl</code></td>
+                                                <td>Your chatbot API endpoint</td>
+                                                <td><span class="badge bg-danger">Yes</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td><code>user_id</code></td>
+                                                <td>Unique user identifier</td>
+                                                <td><span class="badge bg-warning">Optional</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td><code>username</code></td>
+                                                <td>Display name for user</td>
+                                                <td><span class="badge bg-warning">Optional</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td><code>email</code></td>
+                                                <td>User's email address</td>
+                                                <td><span class="badge bg-warning">Optional</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td><code>device_id</code></td>
+                                                <td>Device identifier</td>
+                                                <td><span class="badge bg-warning">Optional</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td><code>position</code></td>
+                                                <td>bottom-right, bottom-left</td>
+                                                <td><span class="badge bg-warning">Optional</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td><code>title</code></td>
+                                                <td>Widget title in header</td>
+                                                <td><span class="badge bg-warning">Optional</span></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <hr class="my-4">
+                        
+                        <div class="row">
+                            <div class="col-12">
+                                <h6><i class="fas fa-magic"></i> Advanced Integration Examples</h6>
+                                <div class="accordion" id="integrationExamples">
+                                    <!-- Anonymous User Example -->
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header" id="anonymousHeading">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#anonymousExample">
+                                                <i class="fas fa-user-slash me-2"></i> Anonymous Users (No Login Required)
+                                            </button>
+                                        </h2>
+                                        <div id="anonymousExample" class="accordion-collapse collapse" data-bs-parent="#integrationExamples">
+                                            <div class="accordion-body">
+                                                <p>For websites where users don't need to log in:</p>
+                                                <div class="position-relative">
+                                                    <pre class="bg-light p-3 rounded" style="font-size: 0.9rem;"><code id="anonymousScript">&lt;script src="{{ request.url_root }}static/chatwidget.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+    ChatWidget.init({
+        apiUrl: '{{ request.url_root.rstrip('/') }}',
+        position: 'bottom-right',
+        title: 'Help Assistant'
+    });
+&lt;/script&gt;</code></pre>
+                                                    <button class="btn btn-sm btn-outline-secondary position-absolute top-0 end-0 m-2" 
+                                                            onclick="copyToClipboard('anonymousScript')">
+                                                        <i class="fas fa-copy"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Dynamic User Example -->
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header" id="dynamicHeading">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#dynamicExample">
+                                                <i class="fas fa-sync-alt me-2"></i> Dynamic User Configuration
+                                            </button>
+                                        </h2>
+                                        <div id="dynamicExample" class="accordion-collapse collapse" data-bs-parent="#integrationExamples">
+                                            <div class="accordion-body">
+                                                <p>For websites with user authentication - update configuration after login:</p>
+                                                <div class="position-relative">
+                                                    <pre class="bg-light p-3 rounded" style="font-size: 0.9rem;"><code id="dynamicScript">&lt;script src="{{ request.url_root }}static/chatwidget.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+    // Initialize as anonymous
+    ChatWidget.init({
+        apiUrl: '{{ request.url_root.rstrip('/') }}',
+        position: 'bottom-right'
+    });
+    
+    // Update after user logs in
+    function onUserLogin(user) {
+        ChatWidget.updateConfig({
+            user_id: user.id,
+            username: user.name,
+            email: user.email,
+            device_id: 'web_app'
+        });
+    }
+&lt;/script&gt;</code></pre>
+                                                    <button class="btn btn-sm btn-outline-secondary position-absolute top-0 end-0 m-2" 
+                                                            onclick="copyToClipboard('dynamicScript')">
+                                                        <i class="fas fa-copy"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- E-commerce Example -->
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header" id="ecommerceHeading">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#ecommerceExample">
+                                                <i class="fas fa-shopping-cart me-2"></i> E-commerce Integration
+                                            </button>
+                                        </h2>
+                                        <div id="ecommerceExample" class="accordion-collapse collapse" data-bs-parent="#integrationExamples">
+                                            <div class="accordion-body">
+                                                <p>For online stores with customer support:</p>
+                                                <div class="position-relative">
+                                                    <pre class="bg-light p-3 rounded" style="font-size: 0.9rem;"><code id="ecommerceScript">&lt;script src="{{ request.url_root }}static/chatwidget.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+    // Get user info from your system
+    const customerInfo = {
+        user_id: 'customer_' + Date.now(),
+        username: 'Customer',
+        email: 'customer@example.com',
+        device_id: 'web_store'
+    };
+    
+    ChatWidget.init({
+        apiUrl: '{{ request.url_root.rstrip('/') }}',
+        ...customerInfo,
+        position: 'bottom-right',
+        title: 'Customer Support',
+        welcomeMessage: 'Hi! How can I help you with your order?'
+    });
+&lt;/script&gt;</code></pre>
+                                                    <button class="btn btn-sm btn-outline-secondary position-absolute top-0 end-0 m-2" 
+                                                            onclick="copyToClipboard('ecommerceScript')">
+                                                        <i class="fas fa-copy"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-success mt-4">
+                            <i class="fas fa-check-circle"></i> <strong>Features:</strong>
+                            <ul class="mb-0 mt-2">
+                                <li>✓ Cross-device conversation continuity for logged-in users</li>
+                                <li>✓ Anonymous session support for guests</li>
+                                <li>✓ Responsive design (mobile & desktop)</li>
+                                <li>✓ Persistent conversation history</li>
+                                <li>✓ Privacy-focused session isolation</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Instructions -->
         <div class="row">
             <div class="col-12">
@@ -568,6 +786,31 @@
                 }
             });
         });
+
+        // Copy to clipboard function
+        function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            const text = element.textContent;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                // Find the button that was clicked
+                const button = document.querySelector(`[onclick="copyToClipboard('${elementId}')"]`);
+                const originalHtml = button.innerHTML;
+                
+                // Show success feedback
+                button.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                button.classList.add('btn-success');
+                
+                // Reset after 2 seconds
+                setTimeout(() => {
+                    button.innerHTML = originalHtml;
+                    button.classList.remove('btn-success');
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+                alert('Failed to copy to clipboard');
+            });
+        }
     </script>
 </body>
 </html>
