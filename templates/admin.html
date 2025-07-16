@@ -789,19 +789,52 @@
                             <textarea class="form-control" id="addToolCurl" rows="3" required></textarea>
                             <div class="form-text">Full curl command. Use {parameter_name} for function parameters</div>
                         </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="addToolResponseMapping" class="form-label">Response Mapping (JSON)</label>
-                                    <textarea class="form-control" id="addToolResponseMapping" rows="4"></textarea>
-                                    <div class="form-text">Optional: Map API response fields to desired output format</div>
-                                </div>
+                        <!-- API Test Section -->
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h6 class="mb-0"><i class="fas fa-vial"></i> API Testing & Response Mapping</h6>
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="addToolResponseTemplate" class="form-label">Response Template</label>
-                                    <textarea class="form-control" id="addToolResponseTemplate" rows="4"></textarea>
-                                    <div class="form-text">Optional: Template for AI response formatting</div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <button type="button" class="btn btn-outline-primary btn-sm mb-3" onclick="testApiResponse('add')">
+                                            <i class="fas fa-play"></i> Test API Response
+                                        </button>
+                                        <div id="addApiTestResult" class="d-none">
+                                            <div class="alert alert-info">
+                                                <strong>API Response:</strong>
+                                                <pre id="addApiResponseData" class="mt-2 mb-0"></pre>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div id="addFieldSelector" class="d-none">
+                                            <label class="form-label">Select Fields for Bot Response:</label>
+                                            <div id="addFieldCheckboxes" class="mb-2">
+                                                <!-- Checkboxes will be populated here -->
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-success" onclick="generateResponseMapping('add')">
+                                                <i class="fas fa-magic"></i> Generate Mapping
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row mt-3">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="addToolResponseMapping" class="form-label">Response Mapping (JSON)</label>
+                                            <textarea class="form-control" id="addToolResponseMapping" rows="4"></textarea>
+                                            <div class="form-text">Auto-generated based on selected fields above</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="addToolResponseTemplate" class="form-label">Response Template</label>
+                                            <textarea class="form-control" id="addToolResponseTemplate" rows="4"></textarea>
+                                            <div class="form-text">Optional: Template for AI response formatting</div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -856,17 +889,53 @@
                             <label for="editToolCurl" class="form-label">Curl Command</label>
                             <textarea class="form-control" id="editToolCurl" rows="3" required></textarea>
                         </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="editToolResponseMapping" class="form-label">Response Mapping (JSON)</label>
-                                    <textarea class="form-control" id="editToolResponseMapping" rows="4"></textarea>
-                                </div>
+                        
+                        <!-- API Test Section -->
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h6 class="mb-0"><i class="fas fa-vial"></i> API Testing & Response Mapping</h6>
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="editToolResponseTemplate" class="form-label">Response Template</label>
-                                    <textarea class="form-control" id="editToolResponseTemplate" rows="4"></textarea>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <button type="button" class="btn btn-outline-primary btn-sm mb-3" onclick="testApiResponse('edit')">
+                                            <i class="fas fa-play"></i> Test API Response
+                                        </button>
+                                        <div id="editApiTestResult" class="d-none">
+                                            <div class="alert alert-info">
+                                                <strong>API Response:</strong>
+                                                <pre id="editApiResponseData" class="mt-2 mb-0"></pre>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div id="editFieldSelector" class="d-none">
+                                            <label class="form-label">Select Fields for Bot Response:</label>
+                                            <div id="editFieldCheckboxes" class="mb-2">
+                                                <!-- Checkboxes will be populated here -->
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-success" onclick="generateResponseMapping('edit')">
+                                                <i class="fas fa-magic"></i> Generate Mapping
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row mt-3">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="editToolResponseMapping" class="form-label">Response Mapping (JSON)</label>
+                                            <textarea class="form-control" id="editToolResponseMapping" rows="4"></textarea>
+                                            <div class="form-text">Auto-generated based on selected fields above</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="editToolResponseTemplate" class="form-label">Response Template</label>
+                                            <textarea class="form-control" id="editToolResponseTemplate" rows="4"></textarea>
+                                            <div class="form-text">Optional: Template for AI response formatting</div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1222,6 +1291,139 @@
                 console.error('Failed to copy text: ', err);
                 alert('Failed to copy to clipboard');
             });
+        }
+
+        // API Testing Functions
+        async function testApiResponse(modalType) {
+            const curlCommand = document.getElementById(`${modalType}ToolCurl`).value;
+            const button = document.querySelector(`[onclick="testApiResponse('${modalType}')"]`);
+            
+            if (!curlCommand) {
+                alert('Please enter a curl command first');
+                return;
+            }
+            
+            // Show loading state
+            const originalHtml = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
+            button.disabled = true;
+            
+            try {
+                const response = await fetch('/test_api_response', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ curl_command: curlCommand })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Show API response
+                    document.getElementById(`${modalType}ApiResponseData`).textContent = JSON.stringify(result.data, null, 2);
+                    document.getElementById(`${modalType}ApiTestResult`).classList.remove('d-none');
+                    
+                    // Generate field checkboxes
+                    generateFieldCheckboxes(result.data, modalType);
+                    document.getElementById(`${modalType}FieldSelector`).classList.remove('d-none');
+                } else {
+                    alert('API test failed: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error testing API: ' + error.message);
+            } finally {
+                // Reset button
+                button.innerHTML = originalHtml;
+                button.disabled = false;
+            }
+        }
+
+        function generateFieldCheckboxes(data, modalType) {
+            const checkboxContainer = document.getElementById(`${modalType}FieldCheckboxes`);
+            checkboxContainer.innerHTML = '';
+            
+            // Function to recursively extract field paths
+            function extractFields(obj, prefix = '') {
+                const fields = [];
+                if (Array.isArray(obj)) {
+                    if (obj.length > 0) {
+                        // For arrays, show the structure of the first element
+                        fields.push(...extractFields(obj[0], prefix + '[0]'));
+                    }
+                } else if (typeof obj === 'object' && obj !== null) {
+                    for (const key in obj) {
+                        const path = prefix ? `${prefix}.${key}` : key;
+                        fields.push({ path: path, value: obj[key], type: typeof obj[key] });
+                        
+                        // Recursively handle nested objects (limited depth)
+                        if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
+                            fields.push(...extractFields(obj[key], path));
+                        }
+                    }
+                }
+                return fields;
+            }
+            
+            const fields = extractFields(data);
+            
+            fields.forEach((field, index) => {
+                const checkboxDiv = document.createElement('div');
+                checkboxDiv.className = 'form-check';
+                
+                // Create user-friendly field name
+                const friendlyName = field.path.replace(/\[0\]\./g, '').replace(/\./g, '_');
+                
+                checkboxDiv.innerHTML = `
+                    <input class="form-check-input field-checkbox" type="checkbox" 
+                           id="${modalType}Field${index}" 
+                           data-path="${field.path}" 
+                           data-friendly-name="${friendlyName}">
+                    <label class="form-check-label" for="${modalType}Field${index}">
+                        <code>${friendlyName}</code> 
+                        <small class="text-muted">(${field.type})</small>
+                        <br>
+                        <small class="text-secondary">Path: ${field.path}</small>
+                        <br>
+                        <small class="text-info">Value: ${JSON.stringify(field.value)}</small>
+                    </label>
+                `;
+                
+                checkboxContainer.appendChild(checkboxDiv);
+            });
+        }
+
+        function generateResponseMapping(modalType) {
+            const selectedFields = {};
+            const checkboxes = document.querySelectorAll(`#${modalType}FieldCheckboxes .field-checkbox:checked`);
+            
+            if (checkboxes.length === 0) {
+                alert('Please select at least one field');
+                return;
+            }
+            
+            checkboxes.forEach(checkbox => {
+                const path = checkbox.dataset.path;
+                const friendlyName = checkbox.dataset.friendlyName;
+                selectedFields[friendlyName] = path;
+            });
+            
+            // Generate the response mapping JSON
+            const responseMapping = {
+                fields: selectedFields
+            };
+            
+            // Update the response mapping textarea
+            document.getElementById(`${modalType}ToolResponseMapping`).value = JSON.stringify(responseMapping, null, 2);
+            
+            // Generate a sample response template
+            const templateFields = Object.keys(selectedFields).map(field => `**${field.replace(/_/g, ' ').toUpperCase()}**: {${field}}`).join('\n- ');
+            const template = `Based on the API response, here's your information:\n\n- ${templateFields}\n\nLet me know if you need any additional details!`;
+            
+            document.getElementById(`${modalType}ToolResponseTemplate`).value = template;
+            
+            // Show success message
+            alert('Response mapping and template generated successfully!');
         }
     </script>
 </body>

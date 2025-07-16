@@ -563,6 +563,67 @@ def toggle_ai_tool(tool_id):
         logging.error(f"Error toggling AI tool: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/test_api_response', methods=['POST'])
+def test_api_response():
+    """Test API response for field mapping configuration"""
+    try:
+        data = request.get_json()
+        curl_command = data.get('curl_command', '')
+        
+        if not curl_command:
+            return jsonify({'success': False, 'error': 'No curl command provided'}), 400
+        
+        # Execute the curl command using subprocess
+        import subprocess
+        import json
+        
+        # Process the curl command (replace any placeholders with test values)
+        processed_command = curl_command
+        
+        # Replace common placeholders with test values
+        processed_command = processed_command.replace('{question}', 'test')
+        processed_command = processed_command.replace('{user_query}', 'test')
+        processed_command = processed_command.replace('{query}', 'test')
+        
+        # Execute the command
+        result = subprocess.run(
+            processed_command,
+            shell=True,
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        
+        if result.returncode == 0:
+            try:
+                # Try to parse as JSON
+                response_data = json.loads(result.stdout)
+                return jsonify({
+                    'success': True,
+                    'data': response_data,
+                    'raw_output': result.stdout
+                })
+            except json.JSONDecodeError:
+                # If not JSON, return as plain text
+                return jsonify({
+                    'success': True,
+                    'data': {'response': result.stdout},
+                    'raw_output': result.stdout
+                })
+        else:
+            return jsonify({
+                'success': False,
+                'error': f'Command failed with return code {result.returncode}',
+                'stderr': result.stderr,
+                'stdout': result.stdout
+            }), 500
+            
+    except subprocess.TimeoutExpired:
+        return jsonify({'success': False, 'error': 'API request timed out'}), 500
+    except Exception as e:
+        logging.error(f"Error testing API response: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/clear_session', methods=['POST'])
 def clear_session():
     """Clear current session memory (user-based or session-based)"""
