@@ -176,6 +176,9 @@ templates/        # HTML templates
 - July 16, 2025: Created AIToolExecutor class for intelligent tool selection and execution with natural language understanding
 - July 16, 2025: Enhanced admin panel with comprehensive AI tools management interface including CRUD operations and real-time updates
 - July 16, 2025: Integrated AI tool selection into RAG chain with fallback to knowledge base when no tools are triggered
+- July 16, 2025: Fixed critical bug in AI tool parameter handling - empty parameter objects now work correctly
+- July 16, 2025: Added user-friendly API testing interface with visual field selector and automatic response mapping generation
+- July 16, 2025: Removed legacy API Rules Management system from admin interface - replaced entirely by AI Tools system
 
 ## User Preferences
 

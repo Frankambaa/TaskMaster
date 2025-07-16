@@ -9,7 +9,6 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from vectorizer import DocumentVectorizer
 from rag_chain import RAGChain
 from models import db, ApiRule, ApiTool
-from api_executor import ApiExecutor
 from session_memory import session_manager
 import json
 import subprocess
@@ -73,7 +72,7 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 # Initialize components
 vectorizer = DocumentVectorizer()
 rag_chain = RAGChain()
-api_executor = ApiExecutor()
+
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -106,15 +105,13 @@ def admin():
                 current_logo = filename
                 break
     
-    # Get API rules and AI tools
-    api_rules = ApiRule.query.order_by(ApiRule.priority.desc(), ApiRule.created_at.desc()).all()
+    # Get AI tools
     ai_tools = ApiTool.query.order_by(ApiTool.priority.desc(), ApiTool.created_at.desc()).all()
     
     return render_template('admin.html', 
                          uploaded_files=uploaded_files, 
                          index_exists=index_exists,
                          current_logo=current_logo,
-                         api_rules=api_rules,
                          ai_tools=ai_tools)
 
 @app.route('/chatbot')
@@ -245,25 +242,10 @@ def ask():
         else:
             logging.info(f"Processing question for session: {session_id}")
         
-        # First check if we have any API rules that match this question
-        api_rules = ApiRule.query.filter_by(active=True).all()
-        matching_rule = api_executor.find_matching_rule(question, api_rules)
-        
-        if matching_rule:
-            # Execute API call
-            logging.info(f"Using API rule: {matching_rule.name}")
-            api_result = api_executor.execute_curl_command(matching_rule.curl_command, question)
-            answer = api_executor.format_api_response(api_result, matching_rule.name)
-            response_type = 'api'
-            
-            # Add to session memory (user-based or session-based)
-            session_manager.add_user_message(session_id, question, user_identifier, username, email, device_id)
-            session_manager.add_ai_message(session_id, answer, user_identifier, username, email, device_id)
-        else:
-            # Fall back to RAG chain with persistent memory
-            logging.info(f"No API rule matched, using RAG chain with {'user-based' if user_identifier else 'session-based'} memory")
-            answer = rag_chain.get_answer(question, FAISS_INDEX_FOLDER, session_id, user_identifier, username, email, device_id)
-            response_type = 'rag'
+        # Use RAG chain with AI-driven tool selection and persistent memory
+        logging.info(f"Using RAG chain with AI tool selection and {'user-based' if user_identifier else 'session-based'} memory")
+        answer = rag_chain.get_answer(question, FAISS_INDEX_FOLDER, session_id, user_identifier, username, email, device_id)
+        response_type = 'rag_with_ai_tools'
         
         # Get current logo
         current_logo = None
@@ -344,90 +326,6 @@ def delete_file(filename):
     
     return redirect(url_for('admin'))
 
-# API Rules management routes
-@app.route('/api_rules', methods=['POST'])
-def add_api_rule():
-    """Add a new API rule"""
-    try:
-        data = request.get_json()
-        
-        rule = ApiRule(
-            name=data['name'],
-            keywords=data['keywords'],
-            curl_command=data['curl_command'],
-            priority=int(data.get('priority', 0)),
-            active=data.get('active', True)
-        )
-        
-        db.session.add(rule)
-        db.session.commit()
-        
-        flash(f'API rule "{rule.name}" added successfully!')
-        return jsonify({'success': True, 'message': 'API rule added successfully'})
-        
-    except Exception as e:
-        db.session.rollback()
-        logging.error(f"Error adding API rule: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@app.route('/api_rules/<int:rule_id>', methods=['PUT'])
-def update_api_rule(rule_id):
-    """Update an API rule"""
-    try:
-        rule = ApiRule.query.get_or_404(rule_id)
-        data = request.get_json()
-        
-        rule.name = data['name']
-        rule.keywords = data['keywords']
-        rule.curl_command = data['curl_command']
-        rule.priority = int(data.get('priority', 0))
-        rule.active = data.get('active', True)
-        
-        db.session.commit()
-        
-        flash(f'API rule "{rule.name}" updated successfully!')
-        return jsonify({'success': True, 'message': 'API rule updated successfully'})
-        
-    except Exception as e:
-        db.session.rollback()
-        logging.error(f"Error updating API rule: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@app.route('/api_rules/<int:rule_id>', methods=['DELETE'])
-def delete_api_rule(rule_id):
-    """Delete an API rule"""
-    try:
-        rule = ApiRule.query.get_or_404(rule_id)
-        rule_name = rule.name
-        
-        db.session.delete(rule)
-        db.session.commit()
-        
-        flash(f'API rule "{rule_name}" deleted successfully!')
-        return jsonify({'success': True, 'message': 'API rule deleted successfully'})
-        
-    except Exception as e:
-        db.session.rollback()
-        logging.error(f"Error deleting API rule: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@app.route('/api_rules/<int:rule_id>/toggle', methods=['POST'])
-def toggle_api_rule(rule_id):
-    """Toggle active status of an API rule"""
-    try:
-        rule = ApiRule.query.get_or_404(rule_id)
-        rule.active = not rule.active
-        
-        db.session.commit()
-        
-        status = "activated" if rule.active else "deactivated"
-        flash(f'API rule "{rule.name}" {status}!')
-        return jsonify({'success': True, 'active': rule.active})
-        
-    except Exception as e:
-        db.session.rollback()
-        logging.error(f"Error toggling API rule: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
 
 # AI Tool Management Routes
 @app.route('/ai_tools', methods=['GET'])
