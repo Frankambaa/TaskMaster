@@ -67,12 +67,28 @@ You'll need an OpenAI API key to run this application:
 
 See `DATABASE_SETUP.md` for detailed database configuration instructions.
 
-## Installation Steps
+## Quick Installation
 
-### Step 1: Download the Project
+### Windows Users
+1. Download the project files
+2. Double-click `install_windows.bat` to run the installer
+3. Follow the on-screen instructions
+
+### Linux/macOS Users
+1. Download the project files
+2. Open terminal in the project directory
+3. Run: `./install_unix.sh`
+4. Follow the on-screen instructions
+
+### Manual Installation
+
+#### Step 1: Download the Project
 ```bash
 # Option 1: If you have git
 git clone <your-repository-url>
+
+# Option 2: Download and extract ZIP file
+# Download from your repository and extract to a folder
 cd rag-chatbot
 
 # Option 2: Download as ZIP and extract
