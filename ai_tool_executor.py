@@ -11,7 +11,10 @@ class AIToolExecutor:
     """AI-driven tool executor using OpenAI Function Calling"""
     
     def __init__(self):
-        self.openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if api_key:
+            api_key = api_key.strip()  # Remove any whitespace
+        self.openai_client = OpenAI(api_key=api_key)
         self.logger = logging.getLogger(__name__)
     
     def get_available_tools(self) -> List[ApiTool]:
