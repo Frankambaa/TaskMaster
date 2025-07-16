@@ -8,7 +8,7 @@ from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
 from vectorizer import DocumentVectorizer
 from rag_chain import RAGChain
-from models import db, ApiRule
+from models import db, ApiRule, ApiTool
 from api_executor import ApiExecutor
 from session_memory import session_manager
 import json
@@ -106,14 +106,16 @@ def admin():
                 current_logo = filename
                 break
     
-    # Get API rules
+    # Get API rules and AI tools
     api_rules = ApiRule.query.order_by(ApiRule.priority.desc(), ApiRule.created_at.desc()).all()
+    ai_tools = ApiTool.query.order_by(ApiTool.priority.desc(), ApiTool.created_at.desc()).all()
     
     return render_template('admin.html', 
                          uploaded_files=uploaded_files, 
                          index_exists=index_exists,
                          current_logo=current_logo,
-                         api_rules=api_rules)
+                         api_rules=api_rules,
+                         ai_tools=ai_tools)
 
 @app.route('/chatbot')
 def chatbot():
@@ -425,6 +427,140 @@ def toggle_api_rule(rule_id):
     except Exception as e:
         db.session.rollback()
         logging.error(f"Error toggling API rule: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# AI Tool Management Routes
+@app.route('/ai_tools', methods=['GET'])
+def get_ai_tools():
+    """Get all AI tools"""
+    try:
+        tools = ApiTool.query.all()
+        return jsonify({'tools': [tool.to_dict() for tool in tools]})
+    except Exception as e:
+        logging.error(f"Error fetching AI tools: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/ai_tools', methods=['POST'])
+def add_ai_tool():
+    """Add a new AI tool"""
+    try:
+        data = request.get_json()
+        
+        # Validate required fields
+        required_fields = ['name', 'description', 'parameters', 'curl_command']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({'success': False, 'error': f'Missing required field: {field}'}), 400
+        
+        # Validate parameters as JSON
+        try:
+            json.loads(data['parameters'])
+        except json.JSONDecodeError:
+            return jsonify({'success': False, 'error': 'Parameters must be valid JSON'}), 400
+        
+        # Validate response_mapping as JSON if provided
+        if data.get('response_mapping'):
+            try:
+                json.loads(data['response_mapping'])
+            except json.JSONDecodeError:
+                return jsonify({'success': False, 'error': 'Response mapping must be valid JSON'}), 400
+        
+        new_tool = ApiTool(
+            name=data['name'],
+            description=data['description'],
+            parameters=data['parameters'],
+            curl_command=data['curl_command'],
+            response_mapping=data.get('response_mapping', '{}'),
+            response_template=data.get('response_template', ''),
+            priority=int(data.get('priority', 0)),
+            active=data.get('active', True)
+        )
+        
+        db.session.add(new_tool)
+        db.session.commit()
+        
+        flash(f'AI tool "{new_tool.name}" added successfully!')
+        return jsonify({'success': True, 'message': 'AI tool added successfully', 'tool': new_tool.to_dict()})
+        
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Error adding AI tool: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/ai_tools/<int:tool_id>', methods=['PUT'])
+def update_ai_tool(tool_id):
+    """Update an AI tool"""
+    try:
+        tool = ApiTool.query.get_or_404(tool_id)
+        data = request.get_json()
+        
+        # Validate parameters as JSON
+        if 'parameters' in data:
+            try:
+                json.loads(data['parameters'])
+            except json.JSONDecodeError:
+                return jsonify({'success': False, 'error': 'Parameters must be valid JSON'}), 400
+        
+        # Validate response_mapping as JSON if provided
+        if data.get('response_mapping'):
+            try:
+                json.loads(data['response_mapping'])
+            except json.JSONDecodeError:
+                return jsonify({'success': False, 'error': 'Response mapping must be valid JSON'}), 400
+        
+        tool.name = data.get('name', tool.name)
+        tool.description = data.get('description', tool.description)
+        tool.parameters = data.get('parameters', tool.parameters)
+        tool.curl_command = data.get('curl_command', tool.curl_command)
+        tool.response_mapping = data.get('response_mapping', tool.response_mapping)
+        tool.response_template = data.get('response_template', tool.response_template)
+        tool.priority = int(data.get('priority', tool.priority))
+        tool.active = data.get('active', tool.active)
+        
+        db.session.commit()
+        
+        flash(f'AI tool "{tool.name}" updated successfully!')
+        return jsonify({'success': True, 'message': 'AI tool updated successfully', 'tool': tool.to_dict()})
+        
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Error updating AI tool: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/ai_tools/<int:tool_id>', methods=['DELETE'])
+def delete_ai_tool(tool_id):
+    """Delete an AI tool"""
+    try:
+        tool = ApiTool.query.get_or_404(tool_id)
+        tool_name = tool.name
+        
+        db.session.delete(tool)
+        db.session.commit()
+        
+        flash(f'AI tool "{tool_name}" deleted successfully!')
+        return jsonify({'success': True, 'message': 'AI tool deleted successfully'})
+        
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Error deleting AI tool: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/ai_tools/<int:tool_id>/toggle', methods=['POST'])
+def toggle_ai_tool(tool_id):
+    """Toggle active status of an AI tool"""
+    try:
+        tool = ApiTool.query.get_or_404(tool_id)
+        tool.active = not tool.active
+        
+        db.session.commit()
+        
+        status = "activated" if tool.active else "deactivated"
+        flash(f'AI tool "{tool.name}" {status}!')
+        return jsonify({'success': True, 'active': tool.active})
+        
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Error toggling AI tool: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/clear_session', methods=['POST'])

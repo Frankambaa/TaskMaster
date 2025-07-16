@@ -45,12 +45,20 @@ This is a full-stack AI-powered chatbot application built with Flask that implem
 - **User-Specific Persistence**: Database-backed storage for authenticated users with cross-device continuity
 - **Dual Storage System**: Persistent storage for users with identifiers, temporary for anonymous sessions
 
-### 4. API Management System (`api_executor.py`, `models.py`)
-- **Smart Routing**: Automatically decides between API calls and knowledge base queries
-- **Keyword Matching**: Configurable keywords trigger specific API rules
+### 4. AI-Driven Tool System (`ai_tool_executor.py`, `models.py`)
+- **Smart AI Selection**: Uses OpenAI Function Calling to intelligently select appropriate tools based on natural language understanding
+- **Dynamic Tool Loading**: API tools are stored in database and loaded dynamically into OpenAI function specifications
+- **Response Mapping**: Configurable field mapping to extract specific data from API responses
+- **Response Templates**: AI-powered formatting using customizable templates for user-friendly output
+- **Priority System**: Tools with higher priority are preferred during AI selection
+- **Parameter Handling**: JSON schema-based parameter validation and dynamic curl command generation
+- **Database Storage**: PostgreSQL backend for persistent AI tool management with ApiTool model
+
+### 5. Legacy API Management System (`api_executor.py`, `models.py`)
+- **Keyword Matching**: Legacy system with configurable keywords that trigger specific API rules
 - **Curl Integration**: Execute any curl command with dynamic placeholder replacement
 - **Priority System**: Rules with higher priority are checked first
-- **Database Storage**: PostgreSQL backend for persistent API rule management
+- **Database Storage**: PostgreSQL backend for persistent API rule management (ApiRule model)
 
 ### 4. Flask Application (`app.py`)
 - **Routes**: 
@@ -86,7 +94,16 @@ This is a full-stack AI-powered chatbot application built with Flask that implem
 9. **Response Generation**: Relevant chunks and conversation history are used as context for GPT-4o via LangChain
 10. **Memory Update**: New conversation turns are stored in session memory
 
-### Smart API Routing Flow
+### AI-Driven Tool Selection Flow
+1. **Question Analysis**: User question is analyzed by OpenAI Function Calling system
+2. **Tool Selection**: AI intelligently selects appropriate tool based on natural language understanding and tool descriptions
+3. **Parameter Extraction**: AI extracts required parameters from user question using JSON schema validation
+4. **Tool Execution**: Selected tool executes configured curl command with dynamic parameter replacement
+5. **Response Mapping**: API response is processed through configurable field mapping
+6. **AI Formatting**: Response is formatted by AI using customizable templates for user-friendly output
+7. **Fallback to RAG**: If no tool is selected, falls back to standard RAG knowledge base flow
+
+### Legacy Smart API Routing Flow (Keyword-Based)
 1. **Question Analysis**: Incoming user question is analyzed for keyword matches
 2. **Rule Matching**: System checks active API rules by priority for keyword matches
 3. **API Execution**: If matched, executes configured curl command with placeholders replaced
@@ -154,6 +171,11 @@ templates/        # HTML templates
 - July 16, 2025: Fixed widget DOM loading issue by adding proper DOMContentLoaded event handling
 - July 16, 2025: Enhanced admin panel with comprehensive widget integration section including copy-to-clipboard functionality
 - July 16, 2025: Added comprehensive security features to chatwidget.js including rate limiting, input sanitization, XSS protection, session timeout, domain restrictions, and request timeout handling
+- July 16, 2025: **MAJOR UPGRADE**: Implemented AI-driven tool-calling system using OpenAI Function Calling to replace keyword-based API triggering
+- July 16, 2025: Added ApiTool database model with OpenAI function specifications, response mapping, and configurable templates
+- July 16, 2025: Created AIToolExecutor class for intelligent tool selection and execution with natural language understanding
+- July 16, 2025: Enhanced admin panel with comprehensive AI tools management interface including CRUD operations and real-time updates
+- July 16, 2025: Integrated AI tool selection into RAG chain with fallback to knowledge base when no tools are triggered
 
 ## User Preferences
 

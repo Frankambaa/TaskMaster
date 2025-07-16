@@ -10,6 +10,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from session_memory import session_manager
+from ai_tool_executor import AIToolExecutor
 
 class RAGChain:
     def __init__(self):
@@ -22,6 +23,9 @@ class RAGChain:
         # do not change this unless explicitly requested by the user
         self.chat_model = "gpt-4o"
         self.top_k = 3
+        
+        # Initialize AI tool executor
+        self.ai_tool_executor = AIToolExecutor()
         
         # Initialize LangChain components
         self.langchain_llm = ChatOpenAI(
@@ -298,7 +302,31 @@ class RAGChain:
                 session_manager.add_ai_message(session_id, response, user_identifier, username, email, device_id)
             return response
         
-        # Retrieve relevant chunks
+        # Get conversation history for AI tool selection
+        conversation_history = []
+        if user_identifier or session_id:
+            history = session_manager.get_session_history(session_id, user_identifier)
+            conversation_history = [
+                {"role": "user" if isinstance(msg, HumanMessage) else "assistant", "content": msg.content}
+                for msg in history[-10:]  # Last 10 messages
+            ]
+        
+        # First, try AI tool selection
+        try:
+            used_tool, tool_response = self.ai_tool_executor.process_question_with_tools(question, conversation_history)
+            
+            if used_tool:
+                # Add to session memory (user-based or session-based)
+                if user_identifier or session_id:
+                    session_manager.add_user_message(session_id, question, user_identifier, username, email, device_id)
+                    session_manager.add_ai_message(session_id, tool_response, user_identifier, username, email, device_id)
+                
+                return tool_response
+        except Exception as e:
+            logging.error(f"Error in AI tool selection: {str(e)}")
+            # Continue to RAG fallback
+        
+        # Fallback to RAG if no tools were used
         relevant_chunks = self.retrieve_relevant_chunks(question, index_folder)
         
         # Generate answer with memory
