@@ -273,6 +273,45 @@ body {
     transform: scale(1.05);
 }
 
+/* User Configuration Panel */
+.user-config-panel {
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    padding-top: 1rem;
+    margin-top: 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 1rem;
+    animation: slideDown 0.3s ease-in-out;
+}
+
+.user-config-panel .form-control {
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #333;
+}
+
+.user-config-panel .form-control:focus {
+    background: white;
+    border-color: white;
+    box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.25);
+}
+
+.user-config-panel .form-label {
+    font-size: 0.85rem;
+    margin-bottom: 0.25rem;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 .chat-input .btn-outline-secondary.recording {
     background-color: #dc3545;
     color: white;

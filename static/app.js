@@ -188,12 +188,18 @@ class ChatApp {
         this.showTypingIndicator();
 
         try {
+            // Use user configuration if available
+            const payload = {
+                question: message,
+                ...userConfig
+            };
+            
             const response = await fetch('/ask', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ question: message })
+                body: JSON.stringify(payload)
             });
 
             if (!response.ok) {
@@ -370,7 +376,8 @@ async function clearMemory() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                }
+                },
+                body: JSON.stringify(userConfig)
             });
 
             if (!response.ok) {
@@ -433,7 +440,153 @@ async function clearMemory() {
     }
 }
 
+// User configuration functions
+let userConfig = {
+    user_id: null,
+    username: null,
+    email: null,
+    device_id: null
+};
+
+function toggleUserConfig() {
+    const panel = document.getElementById('userConfigPanel');
+    if (panel.style.display === 'none' || panel.style.display === '') {
+        panel.style.display = 'block';
+        loadUserConfig();
+    } else {
+        panel.style.display = 'none';
+    }
+}
+
+function loadUserConfig() {
+    // Load saved user config from localStorage
+    const saved = localStorage.getItem('chatbot_user_config');
+    if (saved) {
+        const config = JSON.parse(saved);
+        document.getElementById('userIdInput').value = config.user_id || '';
+        document.getElementById('usernameInput').value = config.username || '';
+        document.getElementById('emailInput').value = config.email || '';
+        document.getElementById('deviceIdInput').value = config.device_id || '';
+        userConfig = config;
+    }
+}
+
+function saveUserConfig() {
+    userConfig = {
+        user_id: document.getElementById('userIdInput').value.trim() || null,
+        username: document.getElementById('usernameInput').value.trim() || null,
+        email: document.getElementById('emailInput').value.trim() || null,
+        device_id: document.getElementById('deviceIdInput').value.trim() || null
+    };
+    
+    // Save to localStorage
+    localStorage.setItem('chatbot_user_config', JSON.stringify(userConfig));
+    
+    // Update session info
+    updateSessionInfo();
+    
+    // Hide panel
+    document.getElementById('userConfigPanel').style.display = 'none';
+    
+    // Show success message
+    showUserConfigSuccess();
+}
+
+function clearUserConfig() {
+    // Clear form inputs
+    document.getElementById('userIdInput').value = '';
+    document.getElementById('usernameInput').value = '';
+    document.getElementById('emailInput').value = '';
+    document.getElementById('deviceIdInput').value = '';
+    
+    // Clear saved config
+    userConfig = {
+        user_id: null,
+        username: null,
+        email: null,
+        device_id: null
+    };
+    
+    localStorage.removeItem('chatbot_user_config');
+    
+    // Update session info
+    updateSessionInfo();
+    
+    // Show success message
+    showUserConfigSuccess('User configuration cleared');
+}
+
+function showUserConfigSuccess(message = 'User configuration saved successfully') {
+    const sessionInfo = document.getElementById('sessionInfo');
+    const originalText = sessionInfo.textContent;
+    
+    sessionInfo.textContent = message;
+    sessionInfo.style.color = '#90EE90';
+    
+    setTimeout(() => {
+        sessionInfo.textContent = originalText;
+        sessionInfo.style.color = '';
+    }, 3000);
+}
+
+async function updateSessionInfo() {
+    try {
+        const options = {
+            method: (userConfig.user_id || userConfig.email || userConfig.device_id) ? 'POST' : 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        };
+        
+        if (options.method === 'POST') {
+            options.body = JSON.stringify(userConfig);
+        }
+        
+        const response = await fetch('/session_info', options);
+        const data = await response.json();
+        
+        const sessionInfo = document.getElementById('sessionInfo');
+        if (data.session_type === 'persistent') {
+            const identifier = data.user_identifier || 'User';
+            const messageCount = data.stats ? data.stats.total_messages : 0;
+            sessionInfo.textContent = `${identifier} • ${messageCount} messages • Persistent`;
+        } else if (data.session_type === 'temporary') {
+            const messageCount = data.stats ? data.stats.total_messages : 0;
+            sessionInfo.textContent = `Guest • ${messageCount} messages • Temporary`;
+        } else {
+            sessionInfo.textContent = 'No active session';
+        }
+    } catch (error) {
+        console.error('Error updating session info:', error);
+        document.getElementById('sessionInfo').textContent = 'Session info unavailable';
+    }
+}
+
+// Modify the sendMessage function to include user parameters
+function sendMessageWithUserConfig(question) {
+    const payload = {
+        question: question,
+        ...userConfig
+    };
+    
+    return fetch('/ask', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+    });
+}
+
 // Initialize the chat app when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     window.chatApp = new ChatApp();
+    
+    // Load user config on page load
+    loadUserConfig();
+    
+    // Update session info on page load
+    setTimeout(() => {
+        updateSessionInfo();
+    }, 1000);
 });

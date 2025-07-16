@@ -551,5 +551,53 @@ def get_user_conversation(user_identifier):
         logging.error(f"Error getting user conversation: {str(e)}")
         return jsonify({'status': 'error', 'message': 'Error getting user conversation'}), 500
 
+@app.route('/widget_demo')
+def widget_demo():
+    """Serve the widget demo page"""
+    return app.send_static_file('../widget_example.html')
+
+@app.route('/test_widget')
+def test_widget():
+    """Simple test page for widget integration"""
+    return '''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Widget Test Page</title>
+        <style>
+            body { font-family: Arial, sans-serif; padding: 40px; }
+            .container { max-width: 800px; margin: 0 auto; }
+            h1 { color: #333; }
+            .info { background: #f0f0f0; padding: 20px; border-radius: 8px; margin: 20px 0; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>Chatbot Widget Test</h1>
+            <div class="info">
+                <p>This is a simple test page demonstrating the chatbot widget integration.</p>
+                <p>The widget should appear as a chat icon in the bottom-right corner.</p>
+                <p>Click the icon to start chatting!</p>
+            </div>
+        </div>
+        
+        <!-- Load the chatbot widget -->
+        <script src="/static/chatwidget.js"></script>
+        <script>
+            ChatWidget.init({
+                apiUrl: window.location.origin,
+                user_id: 'test_user_123',
+                username: 'Test User',
+                email: 'test@example.com',
+                device_id: 'web_browser_test',
+                position: 'bottom-right',
+                title: 'AI Assistant',
+                welcomeMessage: 'Hello! I\\'m your AI assistant. How can I help you today?'
+            });
+        </script>
+    </body>
+    </html>
+    '''
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

@@ -25,16 +25,55 @@
                     {% endif %}
                     <div>
                         <h5 class="mb-0">Apna Chat</h5>
-                      
+                        <small class="text-white-50" id="sessionInfo">Loading session...</small>
                     </div>
                 </div>
                 <div>
+                    <button class="btn btn-sm btn-outline-light me-2" onclick="toggleUserConfig()" title="Configure user settings">
+                        <i class="fas fa-user-cog"></i>
+                    </button>
                     <button class="btn btn-sm btn-outline-light me-2" onclick="clearMemory()" title="Clear conversation memory">
                         <i class="fas fa-trash"></i> Clear Memory
                     </button>
                     <a href="{{ url_for('admin') }}" class="btn btn-sm btn-outline-light">
                         <i class="fas fa-cog"></i> Admin
                     </a>
+                </div>
+            </div>
+            
+            <!-- User Configuration Panel -->
+            <div class="user-config-panel" id="userConfigPanel" style="display: none;">
+                <div class="row g-2 mt-2">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="userIdInput" class="form-label text-white-50">User ID</label>
+                            <input type="text" class="form-control form-control-sm" id="userIdInput" placeholder="e.g., user123">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="usernameInput" class="form-label text-white-50">Username</label>
+                            <input type="text" class="form-control form-control-sm" id="usernameInput" placeholder="e.g., John Doe">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="emailInput" class="form-label text-white-50">Email</label>
+                            <input type="email" class="form-control form-control-sm" id="emailInput" placeholder="e.g., john@example.com">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="deviceIdInput" class="form-label text-white-50">Device ID</label>
+                            <input type="text" class="form-control form-control-sm" id="deviceIdInput" placeholder="e.g., web_browser_001">
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="d-flex justify-content-end gap-2 mt-2">
+                            <button class="btn btn-sm btn-outline-light" onclick="clearUserConfig()">Clear</button>
+                            <button class="btn btn-sm btn-success" onclick="saveUserConfig()">Save & Apply</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
