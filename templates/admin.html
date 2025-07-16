@@ -408,6 +408,16 @@
                                                 <td>Widget title in header</td>
                                                 <td><span class="badge bg-warning">Optional</span></td>
                                             </tr>
+                                            <tr>
+                                                <td><code>apiKey</code></td>
+                                                <td>API authentication key</td>
+                                                <td><span class="badge bg-warning">Optional</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td><code>allowedDomains</code></td>
+                                                <td>Array of allowed domains</td>
+                                                <td><span class="badge bg-warning">Optional</span></td>
+                                            </tr>
                                         </tbody>
                                     </table>
                                 </div>
@@ -519,6 +529,51 @@
                                                             onclick="copyToClipboard('ecommerceScript')">
                                                         <i class="fas fa-copy"></i>
                                                     </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Secure Integration Example -->
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header" id="secureHeading">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#secureExample">
+                                                <i class="fas fa-shield-alt me-2"></i> Secure Integration with Domain Restrictions
+                                            </button>
+                                        </h2>
+                                        <div id="secureExample" class="accordion-collapse collapse" data-bs-parent="#integrationExamples">
+                                            <div class="accordion-body">
+                                                <p>For enhanced security with domain restrictions and API key authentication:</p>
+                                                <div class="position-relative">
+                                                    <pre class="bg-light p-3 rounded" style="font-size: 0.9rem;"><code id="secureScript">&lt;script src="{{ request.url_root }}static/chatwidget.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+    ChatWidget.init({
+        apiUrl: '{{ request.url_root.rstrip('/') }}',
+        user_id: 'secure_user_123',
+        username: 'John Doe',
+        email: 'john@company.com',
+        device_id: 'secure_device',
+        apiKey: 'your-api-key-here', // Optional API key
+        allowedDomains: ['yourcompany.com', 'subdomain.yourcompany.com'], // Domain restrictions
+        position: 'bottom-right',
+        title: 'Secure Chat'
+    });
+&lt;/script&gt;</code></pre>
+                                                    <button class="btn btn-sm btn-outline-secondary position-absolute top-0 end-0 m-2" 
+                                                            onclick="copyToClipboard('secureScript')">
+                                                        <i class="fas fa-copy"></i>
+                                                    </button>
+                                                </div>
+                                                <div class="alert alert-info mt-3">
+                                                    <i class="fas fa-info-circle"></i> <strong>Security Features:</strong>
+                                                    <ul class="mb-0 mt-2">
+                                                        <li>Rate limiting (10 requests per minute)</li>
+                                                        <li>Input sanitization and XSS protection</li>
+                                                        <li>Session timeout (30 minutes)</li>
+                                                        <li>Domain-based access control</li>
+                                                        <li>Request timeout protection</li>
+                                                        <li>Message length limits (2000 characters)</li>
+                                                    </ul>
                                                 </div>
                                             </div>
                                         </div>

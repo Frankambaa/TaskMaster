@@ -19,6 +19,24 @@
 (function() {
     'use strict';
 
+    // Security configuration
+    const SECURITY_CONFIG = {
+        maxMessageLength: 2000,
+        maxConversationHistory: 50,
+        rateLimitWindow: 60000, // 1 minute
+        rateLimitMaxRequests: 10,
+        allowedOrigins: [], // Will be populated with apiUrl domain
+        sessionTimeout: 30 * 60 * 1000, // 30 minutes
+        maxRetries: 3,
+        requestTimeout: 30000 // 30 seconds
+    };
+
+    // Rate limiting state
+    let requestHistory = [];
+    let lastActivityTime = Date.now();
+    let requestCount = 0;
+    let isBlocked = false;
+
     // Widget configuration
     let config = {
         apiUrl: 'http://localhost:5000',
@@ -29,13 +47,16 @@
         theme: 'light',
         position: 'bottom-right',
         title: 'Chat Assistant',
-        welcomeMessage: 'Hi! How can I help you today?'
+        welcomeMessage: 'Hi! How can I help you today?',
+        apiKey: null, // Optional API key for authentication
+        allowedDomains: [] // Domains allowed to use this widget
     };
 
     // Widget state
     let isOpen = false;
     let isInitialized = false;
     let conversationHistory = [];
+    let sessionId = null;
 
     // DOM elements
     let widgetContainer = null;
@@ -45,6 +66,93 @@
     let sendButton = null;
     let toggleButton = null;
 
+    // Security functions
+    const SecurityManager = {
+        validateConfig: function(options) {
+            // Validate API URL
+            if (!options.apiUrl || typeof options.apiUrl !== 'string') {
+                throw new Error('ChatWidget: apiUrl is required and must be a string');
+            }
+            
+            try {
+                const url = new URL(options.apiUrl);
+                if (!['http:', 'https:'].includes(url.protocol)) {
+                    throw new Error('ChatWidget: apiUrl must use http or https protocol');
+                }
+            } catch (e) {
+                throw new Error('ChatWidget: Invalid apiUrl format');
+            }
+
+            // Validate domain restrictions
+            if (options.allowedDomains && options.allowedDomains.length > 0) {
+                const currentDomain = window.location.hostname;
+                if (!options.allowedDomains.includes(currentDomain)) {
+                    throw new Error(`ChatWidget: Domain ${currentDomain} is not authorized`);
+                }
+            }
+
+            // Sanitize user inputs
+            if (options.user_id) options.user_id = this.sanitizeInput(options.user_id);
+            if (options.username) options.username = this.sanitizeInput(options.username);
+            if (options.email) options.email = this.sanitizeInput(options.email);
+            if (options.device_id) options.device_id = this.sanitizeInput(options.device_id);
+            if (options.title) options.title = this.sanitizeInput(options.title);
+
+            return options;
+        },
+
+        sanitizeInput: function(input) {
+            if (typeof input !== 'string') return input;
+            return input.replace(/[<>"\'/\\&]/g, '').trim().substring(0, 100);
+        },
+
+        checkRateLimit: function() {
+            const now = Date.now();
+            
+            // Clean old requests
+            requestHistory = requestHistory.filter(time => now - time < SECURITY_CONFIG.rateLimitWindow);
+            
+            // Check rate limit
+            if (requestHistory.length >= SECURITY_CONFIG.rateLimitMaxRequests) {
+                isBlocked = true;
+                setTimeout(() => { isBlocked = false; }, SECURITY_CONFIG.rateLimitWindow);
+                return false;
+            }
+            
+            requestHistory.push(now);
+            return true;
+        },
+
+        validateMessage: function(message) {
+            if (!message || typeof message !== 'string') {
+                throw new Error('Invalid message format');
+            }
+            
+            if (message.length > SECURITY_CONFIG.maxMessageLength) {
+                throw new Error(`Message too long (max ${SECURITY_CONFIG.maxMessageLength} characters)`);
+            }
+            
+            // Basic XSS protection
+            const sanitized = message.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+            return sanitized.trim();
+        },
+
+        checkSession: function() {
+            const now = Date.now();
+            if (now - lastActivityTime > SECURITY_CONFIG.sessionTimeout) {
+                conversationHistory = [];
+                sessionId = null;
+                return false;
+            }
+            lastActivityTime = now;
+            return true;
+        },
+
+        generateSessionId: function() {
+            return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        }
+    };
+
     // ChatWidget object
     const ChatWidget = {
         init: function(options = {}) {
@@ -53,21 +161,32 @@
                 return;
             }
 
-            // Merge options with default config
-            config = { ...config, ...options };
+            try {
+                // Validate configuration
+                options = SecurityManager.validateConfig(options);
+                
+                // Merge options with default config
+                config = { ...config, ...options };
 
-            // Generate device_id if not provided
-            if (!config.device_id) {
-                config.device_id = 'web_' + Math.random().toString(36).substr(2, 9);
-            }
+                // Generate secure session ID
+                sessionId = SecurityManager.generateSessionId();
 
-            // Initialize when DOM is ready
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', () => {
+                // Generate device_id if not provided
+                if (!config.device_id) {
+                    config.device_id = 'web_' + Math.random().toString(36).substr(2, 9);
+                }
+
+                // Initialize when DOM is ready
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', () => {
+                        this.initializeWidget();
+                    });
+                } else {
                     this.initializeWidget();
-                });
-            } else {
-                this.initializeWidget();
+                }
+            } catch (error) {
+                console.error('ChatWidget initialization failed:', error.message);
+                return;
             }
         },
 
@@ -484,13 +603,26 @@
             // Scroll to bottom
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
             
-            // Store in history
-            conversationHistory.push({ text, sender, timestamp: new Date().toISOString() });
+            // Store in history with security limits
+            conversationHistory.push({ 
+                text: SecurityManager.sanitizeInput(text), 
+                sender, 
+                timestamp: new Date().toISOString(),
+                sessionId: sessionId
+            });
+            
+            // Limit conversation history size
+            if (conversationHistory.length > SECURITY_CONFIG.maxConversationHistory) {
+                conversationHistory = conversationHistory.slice(-SECURITY_CONFIG.maxConversationHistory);
+            }
         },
 
         formatMessage: function(text) {
+            // Sanitize and format text for display
+            const sanitized = SecurityManager.sanitizeInput(text);
+            
             // Simple formatting for bot responses
-            return text
+            return sanitized
                 .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                 .replace(/\*(.*?)\*/g, '<em>$1</em>')
                 .replace(/`(.*?)`/g, '<code>$1</code>')
@@ -520,35 +652,64 @@
             const message = inputField.value.trim();
             if (!message) return;
 
-            // Disable input
-            inputField.disabled = true;
-            sendButton.disabled = true;
+            try {
+                // Security validations
+                if (isBlocked) {
+                    this.addMessage('Rate limit exceeded. Please wait before sending another message.', 'bot', true);
+                    return;
+                }
 
-            // Add user message
-            this.addMessage(message, 'user');
-            
-            // Clear input
-            inputField.value = '';
-            inputField.style.height = 'auto';
+                if (!SecurityManager.checkRateLimit()) {
+                    this.addMessage('Too many requests. Please wait a moment before trying again.', 'bot', true);
+                    return;
+                }
 
-            // Show typing indicator
-            const typingDiv = this.showTyping();
+                if (!SecurityManager.checkSession()) {
+                    this.addMessage('Session expired. Please refresh the page to continue.', 'bot', true);
+                    return;
+                }
 
-            // Send to API
-            this.sendToAPI(message).then(response => {
-                this.hideTyping(typingDiv);
-                this.addMessage(response.answer, 'bot');
-                this.updateSessionInfo(response.user_info);
-            }).catch(error => {
-                this.hideTyping(typingDiv);
-                this.addMessage('Sorry, I encountered an error. Please try again.', 'bot', true);
-                console.error('Chat error:', error);
-            }).finally(() => {
-                // Re-enable input
-                inputField.disabled = false;
-                sendButton.disabled = false;
-                inputField.focus();
-            });
+                // Validate and sanitize message
+                const sanitizedMessage = SecurityManager.validateMessage(message);
+                if (!sanitizedMessage) {
+                    this.addMessage('Invalid message format. Please try again.', 'bot', true);
+                    return;
+                }
+
+                // Disable input
+                inputField.disabled = true;
+                sendButton.disabled = true;
+
+                // Add user message
+                this.addMessage(sanitizedMessage, 'user');
+                
+                // Clear input
+                inputField.value = '';
+                inputField.style.height = 'auto';
+
+                // Show typing indicator
+                const typingDiv = this.showTyping();
+
+                // Send to API
+                this.sendToAPI(sanitizedMessage).then(response => {
+                    this.hideTyping(typingDiv);
+                    this.addMessage(response.answer, 'bot');
+                    this.updateSessionInfo(response.user_info);
+                }).catch(error => {
+                    this.hideTyping(typingDiv);
+                    this.addMessage('Sorry, I encountered an error. Please try again.', 'bot', true);
+                    console.error('Chat error:', error);
+                }).finally(() => {
+                    // Re-enable input
+                    inputField.disabled = false;
+                    sendButton.disabled = false;
+                    inputField.focus();
+                });
+
+            } catch (error) {
+                this.addMessage(error.message, 'bot', true);
+                console.error('Security validation failed:', error);
+            }
         },
 
         sendToAPI: function(question) {
@@ -557,20 +718,63 @@
                 user_id: config.user_id,
                 username: config.username,
                 email: config.email,
-                device_id: config.device_id
+                device_id: config.device_id,
+                session_id: sessionId,
+                timestamp: Date.now()
             };
+
+            // Build headers
+            const headers = {
+                'Content-Type': 'application/json',
+                'X-Widget-Origin': window.location.origin,
+                'X-Widget-Referrer': window.location.href,
+                'X-Widget-User-Agent': navigator.userAgent
+            };
+
+            // Add API key if configured
+            if (config.apiKey) {
+                headers['Authorization'] = `Bearer ${config.apiKey}`;
+            }
+
+            // Create abort controller for timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), SECURITY_CONFIG.requestTimeout);
 
             return fetch(`${config.apiUrl}/ask`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(payload)
+                headers: headers,
+                body: JSON.stringify(payload),
+                signal: controller.signal,
+                credentials: 'same-origin'
             }).then(response => {
+                clearTimeout(timeoutId);
+                
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
+                
+                // Validate response content type
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('Invalid response format');
+                }
+                
                 return response.json();
+            }).then(data => {
+                // Basic response validation
+                if (!data || typeof data !== 'object') {
+                    throw new Error('Invalid response data');
+                }
+                
+                return data;
+            }).catch(error => {
+                clearTimeout(timeoutId);
+                
+                if (error.name === 'AbortError') {
+                    throw new Error('Request timeout');
+                }
+                
+                throw error;
             });
         },
 

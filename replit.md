@@ -153,6 +153,7 @@ templates/        # HTML templates
 - July 16, 2025: Created comprehensive integration guide and test suite for external embedding
 - July 16, 2025: Fixed widget DOM loading issue by adding proper DOMContentLoaded event handling
 - July 16, 2025: Enhanced admin panel with comprehensive widget integration section including copy-to-clipboard functionality
+- July 16, 2025: Added comprehensive security features to chatwidget.js including rate limiting, input sanitization, XSS protection, session timeout, domain restrictions, and request timeout handling
 
 ## User Preferences
 
