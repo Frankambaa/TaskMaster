@@ -212,7 +212,7 @@ def vectorize():
 
 @app.route('/ask', methods=['POST'])
 def ask():
-    """Chat endpoint for answering questions with session-based memory"""
+    """Enhanced chat endpoint for answering questions with user-specific persistent memory"""
     try:
         data = request.get_json()
         if not data or 'question' not in data:
@@ -222,12 +222,26 @@ def ask():
         if not question:
             return jsonify({'error': 'Question cannot be empty'}), 400
         
-        # Get or create session ID
+        # Extract user parameters if provided
+        user_id = data.get('user_id')
+        username = data.get('username')
+        email = data.get('email')
+        device_id = data.get('device_id')
+        
+        # Determine user identifier (priority: user_id > email > device_id)
+        user_identifier = user_id or email or device_id
+        
+        # Get or create session ID for fallback
         if 'session_id' not in session:
             session['session_id'] = str(uuid.uuid4())
         
         session_id = session['session_id']
-        logging.info(f"Processing question for session: {session_id}")
+        
+        # Log the request with user context
+        if user_identifier:
+            logging.info(f"Processing question for user: {user_identifier} (username: {username})")
+        else:
+            logging.info(f"Processing question for session: {session_id}")
         
         # First check if we have any API rules that match this question
         api_rules = ApiRule.query.filter_by(active=True).all()
@@ -240,13 +254,13 @@ def ask():
             answer = api_executor.format_api_response(api_result, matching_rule.name)
             response_type = 'api'
             
-            # Add to session memory for API responses too
-            session_manager.add_user_message(session_id, question)
-            session_manager.add_ai_message(session_id, answer)
+            # Add to session memory (user-based or session-based)
+            session_manager.add_user_message(session_id, question, user_identifier, username, email, device_id)
+            session_manager.add_ai_message(session_id, answer, user_identifier, username, email, device_id)
         else:
-            # Fall back to RAG chain with session memory
-            logging.info(f"No API rule matched, using RAG chain with session memory")
-            answer = rag_chain.get_answer(question, FAISS_INDEX_FOLDER, session_id)
+            # Fall back to RAG chain with persistent memory
+            logging.info(f"No API rule matched, using RAG chain with {'user-based' if user_identifier else 'session-based'} memory")
+            answer = rag_chain.get_answer(question, FAISS_INDEX_FOLDER, session_id, user_identifier, username, email, device_id)
             response_type = 'rag'
         
         # Get current logo
@@ -257,11 +271,28 @@ def ask():
                     current_logo = f'/static/logos/{filename}'
                     break
         
+        # Include user information in response if available
+        user_info = {}
+        if user_identifier:
+            user_info = {
+                'user_id': user_id,
+                'username': username,
+                'email': email,
+                'device_id': device_id,
+                'session_type': 'persistent'
+            }
+        else:
+            user_info = {
+                'session_id': session_id,
+                'session_type': 'temporary'
+            }
+        
         return jsonify({
             'answer': answer,
             'status': 'success',
             'logo': current_logo,
-            'response_type': response_type
+            'response_type': response_type,
+            'user_info': user_info
         })
         
     except Exception as e:
@@ -398,34 +429,90 @@ def toggle_api_rule(rule_id):
 
 @app.route('/clear_session', methods=['POST'])
 def clear_session():
-    """Clear current session memory"""
+    """Clear current session memory (user-based or session-based)"""
     try:
-        if 'session_id' in session:
+        data = request.get_json() or {}
+        
+        # Extract user parameters if provided
+        user_id = data.get('user_id')
+        username = data.get('username')
+        email = data.get('email')
+        device_id = data.get('device_id')
+        
+        # Determine user identifier (priority: user_id > email > device_id)
+        user_identifier = user_id or email or device_id
+        
+        if user_identifier:
+            # Clear user-based conversation
+            session_manager.clear_session(None, user_identifier)
+            logging.info(f"User conversation cleared for user: {user_identifier}")
+            return jsonify({
+                'success': True, 
+                'message': 'User conversation cleared',
+                'session_type': 'persistent',
+                'user_identifier': user_identifier
+            })
+        elif 'session_id' in session:
+            # Clear session-based conversation
             session_id = session['session_id']
             session_manager.clear_session(session_id)
             session.pop('session_id', None)
             logging.info(f"Session memory cleared for session: {session_id}")
-            return jsonify({'success': True, 'message': 'Session memory cleared'})
+            return jsonify({
+                'success': True, 
+                'message': 'Session memory cleared',
+                'session_type': 'temporary',
+                'session_id': session_id
+            })
         else:
-            return jsonify({'success': True, 'message': 'No active session to clear'})
+            return jsonify({'success': True, 'message': 'No active session or user to clear'})
     
     except Exception as e:
         logging.error(f"Error clearing session: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/session_info', methods=['GET'])
+@app.route('/session_info', methods=['GET', 'POST'])
 def session_info():
-    """Get information about current session"""
+    """Get information about current session (user-based or session-based)"""
     try:
-        if 'session_id' in session:
+        data = request.get_json() if request.method == 'POST' else {}
+        
+        # Extract user parameters if provided
+        user_id = data.get('user_id')
+        username = data.get('username')
+        email = data.get('email')
+        device_id = data.get('device_id')
+        
+        # Determine user identifier (priority: user_id > email > device_id)
+        user_identifier = user_id or email or device_id
+        
+        if user_identifier:
+            # Get user-based conversation info
+            stats = session_manager.get_session_stats(None, user_identifier)
+            user_info = session_manager.get_user_conversation_info(user_identifier)
+            
+            return jsonify({
+                'session_type': 'persistent',
+                'user_identifier': user_identifier,
+                'username': username,
+                'email': email,
+                'device_id': device_id,
+                'stats': stats,
+                'user_info': user_info
+            })
+        elif 'session_id' in session:
+            # Get session-based conversation info
             session_id = session['session_id']
             stats = session_manager.get_session_stats(session_id)
+            
             return jsonify({
+                'session_type': 'temporary',
                 'session_id': session_id,
                 'stats': stats
             })
         else:
             return jsonify({
+                'session_type': 'none',
                 'session_id': None,
                 'stats': {'exists': False}
             })
@@ -433,6 +520,36 @@ def session_info():
     except Exception as e:
         logging.error(f"Error getting session info: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+@app.route('/user_conversations', methods=['GET'])
+def user_conversations():
+    """Get list of all user conversations (admin endpoint)"""
+    try:
+        conversations = UserConversation.query.order_by(UserConversation.last_activity.desc()).all()
+        return jsonify({
+            'status': 'success',
+            'conversations': [conv.to_dict() for conv in conversations]
+        })
+    except Exception as e:
+        logging.error(f"Error getting user conversations: {str(e)}")
+        return jsonify({'status': 'error', 'message': 'Error getting user conversations'}), 500
+
+@app.route('/user_conversation/<user_identifier>', methods=['GET'])
+def get_user_conversation(user_identifier):
+    """Get specific user conversation details"""
+    try:
+        conversation = UserConversation.query.filter_by(user_identifier=user_identifier).first()
+        if not conversation:
+            return jsonify({'status': 'error', 'message': 'User conversation not found'}), 404
+            
+        return jsonify({
+            'status': 'success',
+            'conversation': conversation.to_dict(),
+            'history': conversation.get_conversation_history()
+        })
+    except Exception as e:
+        logging.error(f"Error getting user conversation: {str(e)}")
+        return jsonify({'status': 'error', 'message': 'Error getting user conversation'}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

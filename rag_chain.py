@@ -241,8 +241,8 @@ class RAGChain:
             logging.error(f"Error generating answer: {str(e)}")
             return "I'm sorry, I encountered an error while processing your question. Please try again."
     
-    def generate_answer_with_memory(self, question: str, relevant_chunks: List[Dict[str, Any]], session_id: str = None) -> str:
-        """Generate answer using LangChain with session memory"""
+    def generate_answer_with_memory(self, question: str, relevant_chunks: List[Dict[str, Any]], session_id: str = None, user_identifier: str = None, username: str = None, email: str = None, device_id: str = None) -> str:
+        """Generate answer using LangChain with session memory (persistent or temporary)"""
         if not relevant_chunks:
             return "I couldn't find any relevant information. Please try a different question."
         
@@ -252,10 +252,10 @@ class RAGChain:
             for chunk in relevant_chunks
         ])
         
-        # Get conversation history if session_id provided
+        # Get conversation history (user-based or session-based)
         conversation_history = ""
-        if session_id:
-            conversation_history = session_manager.get_memory_context(session_id)
+        if user_identifier or session_id:
+            conversation_history = session_manager.get_memory_context(session_id, user_identifier)
         
         try:
             # Create messages for LangChain
@@ -276,10 +276,10 @@ class RAGChain:
             response = self.langchain_llm.invoke(messages)
             answer = response.content.strip()
             
-            # Add to session memory if session_id provided
-            if session_id:
-                session_manager.add_user_message(session_id, question)
-                session_manager.add_ai_message(session_id, answer)
+            # Add to session memory (user-based or session-based)
+            if user_identifier or session_id:
+                session_manager.add_user_message(session_id, question, user_identifier, username, email, device_id)
+                session_manager.add_ai_message(session_id, answer, user_identifier, username, email, device_id)
             
             return answer
             
@@ -287,21 +287,21 @@ class RAGChain:
             logging.error(f"Error generating answer with memory: {str(e)}")
             return "I'm sorry, I encountered an error while processing your question. Please try again."
     
-    def get_answer(self, question: str, index_folder: str, session_id: str = None) -> str:
-        """Get answer for a question with optional session memory"""
+    def get_answer(self, question: str, index_folder: str, session_id: str = None, user_identifier: str = None, username: str = None, email: str = None, device_id: str = None) -> str:
+        """Get answer for a question with optional session memory (persistent or temporary)"""
         # Check for small talk
         if self.is_small_talk(question):
             response = self.get_small_talk_response(question)
-            # Add to session memory if session_id provided
-            if session_id:
-                session_manager.add_user_message(session_id, question)
-                session_manager.add_ai_message(session_id, response)
+            # Add to session memory (user-based or session-based)
+            if user_identifier or session_id:
+                session_manager.add_user_message(session_id, question, user_identifier, username, email, device_id)
+                session_manager.add_ai_message(session_id, response, user_identifier, username, email, device_id)
             return response
         
         # Retrieve relevant chunks
         relevant_chunks = self.retrieve_relevant_chunks(question, index_folder)
         
         # Generate answer with memory
-        answer = self.generate_answer_with_memory(question, relevant_chunks, session_id)
+        answer = self.generate_answer_with_memory(question, relevant_chunks, session_id, user_identifier, username, email, device_id)
         
         return answer

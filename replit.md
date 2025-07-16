@@ -42,6 +42,8 @@ This is a full-stack AI-powered chatbot application built with Flask that implem
 - **Memory Persistence**: Maintains conversation context across multiple interactions
 - **Privacy Protection**: No cross-user data sharing or leakage
 - **Memory Management**: Automatic cleanup and session management
+- **User-Specific Persistence**: Database-backed storage for authenticated users with cross-device continuity
+- **Dual Storage System**: Persistent storage for users with identifiers, temporary for anonymous sessions
 
 ### 4. API Management System (`api_executor.py`, `models.py`)
 - **Smart Routing**: Automatically decides between API calls and knowledge base queries
@@ -142,6 +144,13 @@ templates/        # HTML templates
 - July 15, 2025: Integrated LangChain with session-based memory management for conversation tracking
 - July 15, 2025: Added privacy-focused session isolation ensuring no cross-user data sharing
 - July 15, 2025: Enhanced chatbot with memory management features including clear memory functionality
+- July 16, 2025: **MAJOR ENHANCEMENT**: Implemented user-specific persistent conversation storage
+- July 16, 2025: Enhanced /ask API to accept user parameters (user_id, username, email, device_id)
+- July 16, 2025: Added cross-device conversation continuity with user identifier-based persistence
+- July 16, 2025: Created UserConversation database model for persistent storage
+- July 16, 2025: Implemented fallback to temporary sessions for anonymous users
+- July 16, 2025: Added user management endpoints for conversation administration
+- July 16, 2025: Created comprehensive integration guide and test suite for external embedding
 
 ## User Preferences
 
