@@ -249,7 +249,7 @@ class AIToolExecutor:
         # Check if AI wants to use tools
         should_use, tool_name, tool_args = self.should_use_tools(question, conversation_history)
         
-        if should_use and tool_name and tool_args:
+        if should_use and tool_name and tool_args is not None:
             # Execute the selected tool
             tool_result = self.execute_tool(tool_name, tool_args, question)
             
