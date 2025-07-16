@@ -599,5 +599,46 @@ def test_widget():
     </html>
     '''
 
+@app.route('/test_widget_fix')
+def test_widget_fix():
+    """Test page for fixed widget integration"""
+    return '''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Widget Test - Fixed</title>
+        <!-- Add to <head> section -->
+        <script src="/static/chatwidget.js"></script>
+        <script>
+            ChatWidget.init({
+                apiUrl: window.location.origin,
+                user_id: 'frank11',
+                username: 'Frank',
+                email: 'franklin@kambaa.com',
+                device_id: 'Chrome 101',
+                position: 'bottom-right',
+                title: 'AI Assistant'
+            });
+        </script>
+        <style>
+            body { font-family: Arial, sans-serif; padding: 40px; }
+            .container { max-width: 800px; margin: 0 auto; }
+            h1 { color: #333; }
+            .info { background: #e8f5e8; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #4caf50; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>Widget Test - Fixed Version</h1>
+            <div class="info">
+                <p><strong>✓ Fixed!</strong> This page tests the fixed chatwidget.js that properly handles DOM loading.</p>
+                <p>The widget should appear in the bottom-right corner without any JavaScript errors.</p>
+                <p>This demonstrates the fix for the "Cannot read properties of null (reading 'appendChild')" error.</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    '''
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

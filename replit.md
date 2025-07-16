@@ -151,6 +151,8 @@ templates/        # HTML templates
 - July 16, 2025: Implemented fallback to temporary sessions for anonymous users
 - July 16, 2025: Added user management endpoints for conversation administration
 - July 16, 2025: Created comprehensive integration guide and test suite for external embedding
+- July 16, 2025: Fixed widget DOM loading issue by adding proper DOMContentLoaded event handling
+- July 16, 2025: Enhanced admin panel with comprehensive widget integration section including copy-to-clipboard functionality
 
 ## User Preferences
 

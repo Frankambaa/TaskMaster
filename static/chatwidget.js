@@ -61,6 +61,17 @@
                 config.device_id = 'web_' + Math.random().toString(36).substr(2, 9);
             }
 
+            // Initialize when DOM is ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', () => {
+                    this.initializeWidget();
+                });
+            } else {
+                this.initializeWidget();
+            }
+        },
+
+        initializeWidget: function() {
             // Initialize the widget
             this.createStyles();
             this.createWidget();
@@ -366,8 +377,13 @@
             widgetContainer.appendChild(toggleButton);
             widgetContainer.appendChild(chatWindow);
 
-            // Add to page
-            document.body.appendChild(widgetContainer);
+            // Add to page (ensure body exists)
+            if (document.body) {
+                document.body.appendChild(widgetContainer);
+            } else {
+                console.error('ChatWidget: document.body not available');
+                return;
+            }
 
             // Add welcome message
             if (config.welcomeMessage) {
