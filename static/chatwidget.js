@@ -306,6 +306,9 @@
                     border-radius: 18px;
                     font-size: 14px;
                     line-height: 1.4;
+                    word-wrap: break-word;
+                    white-space: pre-wrap;
+                    overflow-wrap: break-word;
                 }
 
                 .chat-widget-message.user .chat-widget-message-bubble {
@@ -583,13 +586,12 @@
             isOpen = false;
         },
 
-        addMessage: function(text, sender, isError = false) {
+        addMessage: function(text, sender, isError = false, enableTyping = false) {
             const messageDiv = document.createElement('div');
             messageDiv.className = `chat-widget-message ${sender}`;
             
             const bubble = document.createElement('div');
             bubble.className = 'chat-widget-message-bubble';
-            bubble.innerHTML = this.formatMessage(text);
             
             if (isError) {
                 bubble.style.background = '#ffebee';
@@ -599,9 +601,6 @@
             
             messageDiv.appendChild(bubble);
             messagesContainer.appendChild(messageDiv);
-            
-            // Scroll to bottom
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
             
             // Store in history with security limits
             conversationHistory.push({ 
@@ -614,6 +613,49 @@
             // Limit conversation history size
             if (conversationHistory.length > SECURITY_CONFIG.maxConversationHistory) {
                 conversationHistory = conversationHistory.slice(-SECURITY_CONFIG.maxConversationHistory);
+            }
+            
+            // Enable typing effect for bot messages
+            if (enableTyping && sender === 'bot') {
+                this.typeMessage(bubble, text);
+            } else {
+                bubble.innerHTML = this.formatMessage(text);
+                // Scroll to bottom
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+        },
+
+        typeMessage: function(element, text, index = 0) {
+            const formattedText = this.formatMessage(text);
+            
+            // Simple character-by-character typing for better compatibility
+            const plainText = text.replace(/\*\*(.*?)\*\*/g, '$1')
+                                 .replace(/\*(.*?)\*/g, '$1')
+                                 .replace(/`(.*?)`/g, '$1');
+            
+            if (index < plainText.length) {
+                const currentText = plainText.substring(0, index + 1);
+                
+                // Apply formatting to the current text
+                const displayText = currentText
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                    .replace(/`(.*?)`/g, '<code>$1</code>')
+                    .replace(/\n/g, '<br>');
+                
+                element.innerHTML = displayText;
+                
+                // Scroll to bottom during typing
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                
+                // Continue typing
+                setTimeout(() => {
+                    this.typeMessage(element, text, index + 1);
+                }, 25); // Adjust speed here (lower = faster)
+            } else {
+                // Typing complete - apply full formatting
+                element.innerHTML = formattedText;
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
             }
         },
 
@@ -693,7 +735,7 @@
                 // Send to API
                 this.sendToAPI(sanitizedMessage).then(response => {
                     this.hideTyping(typingDiv);
-                    this.addMessage(response.answer, 'bot');
+                    this.addMessage(response.answer, 'bot', false, true); // Enable typing effect
                     this.updateSessionInfo(response.user_info);
                 }).catch(error => {
                     this.hideTyping(typingDiv);
