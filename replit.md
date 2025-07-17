@@ -47,6 +47,8 @@ This is a full-stack AI-powered chatbot application built with Flask that implem
 
 ### 4. AI-Driven Tool System (`ai_tool_executor.py`, `models.py`)
 - **Smart AI Selection**: Uses OpenAI Function Calling to intelligently select appropriate tools based on natural language understanding
+- **Intelligent Clarification**: When uncertain about tool selection, asks clarifying questions instead of making assumptions
+- **Ambiguity Detection**: AI analyzes questions for vague terms and provides helpful clarification options
 - **Dynamic Tool Loading**: API tools are stored in database and loaded dynamically into OpenAI function specifications
 - **Response Mapping**: Configurable field mapping to extract specific data from API responses
 - **Response Templates**: AI-powered formatting using customizable templates for user-friendly output
@@ -96,12 +98,14 @@ This is a full-stack AI-powered chatbot application built with Flask that implem
 
 ### AI-Driven Tool Selection Flow
 1. **Question Analysis**: User question is analyzed by OpenAI Function Calling system
-2. **Tool Selection**: AI intelligently selects appropriate tool based on natural language understanding and tool descriptions
-3. **Parameter Extraction**: AI extracts required parameters from user question using JSON schema validation
-4. **Tool Execution**: Selected tool executes configured curl command with dynamic parameter replacement
-5. **Response Mapping**: API response is processed through configurable field mapping
-6. **AI Formatting**: Response is formatted by AI using customizable templates for user-friendly output
-7. **Fallback to RAG**: If no tool is selected, falls back to standard RAG knowledge base flow
+2. **Ambiguity Detection**: AI checks if question is vague or could match multiple tools
+3. **Clarification Request**: If ambiguous, AI generates clarifying questions and returns them immediately
+4. **Tool Selection**: For clear questions, AI intelligently selects appropriate tool based on natural language understanding
+5. **Parameter Extraction**: AI extracts required parameters from user question using JSON schema validation
+6. **Tool Execution**: Selected tool executes configured curl command with dynamic parameter replacement
+7. **Response Mapping**: API response is processed through configurable field mapping
+8. **AI Formatting**: Response is formatted by AI using customizable templates for user-friendly output
+9. **Fallback to RAG**: If no tool is selected, falls back to standard RAG knowledge base flow
 
 ### Legacy Smart API Routing Flow (Keyword-Based)
 1. **Question Analysis**: Incoming user question is analyzed for keyword matches
@@ -198,6 +202,10 @@ templates/        # HTML templates
 - July 17, 2025: Fixed chat history chronological order - questions now appear before answers in correct sequence
 - July 17, 2025: Improved load history button styling - smaller, subtle appearance above welcome message
 - July 17, 2025: Load history button now only appears when actual conversation history exists
+- July 17, 2025: **AI CLARIFICATION SYSTEM**: Added intelligent clarification mechanism for ambiguous questions
+- July 17, 2025: When AI is uncertain about tool selection, it now asks clarifying questions instead of making assumptions
+- July 17, 2025: Examples: "credits" -> "Are you looking for your credit balance or information about purchasing credits?"
+- July 17, 2025: Enhanced user experience by preventing incorrect API calls when questions are vague or generic
 
 ## User Preferences
 

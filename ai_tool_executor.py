@@ -39,16 +39,21 @@ class AIToolExecutor:
         
         return functions
     
-    def should_use_tools(self, question: str, conversation_history: List[Dict] = None) -> Tuple[bool, Optional[str], Optional[Dict]]:
+    def should_use_tools(self, question: str, conversation_history: List[Dict] = None) -> Tuple[bool, Optional[str], Optional[Dict], Optional[str]]:
         """
         Use AI to determine if tools should be used and which one
-        Returns: (should_use_tools, tool_name, tool_arguments)
+        Returns: (should_use_tools, tool_name, tool_arguments, clarification_question)
         """
         try:
             tools = self.get_tools_as_openai_functions()
             
             if not tools:
-                return False, None, None
+                return False, None, None, None
+            
+            # First, check if the question is ambiguous and needs clarification
+            clarification_check = self.check_for_clarification_needed(question, tools)
+            if clarification_check:
+                return False, None, None, clarification_check
             
             # Build conversation context with strict system prompt
             messages = [
@@ -102,13 +107,88 @@ Be extremely conservative. When in doubt, do NOT use tools."""
                 function_args = json.loads(tool_call.function.arguments)
                 
                 self.logger.info(f"AI selected tool: {function_name} with args: {function_args}")
-                return True, function_name, function_args
+                return True, function_name, function_args, None
             
-            return False, None, None
+            return False, None, None, None
             
         except Exception as e:
             self.logger.error(f"Error in AI tool selection: {e}")
-            return False, None, None
+            return False, None, None, None
+    
+    def check_for_clarification_needed(self, question: str, tools: List[Dict]) -> Optional[str]:
+        """
+        Check if the question is ambiguous and needs clarification
+        Returns clarification question if needed, None otherwise
+        """
+        try:
+            # Extract tool names and descriptions for context
+            tool_context = []
+            for tool in tools:
+                func_spec = tool.get('function', {})
+                tool_context.append({
+                    'name': func_spec.get('name', ''),
+                    'description': func_spec.get('description', '')
+                })
+            
+            # Use AI to detect ambiguity and generate clarification
+            messages = [
+                {
+                    "role": "system",
+                    "content": f"""You are an intelligent assistant that detects when user questions are ambiguous and could match multiple available tools.
+
+Available tools and their purposes:
+{json.dumps(tool_context, indent=2)}
+
+Your task is to determine if the user's question is ambiguous or could refer to multiple different actions. 
+
+If the question is ambiguous, respond with EXACTLY this format:
+CLARIFICATION_NEEDED: [Your clarifying question here]
+
+If the question is clear and specific, respond with:
+CLEAR
+
+Guidelines for detecting ambiguity:
+1. Look for generic terms that could match multiple tools (e.g., "credits" could mean checking balance OR purchasing)
+2. Check for vague requests that don't specify the exact action wanted
+3. Consider if the user might want different types of information from the same domain
+
+Examples of ambiguous questions:
+- "credits" (could mean check balance, purchase, or general info)
+- "account" (could mean account details, balance, settings, etc.)
+- "status" (could mean account status, order status, etc.)
+
+Examples of clear questions:
+- "What is my current credit balance?"
+- "How do I purchase more credits?"
+- "Show me my account details"
+
+Be helpful but concise in your clarification questions."""
+                },
+                {
+                    "role": "user", 
+                    "content": f"User question: {question}"
+                }
+            ]
+            
+            response = self.openai_client.chat.completions.create(
+                model="gpt-4o",
+                messages=messages,
+                max_tokens=150,
+                temperature=0.3
+            )
+            
+            result = response.choices[0].message.content.strip()
+            
+            if result.startswith("CLARIFICATION_NEEDED:"):
+                clarification = result.replace("CLARIFICATION_NEEDED:", "").strip()
+                self.logger.info(f"Clarification needed for question: '{question}' -> '{clarification}'")
+                return clarification
+            
+            return None
+            
+        except Exception as e:
+            self.logger.error(f"Error checking for clarification: {e}")
+            return None
     
     def execute_tool(self, tool_name: str, tool_arguments: Dict[str, Any], original_question: str) -> Dict[str, Any]:
         """Execute the selected tool with given arguments"""
@@ -272,7 +352,11 @@ Be extremely conservative. When in doubt, do NOT use tools."""
         Returns: (used_tools, formatted_response)
         """
         # Check if AI wants to use tools
-        should_use, tool_name, tool_args = self.should_use_tools(question, conversation_history)
+        should_use, tool_name, tool_args, clarification = self.should_use_tools(question, conversation_history)
+        
+        # If clarification is needed, return it immediately
+        if clarification:
+            return True, clarification
         
         if should_use and tool_name and tool_args is not None:
             # Execute the selected tool
