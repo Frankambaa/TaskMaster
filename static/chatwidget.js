@@ -50,7 +50,9 @@
         welcomeMessage: 'Hi! How can I help you today?',
         apiKey: null, // Optional API key for authentication
         allowedDomains: [], // Domains allowed to use this widget
-        persistentHistoryCount: 10 // Number of messages to persist across sessions
+        persistentHistoryCount: 10, // Number of messages to persist across sessions
+        autoScrollToBottom: true, // Automatically scroll to bottom to show latest messages
+        smoothScrolling: false // Use smooth scrolling animation
     };
 
     // Widget state
@@ -520,6 +522,11 @@
                 if (config.welcomeMessage && !historyLoaded) {
                     this.addMessage(config.welcomeMessage, 'bot');
                 }
+                
+                // Ensure we scroll to bottom after everything is loaded
+                setTimeout(() => {
+                    this.scrollToBottom();
+                }, 100);
             });
 
             // Load session info
@@ -583,9 +590,11 @@
             toggleButton.title = 'Close Chat';
             isOpen = true;
             
-            // Focus input
+            // Focus input and scroll to bottom
             setTimeout(() => {
                 inputField.focus();
+                // Ensure we scroll to the bottom when opening
+                this.scrollToBottom();
             }, 100);
         },
 
@@ -594,6 +603,20 @@
             toggleButton.innerHTML = '💬';
             toggleButton.title = 'Open Chat';
             isOpen = false;
+        },
+
+        scrollToBottom: function(forceSmooth = null) {
+            if (messagesContainer && config.autoScrollToBottom) {
+                const useSmooth = forceSmooth !== null ? forceSmooth : config.smoothScrolling;
+                if (useSmooth) {
+                    messagesContainer.scrollTo({
+                        top: messagesContainer.scrollHeight,
+                        behavior: 'smooth'
+                    });
+                } else {
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                }
+            }
         },
 
         addMessage: function(text, sender, isError = false, enableTyping = false, storeInHistory = true) {
@@ -633,7 +656,7 @@
             } else {
                 bubble.innerHTML = this.formatMessage(text, sender === 'user');
                 // Scroll to bottom
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                this.scrollToBottom();
             }
         },
 
@@ -658,7 +681,7 @@
                 element.innerHTML = displayText;
                 
                 // Scroll to bottom during typing
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                this.scrollToBottom();
                 
                 // Continue typing
                 setTimeout(() => {
@@ -865,14 +888,18 @@
                 if (data.history && Array.isArray(data.history) && data.history.length > 0) {
                     console.log(`Loading ${data.history.length} messages from history`);
                     // Load messages without typing effect and without storing in history again
-                    data.history.forEach(message => {
+                    data.history.forEach((message, index) => {
                         console.log('Loading message:', message);
                         this.addMessage(message.content, message.role === 'user' ? 'user' : 'bot', false, false, false);
+                        // Scroll to bottom after each message to ensure proper positioning
+                        if (index === data.history.length - 1) {
+                            setTimeout(() => this.scrollToBottom(), 50);
+                        }
                     });
                     
                     // Scroll to bottom after loading history
-                    if (messagesContainer && data.history.length > 0) {
-                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                    if (data.history.length > 0) {
+                        this.scrollToBottom();
                     }
                     
                     return true; // History was loaded
