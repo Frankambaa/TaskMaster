@@ -523,9 +523,9 @@
                 const welcomeMsg = this.getPersonalizedWelcome();
                 this.addMessage(welcomeMsg, 'bot');
                 
-                // Add load history button if enabled
+                // Check if we should show load history button
                 if (config.showHistoryButton) {
-                    this.addLoadHistoryButton();
+                    this.checkForHistoryAndShowButton();
                 } else {
                     // Auto-load history if button is disabled
                     this.loadChatHistory().then((historyLoaded) => {
@@ -651,6 +651,45 @@
                 return `Hi ${name}! How can I help you today?`;
             }
             return config.welcomeMessage;
+        },
+
+        checkForHistoryAndShowButton: function() {
+            // Check if there's history available without loading it
+            if (!config.user_id && !config.email && !config.device_id) {
+                return;
+            }
+
+            const payload = {
+                user_id: config.user_id,
+                username: config.username,
+                email: config.email,
+                device_id: config.device_id,
+                limit: 1 // Just check if any history exists
+            };
+
+            fetch(`${config.apiUrl}/widget_history`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Widget-Origin': window.location.origin
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.history && Array.isArray(data.history) && data.history.length > 0) {
+                    // History exists, show the button
+                    this.addLoadHistoryButton();
+                }
+            })
+            .catch(error => {
+                console.error('Error checking for history:', error);
+            });
         },
 
         addLoadHistoryButton: function() {
@@ -1021,7 +1060,7 @@
                 if (data.history && Array.isArray(data.history) && data.history.length > 0) {
                     console.log(`Loading ${data.history.length} messages from history`);
                     
-                    // Insert history messages after the welcome message
+                    // Insert history messages BEFORE the welcome message
                     const welcomeMessage = messagesContainer.querySelector('.chat-widget-message.bot');
                     
                     data.history.forEach((message, index) => {
@@ -1035,9 +1074,9 @@
                         
                         messageDiv.appendChild(bubble);
                         
-                        // Insert after welcome message
-                        if (welcomeMessage && welcomeMessage.nextSibling) {
-                            messagesContainer.insertBefore(messageDiv, welcomeMessage.nextSibling);
+                        // Insert before welcome message
+                        if (welcomeMessage) {
+                            messagesContainer.insertBefore(messageDiv, welcomeMessage);
                         } else {
                             messagesContainer.appendChild(messageDiv);
                         }
