@@ -49,7 +49,8 @@
         title: 'Chat Assistant',
         welcomeMessage: 'Hi! How can I help you today?',
         apiKey: null, // Optional API key for authentication
-        allowedDomains: [] // Domains allowed to use this widget
+        allowedDomains: [], // Domains allowed to use this widget
+        persistentHistoryCount: 10 // Number of messages to persist across sessions
     };
 
     // Widget state
@@ -513,10 +514,13 @@
                 return;
             }
 
-            // Add welcome message
-            if (config.welcomeMessage) {
-                this.addMessage(config.welcomeMessage, 'bot');
-            }
+            // Load chat history first, then add welcome message if no history exists
+            this.loadChatHistory().then(() => {
+                // Add welcome message only if no history was loaded
+                if (config.welcomeMessage && messagesContainer.children.length === 0) {
+                    this.addMessage(config.welcomeMessage, 'bot');
+                }
+            });
 
             // Load session info
             this.loadSessionInfo();
@@ -592,7 +596,7 @@
             isOpen = false;
         },
 
-        addMessage: function(text, sender, isError = false, enableTyping = false) {
+        addMessage: function(text, sender, isError = false, enableTyping = false, storeInHistory = true) {
             const messageDiv = document.createElement('div');
             messageDiv.className = `chat-widget-message ${sender}`;
             
@@ -608,17 +612,19 @@
             messageDiv.appendChild(bubble);
             messagesContainer.appendChild(messageDiv);
             
-            // Store in history with security limits
-            conversationHistory.push({ 
-                text: SecurityManager.sanitizeInput(text, sender === 'user'), 
-                sender, 
-                timestamp: new Date().toISOString(),
-                sessionId: sessionId
-            });
-            
-            // Limit conversation history size
-            if (conversationHistory.length > SECURITY_CONFIG.maxConversationHistory) {
-                conversationHistory = conversationHistory.slice(-SECURITY_CONFIG.maxConversationHistory);
+            // Store in history with security limits (only for new messages, not loaded history)
+            if (storeInHistory) {
+                conversationHistory.push({ 
+                    text: SecurityManager.sanitizeInput(text, sender === 'user'), 
+                    sender, 
+                    timestamp: new Date().toISOString(),
+                    sessionId: sessionId
+                });
+                
+                // Limit conversation history size
+                if (conversationHistory.length > SECURITY_CONFIG.maxConversationHistory) {
+                    conversationHistory = conversationHistory.slice(-SECURITY_CONFIG.maxConversationHistory);
+                }
             }
             
             // Enable typing effect for bot messages
@@ -823,6 +829,53 @@
                 }
                 
                 throw error;
+            });
+        },
+
+        loadChatHistory: function() {
+            // Only load history if user identification is available
+            if (!config.user_id && !config.email && !config.device_id) {
+                return Promise.resolve();
+            }
+
+            const payload = {
+                user_id: config.user_id,
+                username: config.username,
+                email: config.email,
+                device_id: config.device_id,
+                limit: config.persistentHistoryCount
+            };
+
+            return fetch(`${config.apiUrl}/widget_history`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Widget-Origin': window.location.origin
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.history && Array.isArray(data.history)) {
+                    // Load messages without typing effect and without storing in history again
+                    data.history.forEach(message => {
+                        this.addMessage(message.content, message.role === 'user' ? 'user' : 'bot', false, false, false);
+                    });
+                    
+                    // Scroll to bottom after loading history
+                    if (messagesContainer && data.history.length > 0) {
+                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error loading chat history:', error);
+                // Don't show error to user, just fail silently
             });
         },
 

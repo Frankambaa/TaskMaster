@@ -275,7 +275,8 @@
         email: 'user@example.com',
         device_id: 'web_browser',
         position: 'bottom-right',
-        title: 'AI Assistant'
+        title: 'AI Assistant',
+        persistentHistoryCount: 10  // Number of messages to persist
     });
 &lt;/script&gt;</code></pre>
                                     <button class="btn btn-sm btn-outline-secondary position-absolute top-0 end-0 m-2" 
@@ -319,6 +320,11 @@
                                             <tr>
                                                 <td><code>device_id</code></td>
                                                 <td>Device identifier</td>
+                                                <td><span class="badge bg-warning">Optional</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td><code>persistentHistoryCount</code></td>
+                                                <td>Number of messages to persist across sessions (default: 10)</td>
                                                 <td><span class="badge bg-warning">Optional</span></td>
                                             </tr>
                                             <tr>
@@ -406,7 +412,8 @@
             user_id: user.id,
             username: user.name,
             email: user.email,
-            device_id: 'web_app'
+            device_id: 'web_app',
+            persistentHistoryCount: 15  // Keep last 15 messages
         });
     }
 &lt;/script&gt;</code></pre>

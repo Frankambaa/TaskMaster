@@ -182,6 +182,12 @@ templates/        # HTML templates
 - July 16, 2025: Enhanced installation scripts with comprehensive error handling, dependency verification, and colored output
 - July 16, 2025: Updated local_requirements.txt with complete dependency list including LangChain, database drivers, and testing tools
 - July 16, 2025: Added automated directory creation and permission setup in installation scripts
+- July 17, 2025: **MAJOR ENHANCEMENT**: Implemented persistent chat history that loads last N messages (configurable) on page reload
+- July 17, 2025: Added `/widget_history` endpoint to retrieve conversation history for authenticated users
+- July 17, 2025: Enhanced chatwidget.js with `persistentHistoryCount` configuration option (default: 10 messages)
+- July 17, 2025: Chat history persists across browser sessions and different devices for identified users
+- July 17, 2025: Added comprehensive admin panel documentation for persistent history configuration
+- July 17, 2025: Fixed bot response text truncation issue in chatwidget - security limits now only apply to user input
 
 ## User Preferences
 

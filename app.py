@@ -616,6 +616,57 @@ def session_info():
         logging.error(f"Error getting session info: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/widget_history', methods=['POST'])
+def widget_history():
+    """Get chat history for widget (last N messages)"""
+    try:
+        data = request.get_json()
+        
+        # Extract user parameters
+        user_id = data.get('user_id')
+        username = data.get('username')
+        email = data.get('email')
+        device_id = data.get('device_id')
+        limit = data.get('limit', 10)  # Default to 10 messages
+        
+        # Determine user identifier (priority: user_id > email > device_id)
+        user_identifier = user_id or email or device_id
+        
+        if not user_identifier:
+            return jsonify({'history': []})
+        
+        # Get user conversation from database
+        user_conv = UserConversation.query.filter_by(user_identifier=user_identifier).first()
+        
+        if not user_conv:
+            return jsonify({'history': []})
+        
+        # Get conversation history
+        conversation_history = user_conv.get_conversation_history()
+        
+        # Get last N messages
+        if limit and len(conversation_history) > limit:
+            conversation_history = conversation_history[-limit:]
+        
+        # Format messages for widget display
+        formatted_history = []
+        for message in conversation_history:
+            formatted_history.append({
+                'role': message.get('role', 'user'),
+                'content': message.get('content', ''),
+                'timestamp': message.get('timestamp', '')
+            })
+        
+        return jsonify({
+            'history': formatted_history,
+            'user_identifier': user_identifier,
+            'total_messages': len(conversation_history)
+        })
+    
+    except Exception as e:
+        logging.error(f"Error getting widget history: {str(e)}")
+        return jsonify({'error': str(e), 'history': []}), 500
+
 @app.route('/user_conversations', methods=['GET'])
 def user_conversations():
     """Get list of all user conversations (admin endpoint)"""

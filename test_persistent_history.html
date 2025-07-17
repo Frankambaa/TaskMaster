@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Persistent Chat History Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .demo-container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .feature-box {
+            background: #e3f2fd;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border-left: 4px solid #2196f3;
+        }
+        .config-example {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border: 1px solid #dee2e6;
+        }
+        code {
+            background: #f1f3f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .instructions {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #ffeaa7;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <h1>🔄 Persistent Chat History Demo</h1>
+        
+        <div class="feature-box">
+            <h3>✨ New Feature: Persistent Chat History</h3>
+            <p>The chatbot now remembers your conversations across page reloads and different browser sessions! This means:</p>
+            <ul>
+                <li>🔄 Chat history persists when you refresh the page</li>
+                <li>🌐 Works across different browsers and devices (for identified users)</li>
+                <li>⚙️ Configurable number of messages to remember (default: 10)</li>
+                <li>🔐 Secure and private - only your messages are restored</li>
+            </ul>
+        </div>
+
+        <div class="instructions">
+            <h4>📋 How to Test:</h4>
+            <ol>
+                <li>Open the chat widget below</li>
+                <li>Send a few messages to the bot</li>
+                <li>Refresh this page (F5 or Ctrl+R)</li>
+                <li>Open the chat widget again - your messages should still be there!</li>
+            </ol>
+        </div>
+
+        <div class="config-example">
+            <h4>🔧 Configuration Options:</h4>
+            <p>You can customize how many messages to persist:</p>
+            <pre><code>ChatWidget.init({
+    apiUrl: 'http://localhost:5000',
+    user_id: 'demo_user_123',
+    username: 'Demo User',
+    email: 'demo@example.com',
+    device_id: 'web_browser',
+    persistentHistoryCount: 15  // Keep last 15 messages
+});</code></pre>
+        </div>
+
+        <div class="feature-box">
+            <h3>🎯 Technical Details:</h3>
+            <ul>
+                <li><strong>Backend Endpoint:</strong> <code>/widget_history</code> - Retrieves conversation history</li>
+                <li><strong>Storage:</strong> Database-backed with user identification</li>
+                <li><strong>Security:</strong> User input sanitization and message limits</li>
+                <li><strong>Performance:</strong> Efficient loading of recent messages only</li>
+            </ul>
+        </div>
+
+        <button class="btn" onclick="reloadDemo()">🔄 Reload Page to Test Persistence</button>
+    </div>
+
+    <!-- Chat Widget Integration -->
+    <script src="http://localhost:5000/static/chatwidget.js"></script>
+    <script>
+        ChatWidget.init({
+            apiUrl: 'http://localhost:5000',
+            user_id: 'demo_user_persistence',
+            username: 'Demo User',
+            email: 'demo@example.com',
+            device_id: 'web_browser_demo',
+            position: 'bottom-right',
+            title: 'AI Assistant (Persistent)',
+            persistentHistoryCount: 10  // Keep last 10 messages
+        });
+
+        function reloadDemo() {
+            window.location.reload();
+        }
+    </script>
+</body>
+</html>
