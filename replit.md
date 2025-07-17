@@ -207,6 +207,9 @@ templates/        # HTML templates
 - July 17, 2025: Pre-filters questions to avoid over-clarification - skips questions with clear context or action words
 - July 17, 2025: Examples: "credits" (single word) -> asks clarification, "how can I post my job" (clear context) -> no clarification
 - July 17, 2025: Enhanced user experience by preventing incorrect API calls while minimizing unnecessary questions
+- July 17, 2025: **RESPONSE TEMPLATE DIRECT USAGE**: Modified AI tool response formatting to use response templates directly with field replacement
+- July 17, 2025: Removed AI formatting layer - now shows exact template message with replaced placeholders (e.g., "The Job post you have created till now is {Job Post}")
+- July 17, 2025: Improved response consistency and reduced API calls by using template-based formatting instead of AI generation
 
 ## User Preferences
 

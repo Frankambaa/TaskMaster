@@ -330,7 +330,7 @@ Be extremely conservative - only ask when truly necessary."""
             return response_data
     
     def format_tool_response(self, tool_result: Dict[str, Any], original_question: str) -> str:
-        """Format tool response using AI and response template"""
+        """Format tool response using response template with field replacement"""
         try:
             if not tool_result.get('success'):
                 return f"I encountered an error: {tool_result.get('error', 'Unknown error')}"
@@ -338,38 +338,30 @@ Be extremely conservative - only ask when truly necessary."""
             response_template = tool_result.get('response_template', '')
             tool_data = tool_result.get('data', {})
             
-            # If no template, use AI to format the response
+            # If no template, provide a simple default format
             if not response_template:
-                response_template = "Please format this API response data in a clear, user-friendly way for the user's question: {question}"
+                if isinstance(tool_data, dict):
+                    formatted_data = []
+                    for key, value in tool_data.items():
+                        formatted_data.append(f"**{key.upper()}**: {value}")
+                    return "Based on the API response:\n\n" + "\n".join(formatted_data)
+                else:
+                    return f"API Response: {tool_data}"
             
-            # Use AI to format the response
-            format_prompt = f"""
-            Original question: {original_question}
+            # Use template with field replacement
+            formatted_response = response_template
             
-            API response data: {json.dumps(tool_data, indent=2)}
+            # Replace placeholders in template with actual data
+            if isinstance(tool_data, dict):
+                for key, value in tool_data.items():
+                    placeholder = f"{{{key}}}"
+                    formatted_response = formatted_response.replace(placeholder, str(value))
             
-            Response template: {response_template}
+            # Replace question placeholder if present
+            formatted_response = formatted_response.replace("{question}", original_question)
+            formatted_response = formatted_response.replace("{user_query}", original_question)
             
-            Please format this information in a clear, helpful way for the user. Focus on answering their specific question using the API data.
-            """
-            
-            response = self.openai_client.chat.completions.create(
-                model="gpt-4o",  # the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are a helpful assistant that formats API responses for users in a clear, concise way."
-                    },
-                    {
-                        "role": "user",
-                        "content": format_prompt
-                    }
-                ],
-                max_tokens=1000,
-                temperature=0.7
-            )
-            
-            return response.choices[0].message.content
+            return formatted_response
             
         except Exception as e:
             self.logger.error(f"Error formatting tool response: {e}")
