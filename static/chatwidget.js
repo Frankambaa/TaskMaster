@@ -101,9 +101,15 @@
             return options;
         },
 
-        sanitizeInput: function(input) {
+        sanitizeInput: function(input, isUserInput = true) {
             if (typeof input !== 'string') return input;
-            return input.replace(/[<>"\'/\\&]/g, '').trim().substring(0, 100);
+            // Apply length limit only for user inputs, not bot responses
+            if (isUserInput) {
+                return input.replace(/[<>"\'/\\&]/g, '').trim().substring(0, 100);
+            } else {
+                // For bot responses, only sanitize dangerous characters but don't truncate
+                return input.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '').trim();
+            }
         },
 
         checkRateLimit: function() {
@@ -604,7 +610,7 @@
             
             // Store in history with security limits
             conversationHistory.push({ 
-                text: SecurityManager.sanitizeInput(text), 
+                text: SecurityManager.sanitizeInput(text, sender === 'user'), 
                 sender, 
                 timestamp: new Date().toISOString(),
                 sessionId: sessionId
@@ -619,14 +625,14 @@
             if (enableTyping && sender === 'bot') {
                 this.typeMessage(bubble, text);
             } else {
-                bubble.innerHTML = this.formatMessage(text);
+                bubble.innerHTML = this.formatMessage(text, sender === 'user');
                 // Scroll to bottom
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
             }
         },
 
         typeMessage: function(element, text, index = 0) {
-            const formattedText = this.formatMessage(text);
+            const formattedText = this.formatMessage(text, false); // false = not user input
             
             // Simple character-by-character typing for better compatibility
             const plainText = text.replace(/\*\*(.*?)\*\*/g, '$1')
@@ -636,8 +642,8 @@
             if (index < plainText.length) {
                 const currentText = plainText.substring(0, index + 1);
                 
-                // Apply formatting to the current text
-                const displayText = currentText
+                // Apply formatting to the current text without truncation
+                const displayText = SecurityManager.sanitizeInput(currentText, false)
                     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                     .replace(/\*(.*?)\*/g, '<em>$1</em>')
                     .replace(/`(.*?)`/g, '<code>$1</code>')
@@ -653,15 +659,15 @@
                     this.typeMessage(element, text, index + 1);
                 }, 25); // Adjust speed here (lower = faster)
             } else {
-                // Typing complete - apply full formatting
+                // Typing complete - apply full formatting without truncation
                 element.innerHTML = formattedText;
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
             }
         },
 
-        formatMessage: function(text) {
+        formatMessage: function(text, isUserInput = false) {
             // Sanitize and format text for display
-            const sanitized = SecurityManager.sanitizeInput(text);
+            const sanitized = SecurityManager.sanitizeInput(text, isUserInput);
             
             // Simple formatting for bot responses
             return sanitized
