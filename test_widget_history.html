@@ -64,9 +64,12 @@
             <ol>
                 <li>Open the browser console (F12) to see debug messages</li>
                 <li>Click the chat widget button in the bottom right</li>
+                <li>Notice the personalized welcome message: "Hi Test User! How can I help you today?"</li>
+                <li>If you have previous messages, you'll see a "Load Previous Messages" button</li>
                 <li>Send a few messages to the bot</li>
                 <li>Refresh this page (F5 or Ctrl+R)</li>
-                <li>Open the chat widget again - your messages should appear above the welcome message</li>
+                <li>Open the chat widget again - you should see the personalized welcome message</li>
+                <li>Click "Load Previous Messages" to see your conversation history</li>
             </ol>
         </div>
 
@@ -99,7 +102,11 @@
             position: 'bottom-right',
             title: 'Test Chat (History)',
             persistentHistoryCount: 10,
-            welcomeMessage: 'Welcome! Your chat history is preserved.'
+            welcomeMessage: 'How can I help you today?',
+            personalizedWelcome: true,
+            showHistoryButton: true,
+            autoScrollToBottom: true,
+            smoothScrolling: false
         });
 
         // Test functions

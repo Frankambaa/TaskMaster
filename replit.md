@@ -188,6 +188,11 @@ templates/        # HTML templates
 - July 17, 2025: Chat history persists across browser sessions and different devices for identified users
 - July 17, 2025: Added comprehensive admin panel documentation for persistent history configuration
 - July 17, 2025: Fixed bot response text truncation issue in chatwidget - security limits now only apply to user input
+- July 17, 2025: **UX ENHANCEMENT**: Added personalized welcome messages with user's name (from username, email, or user_id)
+- July 17, 2025: Implemented optional "Load Previous Messages" button instead of auto-loading chat history
+- July 17, 2025: Added configurable options: `personalizedWelcome`, `showHistoryButton`, `autoScrollToBottom`, `smoothScrolling`
+- July 17, 2025: Enhanced scroll behavior to always show latest messages at bottom of chat interface
+- July 17, 2025: History loading now preserves welcome message and inserts conversation history after it
 
 ## User Preferences
 

@@ -52,7 +52,9 @@
         allowedDomains: [], // Domains allowed to use this widget
         persistentHistoryCount: 10, // Number of messages to persist across sessions
         autoScrollToBottom: true, // Automatically scroll to bottom to show latest messages
-        smoothScrolling: false // Use smooth scrolling animation
+        smoothScrolling: false, // Use smooth scrolling animation
+        showHistoryButton: true, // Show "Load History" button instead of auto-loading
+        personalizedWelcome: true // Show personalized welcome message with user's name
     };
 
     // Widget state
@@ -516,18 +518,32 @@
                 return;
             }
 
-            // Load chat history first, then add welcome message if no history exists
-            this.loadChatHistory().then((historyLoaded) => {
-                // Add welcome message only if no history was loaded
-                if (config.welcomeMessage && !historyLoaded) {
-                    this.addMessage(config.welcomeMessage, 'bot');
-                }
+            // Always show personalized welcome message first
+            if (config.welcomeMessage) {
+                const welcomeMsg = this.getPersonalizedWelcome();
+                this.addMessage(welcomeMsg, 'bot');
                 
-                // Ensure we scroll to bottom after everything is loaded
-                setTimeout(() => {
-                    this.scrollToBottom();
-                }, 100);
-            });
+                // Add load history button if enabled
+                if (config.showHistoryButton) {
+                    this.addLoadHistoryButton();
+                } else {
+                    // Auto-load history if button is disabled
+                    this.loadChatHistory().then((historyLoaded) => {
+                        if (historyLoaded) {
+                            // Remove welcome message if history was loaded
+                            const welcomeMessages = messagesContainer.querySelectorAll('.chat-widget-message.bot');
+                            if (welcomeMessages.length > 0) {
+                                welcomeMessages[0].remove();
+                            }
+                        }
+                    });
+                }
+            }
+            
+            // Ensure we scroll to bottom after everything is loaded
+            setTimeout(() => {
+                this.scrollToBottom();
+            }, 100);
 
             // Load session info
             this.loadSessionInfo();
@@ -617,6 +633,65 @@
                     messagesContainer.scrollTop = messagesContainer.scrollHeight;
                 }
             }
+        },
+
+        getPersonalizedWelcome: function() {
+            let name = '';
+            if (config.personalizedWelcome) {
+                if (config.username) {
+                    name = config.username;
+                } else if (config.email) {
+                    name = config.email.split('@')[0];
+                } else if (config.user_id) {
+                    name = config.user_id;
+                }
+            }
+            
+            if (name) {
+                return `Hi ${name}! How can I help you today?`;
+            }
+            return config.welcomeMessage;
+        },
+
+        addLoadHistoryButton: function() {
+            const buttonDiv = document.createElement('div');
+            buttonDiv.className = 'chat-widget-message bot';
+            buttonDiv.style.textAlign = 'center';
+            buttonDiv.style.marginTop = '10px';
+            
+            const button = document.createElement('button');
+            button.className = 'load-history-btn';
+            button.textContent = 'Load Previous Messages';
+            button.style.cssText = `
+                background: #007bff;
+                color: white;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 15px;
+                cursor: pointer;
+                font-size: 12px;
+                transition: background-color 0.3s;
+            `;
+            
+            button.addEventListener('mouseover', () => {
+                button.style.backgroundColor = '#0056b3';
+            });
+            
+            button.addEventListener('mouseout', () => {
+                button.style.backgroundColor = '#007bff';
+            });
+            
+            button.addEventListener('click', () => {
+                button.textContent = 'Loading...';
+                button.disabled = true;
+                this.loadChatHistoryOnDemand().then(() => {
+                    buttonDiv.remove();
+                });
+            });
+            
+            buttonDiv.appendChild(button);
+            messagesContainer.appendChild(buttonDiv);
+            this.scrollToBottom();
         },
 
         addMessage: function(text, sender, isError = false, enableTyping = false, storeInHistory = true) {
@@ -909,6 +984,76 @@
             })
             .catch(error => {
                 console.error('Error loading chat history:', error);
+                return false; // Return false on error
+            });
+        },
+
+        loadChatHistoryOnDemand: function() {
+            // Only load history if user identification is available
+            if (!config.user_id && !config.email && !config.device_id) {
+                return Promise.resolve(false);
+            }
+
+            const payload = {
+                user_id: config.user_id,
+                username: config.username,
+                email: config.email,
+                device_id: config.device_id,
+                limit: config.persistentHistoryCount
+            };
+
+            return fetch(`${config.apiUrl}/widget_history`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Widget-Origin': window.location.origin
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Widget history loaded on demand:', data);
+                if (data.history && Array.isArray(data.history) && data.history.length > 0) {
+                    console.log(`Loading ${data.history.length} messages from history`);
+                    
+                    // Insert history messages after the welcome message
+                    const welcomeMessage = messagesContainer.querySelector('.chat-widget-message.bot');
+                    
+                    data.history.forEach((message, index) => {
+                        console.log('Loading message:', message);
+                        const messageDiv = document.createElement('div');
+                        messageDiv.className = `chat-widget-message ${message.role === 'user' ? 'user' : 'bot'}`;
+                        
+                        const bubble = document.createElement('div');
+                        bubble.className = 'chat-widget-message-bubble';
+                        bubble.innerHTML = this.formatMessage(message.content, message.role === 'user');
+                        
+                        messageDiv.appendChild(bubble);
+                        
+                        // Insert after welcome message
+                        if (welcomeMessage && welcomeMessage.nextSibling) {
+                            messagesContainer.insertBefore(messageDiv, welcomeMessage.nextSibling);
+                        } else {
+                            messagesContainer.appendChild(messageDiv);
+                        }
+                    });
+                    
+                    // Scroll to bottom after loading history
+                    setTimeout(() => this.scrollToBottom(), 100);
+                    
+                    return true; // History was loaded
+                } else {
+                    console.log('No history found');
+                    return false; // No history found
+                }
+            })
+            .catch(error => {
+                console.error('Error loading chat history on demand:', error);
                 return false; // Return false on error
             });
         },
