@@ -1002,11 +1002,14 @@
                 if (data.history && Array.isArray(data.history) && data.history.length > 0) {
                     console.log(`Loading ${data.history.length} messages from history`);
                     // Load messages without typing effect and without storing in history again
-                    data.history.forEach((message, index) => {
+                    // History comes in reverse chronological order (newest first), so we need to reverse it
+                    const reversedHistory = [...data.history].reverse();
+                    
+                    reversedHistory.forEach((message, index) => {
                         console.log('Loading message:', message);
                         this.addMessage(message.content, message.role === 'user' ? 'user' : 'bot', false, false, false);
                         // Scroll to bottom after each message to ensure proper positioning
-                        if (index === data.history.length - 1) {
+                        if (index === reversedHistory.length - 1) {
                             setTimeout(() => this.scrollToBottom(), 50);
                         }
                     });
@@ -1060,10 +1063,13 @@
                 if (data.history && Array.isArray(data.history) && data.history.length > 0) {
                     console.log(`Loading ${data.history.length} messages from history`);
                     
-                    // Insert history messages BEFORE the welcome message
+                    // Insert history messages BEFORE the welcome message in correct chronological order
                     const welcomeMessage = messagesContainer.querySelector('.chat-widget-message.bot');
                     
-                    data.history.forEach((message, index) => {
+                    // Reverse the history to insert oldest first (so they appear in correct order)
+                    const reversedHistory = [...data.history].reverse();
+                    
+                    reversedHistory.forEach((message, index) => {
                         console.log('Loading message:', message);
                         const messageDiv = document.createElement('div');
                         messageDiv.className = `chat-widget-message ${message.role === 'user' ? 'user' : 'bot'}`;

@@ -50,8 +50,33 @@ class AIToolExecutor:
             if not tools:
                 return False, None, None
             
-            # Build conversation context
-            messages = []
+            # Build conversation context with strict system prompt
+            messages = [
+                {
+                    "role": "system",
+                    "content": """You are a conservative AI assistant that only uses API tools when you are ABSOLUTELY CERTAIN they are needed.
+
+CRITICAL RULES:
+1. Only use API tools when the user's question DIRECTLY and SPECIFICALLY requests information that can ONLY be obtained from the API
+2. If the question is vague, general, or could be answered with general knowledge, DO NOT use any tools
+3. If you're unsure whether to use a tool, DON'T use it - default to general knowledge
+4. Look for EXACT matches between the user's request and the tool's purpose
+5. Pay attention to context - similar words don't mean the same thing (e.g., "credit limit" vs "buy credits")
+
+Examples of when NOT to use tools:
+- "Can you share your plan to buy credits" (asking about purchasing plans, not checking current balance)
+- "How do I get more credits" (asking for instructions, not current status)
+- "What are the credit options" (asking about available plans, not personal data)
+
+Examples of when TO use tools:
+- "What is my current credit limit" (directly asking for personal account data)
+- "Show me my account balance" (directly requesting personal information)
+- "What are my current credits" (directly asking for personal data)
+
+Be extremely conservative. When in doubt, do NOT use tools."""
+                }
+            ]
+            
             if conversation_history:
                 messages.extend(conversation_history[-5:])  # Last 5 messages for context
             
