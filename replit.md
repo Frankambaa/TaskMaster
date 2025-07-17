@@ -211,6 +211,9 @@ templates/        # HTML templates
 - July 17, 2025: Removed AI formatting layer - now shows exact template message with replaced placeholders (e.g., "The Job post you have created till now is {Job Post}")
 - July 17, 2025: Enhanced field replacement logic to handle multiple data formats (dict, list, raw response) for robust placeholder substitution
 - July 17, 2025: Improved response consistency and reduced API calls by using template-based formatting instead of AI generation
+- July 17, 2025: **WIDGET ICON CUSTOMIZATION**: Added chatwidget icon customization feature in admin panel
+- July 17, 2025: Implemented icon upload, preview, and reset functionality with API endpoints for widget branding
+- July 17, 2025: Enhanced chatwidget.js to support iconUrl configuration parameter for custom chat button icons
 
 ## User Preferences
 

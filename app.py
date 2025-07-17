@@ -58,6 +58,7 @@ CORS(app)
 UPLOAD_FOLDER = 'uploads'
 FAISS_INDEX_FOLDER = 'faiss_index'
 LOGO_FOLDER = 'static/logos'
+WIDGET_ICON_FOLDER = 'static/widget_icons'
 ALLOWED_EXTENSIONS = {'pdf', 'docx'}
 ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'svg'}
 
@@ -65,6 +66,7 @@ ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'svg'}
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(FAISS_INDEX_FOLDER, exist_ok=True)
 os.makedirs(LOGO_FOLDER, exist_ok=True)
+os.makedirs(WIDGET_ICON_FOLDER, exist_ok=True)
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
@@ -809,6 +811,77 @@ def test_widget_fix():
     </body>
     </html>
     '''
+
+# Widget Icon Management API Endpoints
+@app.route('/api/widget/icon', methods=['GET'])
+def get_widget_icon():
+    """Get current widget icon"""
+    try:
+        # Check for custom icon
+        icon_path = os.path.join(WIDGET_ICON_FOLDER, 'widget_icon.png')
+        if os.path.exists(icon_path):
+            return jsonify({
+                'iconUrl': f'{request.url_root}static/widget_icons/widget_icon.png',
+                'isCustom': True
+            })
+        
+        # Return default icon info
+        return jsonify({
+            'iconUrl': None,
+            'isCustom': False
+        })
+    except Exception as e:
+        logging.error(f"Error getting widget icon: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/widget/icon', methods=['POST'])
+def upload_widget_icon():
+    """Upload custom widget icon"""
+    try:
+        if 'iconFile' not in request.files:
+            return jsonify({'error': 'No file provided'}), 400
+        
+        file = request.files['iconFile']
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+        
+        if not allowed_image_file(file.filename):
+            return jsonify({'error': 'Invalid file type. Please use PNG, JPG, or SVG.'}), 400
+        
+        # Save the icon
+        filename = 'widget_icon.png'
+        file_path = os.path.join(WIDGET_ICON_FOLDER, filename)
+        file.save(file_path)
+        
+        # Generate the icon URL
+        icon_url = f'{request.url_root}static/widget_icons/{filename}'
+        
+        return jsonify({
+            'success': True,
+            'iconUrl': icon_url,
+            'message': 'Icon uploaded successfully'
+        })
+    
+    except Exception as e:
+        logging.error(f"Error uploading widget icon: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/widget/icon', methods=['DELETE'])
+def delete_widget_icon():
+    """Reset to default widget icon"""
+    try:
+        icon_path = os.path.join(WIDGET_ICON_FOLDER, 'widget_icon.png')
+        if os.path.exists(icon_path):
+            os.remove(icon_path)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Reset to default icon'
+        })
+    
+    except Exception as e:
+        logging.error(f"Error deleting widget icon: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

@@ -347,8 +347,56 @@
                                                 <td>Array of allowed domains</td>
                                                 <td><span class="badge bg-warning">Optional</span></td>
                                             </tr>
+                                            <tr>
+                                                <td><code>iconUrl</code></td>
+                                                <td>Custom icon URL for chat widget</td>
+                                                <td><span class="badge bg-warning">Optional</span></td>
+                                            </tr>
                                         </tbody>
                                     </table>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Widget Icon Customization -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <i class="fas fa-paint-brush"></i> Widget Icon Customization
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <h6><i class="fas fa-upload"></i> Upload Custom Icon</h6>
+                                                <p class="text-muted">Upload a custom icon for your chat widget. Supports PNG, JPG, SVG formats.</p>
+                                                <form id="iconUploadForm" enctype="multipart/form-data">
+                                                    <div class="input-group mb-3">
+                                                        <input type="file" class="form-control" id="iconFile" name="iconFile" accept="image/*">
+                                                        <button class="btn btn-outline-primary" type="submit">
+                                                            <i class="fas fa-upload"></i> Upload Icon
+                                                        </button>
+                                                    </div>
+                                                </form>
+                                                <div id="iconUploadStatus" class="mt-2"></div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <h6><i class="fas fa-eye"></i> Current Icon</h6>
+                                                <div id="currentIcon" class="text-center p-3 border rounded">
+                                                    <i class="fas fa-comments fa-3x text-primary"></i>
+                                                    <p class="text-muted mt-2">Default Chat Icon</p>
+                                                </div>
+                                                <div class="mt-3">
+                                                    <button class="btn btn-sm btn-outline-secondary me-2" onclick="resetToDefaultIcon()">
+                                                        <i class="fas fa-undo"></i> Reset to Default
+                                                    </button>
+                                                    <button class="btn btn-sm btn-outline-info" onclick="previewIcon()">
+                                                        <i class="fas fa-eye"></i> Preview
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1140,6 +1188,175 @@
             // Show success message
             alert('Response mapping and template generated successfully!');
         }
+
+        // Widget Icon Management Functions
+        function initializeIconUpload() {
+            const iconUploadForm = document.getElementById('iconUploadForm');
+            iconUploadForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                uploadIcon();
+            });
+            
+            // Load current icon on page load
+            loadCurrentIcon();
+        }
+
+        function loadCurrentIcon() {
+            fetch('/api/widget/icon')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.iconUrl) {
+                        updateIconDisplay(data.iconUrl);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading current icon:', error);
+                });
+        }
+
+        function uploadIcon() {
+            const fileInput = document.getElementById('iconFile');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showIconStatus('Please select a file first', 'danger');
+                return;
+            }
+            
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                showIconStatus('Please select an image file', 'danger');
+                return;
+            }
+            
+            // Validate file size (max 2MB)
+            if (file.size > 2 * 1024 * 1024) {
+                showIconStatus('File size must be less than 2MB', 'danger');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('iconFile', file);
+            
+            showIconStatus('Uploading icon...', 'info');
+            
+            fetch('/api/widget/icon', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showIconStatus('Icon uploaded successfully!', 'success');
+                    updateIconDisplay(data.iconUrl);
+                    fileInput.value = ''; // Clear the file input
+                    updateWidgetExamples(data.iconUrl);
+                } else {
+                    showIconStatus(data.error || 'Upload failed', 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error uploading icon:', error);
+                showIconStatus('Upload failed. Please try again.', 'danger');
+            });
+        }
+
+        function updateIconDisplay(iconUrl) {
+            const currentIconDiv = document.getElementById('currentIcon');
+            currentIconDiv.innerHTML = `
+                <img src="${iconUrl}" alt="Custom Icon" style="width: 48px; height: 48px; border-radius: 50%;">
+                <p class="text-muted mt-2">Custom Icon</p>
+            `;
+        }
+
+        function resetToDefaultIcon() {
+            if (confirm('Are you sure you want to reset to the default icon?')) {
+                fetch('/api/widget/icon', {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showIconStatus('Reset to default icon', 'success');
+                        const currentIconDiv = document.getElementById('currentIcon');
+                        currentIconDiv.innerHTML = `
+                            <i class="fas fa-comments fa-3x text-primary"></i>
+                            <p class="text-muted mt-2">Default Chat Icon</p>
+                        `;
+                        updateWidgetExamples(null);
+                    } else {
+                        showIconStatus(data.error || 'Reset failed', 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error resetting icon:', error);
+                    showIconStatus('Reset failed. Please try again.', 'danger');
+                });
+            }
+        }
+
+        function previewIcon() {
+            // Open a new window with the widget demo that includes the current icon
+            window.open('/widget_demo', '_blank');
+        }
+
+        function showIconStatus(message, type) {
+            const statusDiv = document.getElementById('iconUploadStatus');
+            statusDiv.innerHTML = `<div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>`;
+            
+            // Auto-dismiss after 5 seconds
+            setTimeout(() => {
+                statusDiv.innerHTML = '';
+            }, 5000);
+        }
+
+        function updateWidgetExamples(iconUrl) {
+            // Update all widget code examples to include the custom icon
+            const iconConfig = iconUrl ? `        iconUrl: '${iconUrl}',` : '';
+            
+            // Update basic widget script
+            const basicScript = document.getElementById('basicWidgetScript');
+            const basicContent = basicScript.textContent;
+            const updatedBasicContent = basicContent.replace(
+                /        persistentHistoryCount: 10  \/\/ Number of messages to persist/,
+                `        persistentHistoryCount: 10,  // Number of messages to persist\n${iconConfig}`
+            );
+            basicScript.textContent = updatedBasicContent;
+            
+            // Update other script examples too
+            updateScriptExample('anonymousScript', iconConfig);
+            updateScriptExample('dynamicScript', iconConfig);
+            updateScriptExample('ecommerceScript', iconConfig);
+            updateScriptExample('secureScript', iconConfig);
+        }
+
+        function updateScriptExample(scriptId, iconConfig) {
+            const scriptElement = document.getElementById(scriptId);
+            if (scriptElement) {
+                let content = scriptElement.textContent;
+                
+                // Remove existing iconUrl if present
+                content = content.replace(/        iconUrl: '[^']*',\n?/g, '');
+                
+                // Add new iconUrl if provided
+                if (iconConfig) {
+                    content = content.replace(
+                        /    });/,
+                        `${iconConfig}\n    });`
+                    );
+                }
+                
+                scriptElement.textContent = content;
+            }
+        }
+
+        // Initialize icon upload when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeIconUpload();
+        });
     </script>
 </body>
 </html>

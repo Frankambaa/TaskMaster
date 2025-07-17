@@ -54,7 +54,8 @@
         autoScrollToBottom: true, // Automatically scroll to bottom to show latest messages
         smoothScrolling: false, // Use smooth scrolling animation
         showHistoryButton: true, // Show "Load History" button instead of auto-loading
-        personalizedWelcome: true // Show personalized welcome message with user's name
+        personalizedWelcome: true, // Show personalized welcome message with user's name
+        iconUrl: null // Custom icon URL for the chat widget toggle button
     };
 
     // Widget state
@@ -457,7 +458,18 @@
             // Create toggle button
             toggleButton = document.createElement('button');
             toggleButton.className = 'chat-widget-toggle';
-            toggleButton.innerHTML = '💬';
+            
+            // Use custom icon if provided, otherwise use default emoji
+            if (config.iconUrl) {
+                const iconImg = document.createElement('img');
+                iconImg.src = config.iconUrl;
+                iconImg.alt = 'Chat';
+                iconImg.style.cssText = 'width: 24px; height: 24px; border-radius: 50%; object-fit: cover;';
+                toggleButton.appendChild(iconImg);
+            } else {
+                toggleButton.innerHTML = '💬';
+            }
+            
             toggleButton.title = 'Open Chat';
 
             // Create chat window
@@ -602,7 +614,13 @@
 
         openWidget: function() {
             chatWindow.style.display = 'flex';
-            toggleButton.innerHTML = '×';
+            
+            // Update toggle button to show close icon
+            if (config.iconUrl) {
+                toggleButton.innerHTML = '×';
+            } else {
+                toggleButton.innerHTML = '×';
+            }
             toggleButton.title = 'Close Chat';
             isOpen = true;
             
@@ -616,7 +634,18 @@
 
         closeWidget: function() {
             chatWindow.style.display = 'none';
-            toggleButton.innerHTML = '💬';
+            
+            // Update toggle button to show chat icon
+            if (config.iconUrl) {
+                toggleButton.innerHTML = '';
+                const iconImg = document.createElement('img');
+                iconImg.src = config.iconUrl;
+                iconImg.alt = 'Chat';
+                iconImg.style.cssText = 'width: 24px; height: 24px; border-radius: 50%; object-fit: cover;';
+                toggleButton.appendChild(iconImg);
+            } else {
+                toggleButton.innerHTML = '💬';
+            }
             toggleButton.title = 'Open Chat';
             isOpen = false;
         },
