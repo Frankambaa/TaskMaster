@@ -351,9 +351,26 @@ Be extremely conservative - only ask when truly necessary."""
             # Use template with field replacement
             formatted_response = response_template
             
+            # Get raw API response data for field replacement
+            raw_data = tool_result.get('raw_data', tool_data)
+            
             # Replace placeholders in template with actual data
+            # First try with mapped data
             if isinstance(tool_data, dict):
                 for key, value in tool_data.items():
+                    placeholder = f"{{{key}}}"
+                    formatted_response = formatted_response.replace(placeholder, str(value))
+            
+            # Then try with raw data in case mapping didn't work
+            if isinstance(raw_data, dict):
+                for key, value in raw_data.items():
+                    placeholder = f"{{{key}}}"
+                    formatted_response = formatted_response.replace(placeholder, str(value))
+            
+            # Handle list of dictionaries (common API response format)
+            if isinstance(raw_data, list) and len(raw_data) > 0 and isinstance(raw_data[0], dict):
+                first_item = raw_data[0]
+                for key, value in first_item.items():
                     placeholder = f"{{{key}}}"
                     formatted_response = formatted_response.replace(placeholder, str(value))
             
