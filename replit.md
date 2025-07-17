@@ -47,8 +47,8 @@ This is a full-stack AI-powered chatbot application built with Flask that implem
 
 ### 4. AI-Driven Tool System (`ai_tool_executor.py`, `models.py`)
 - **Smart AI Selection**: Uses OpenAI Function Calling to intelligently select appropriate tools based on natural language understanding
-- **Intelligent Clarification**: When uncertain about tool selection, asks clarifying questions instead of making assumptions
-- **Ambiguity Detection**: AI analyzes questions for vague terms and provides helpful clarification options
+- **Conservative Clarification**: Only asks clarifying questions for extremely ambiguous single-word queries that could match multiple tools
+- **Smart Pre-filtering**: Skips clarification for questions with clear context, action words, or sufficient detail
 - **Dynamic Tool Loading**: API tools are stored in database and loaded dynamically into OpenAI function specifications
 - **Response Mapping**: Configurable field mapping to extract specific data from API responses
 - **Response Templates**: AI-powered formatting using customizable templates for user-friendly output
@@ -202,10 +202,11 @@ templates/        # HTML templates
 - July 17, 2025: Fixed chat history chronological order - questions now appear before answers in correct sequence
 - July 17, 2025: Improved load history button styling - smaller, subtle appearance above welcome message
 - July 17, 2025: Load history button now only appears when actual conversation history exists
-- July 17, 2025: **AI CLARIFICATION SYSTEM**: Added intelligent clarification mechanism for ambiguous questions
-- July 17, 2025: When AI is uncertain about tool selection, it now asks clarifying questions instead of making assumptions
-- July 17, 2025: Examples: "credits" -> "Are you looking for your credit balance or information about purchasing credits?"
-- July 17, 2025: Enhanced user experience by preventing incorrect API calls when questions are vague or generic
+- July 17, 2025: **AI CLARIFICATION SYSTEM**: Added conservative clarification mechanism for extremely ambiguous questions
+- July 17, 2025: Only asks clarifying questions for single-word generic terms that could match multiple tools
+- July 17, 2025: Pre-filters questions to avoid over-clarification - skips questions with clear context or action words
+- July 17, 2025: Examples: "credits" (single word) -> asks clarification, "how can I post my job" (clear context) -> no clarification
+- July 17, 2025: Enhanced user experience by preventing incorrect API calls while minimizing unnecessary questions
 
 ## User Preferences
 

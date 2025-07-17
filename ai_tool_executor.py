@@ -121,6 +121,31 @@ Be extremely conservative. When in doubt, do NOT use tools."""
         Returns clarification question if needed, None otherwise
         """
         try:
+            # Only check for clarification if we have multiple tools and the question is very short/generic
+            if len(tools) < 2:
+                return None
+            
+            # Pre-filter: Only check for clarification if the question is potentially ambiguous
+            # Look for single words or very generic terms that could match multiple tools
+            question_lower = question.lower().strip()
+            
+            # Common ambiguous keywords that might need clarification
+            ambiguous_keywords = [
+                'credits', 'credit', 'account', 'balance', 'status', 'info', 'information',
+                'details', 'data', 'token', 'tokens', 'user', 'profile', 'settings'
+            ]
+            
+            # Skip clarification if the question is long or contains action words
+            if len(question.split()) > 5 or any(word in question_lower for word in [
+                'how', 'what', 'where', 'when', 'why', 'can', 'could', 'should', 'would',
+                'help', 'show', 'get', 'find', 'search', 'post', 'create', 'update', 'delete'
+            ]):
+                return None
+            
+            # Only proceed if the question contains ambiguous keywords
+            if not any(keyword in question_lower for keyword in ambiguous_keywords):
+                return None
+                
             # Extract tool names and descriptions for context
             tool_context = []
             for tool in tools:
@@ -130,39 +155,43 @@ Be extremely conservative. When in doubt, do NOT use tools."""
                     'description': func_spec.get('description', '')
                 })
             
-            # Use AI to detect ambiguity and generate clarification
+            # Use AI to detect ambiguity - be more conservative
             messages = [
                 {
                     "role": "system",
-                    "content": f"""You are an intelligent assistant that detects when user questions are ambiguous and could match multiple available tools.
+                    "content": f"""You are a conservative assistant that only asks for clarification when a question is EXTREMELY ambiguous and could match multiple available tools.
 
 Available tools and their purposes:
 {json.dumps(tool_context, indent=2)}
 
-Your task is to determine if the user's question is ambiguous or could refer to multiple different actions. 
+ONLY ask for clarification if:
+1. The question is a single generic word that could match multiple tools
+2. The question is so vague it's impossible to determine intent
+3. There are multiple tools that could handle the exact same keyword
 
-If the question is ambiguous, respond with EXACTLY this format:
+DO NOT ask for clarification if:
+1. The question contains context or action words
+2. The question is a complete sentence
+3. The question has clear intent even if it's not perfectly specific
+4. The question doesn't match any tool closely
+
+If clarification is absolutely needed, respond with:
 CLARIFICATION_NEEDED: [Your clarifying question here]
 
-If the question is clear and specific, respond with:
+If the question is clear enough to proceed, respond with:
 CLEAR
 
-Guidelines for detecting ambiguity:
-1. Look for generic terms that could match multiple tools (e.g., "credits" could mean checking balance OR purchasing)
-2. Check for vague requests that don't specify the exact action wanted
-3. Consider if the user might want different types of information from the same domain
+Examples of when TO ask clarification:
+- "credits" (single word, could mean balance OR purchase)
+- "account" (single word, could mean details OR balance)
 
-Examples of ambiguous questions:
-- "credits" (could mean check balance, purchase, or general info)
-- "account" (could mean account details, balance, settings, etc.)
-- "status" (could mean account status, order status, etc.)
+Examples of when NOT to ask clarification:
+- "how can I post my job" (clear intent and context)
+- "what is my balance" (clear intent)
+- "help me with account settings" (clear context)
+- "show me my status" (clear action)
 
-Examples of clear questions:
-- "What is my current credit balance?"
-- "How do I purchase more credits?"
-- "Show me my account details"
-
-Be helpful but concise in your clarification questions."""
+Be extremely conservative - only ask when truly necessary."""
                 },
                 {
                     "role": "user", 
