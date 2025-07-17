@@ -515,9 +515,9 @@
             }
 
             // Load chat history first, then add welcome message if no history exists
-            this.loadChatHistory().then(() => {
+            this.loadChatHistory().then((historyLoaded) => {
                 // Add welcome message only if no history was loaded
-                if (config.welcomeMessage && messagesContainer.children.length === 0) {
+                if (config.welcomeMessage && !historyLoaded) {
                     this.addMessage(config.welcomeMessage, 'bot');
                 }
             });
@@ -835,7 +835,7 @@
         loadChatHistory: function() {
             // Only load history if user identification is available
             if (!config.user_id && !config.email && !config.device_id) {
-                return Promise.resolve();
+                return Promise.resolve(false);
             }
 
             const payload = {
@@ -862,7 +862,7 @@
             })
             .then(data => {
                 console.log('Widget history loaded:', data);
-                if (data.history && Array.isArray(data.history)) {
+                if (data.history && Array.isArray(data.history) && data.history.length > 0) {
                     console.log(`Loading ${data.history.length} messages from history`);
                     // Load messages without typing effect and without storing in history again
                     data.history.forEach(message => {
@@ -874,11 +874,15 @@
                     if (messagesContainer && data.history.length > 0) {
                         messagesContainer.scrollTop = messagesContainer.scrollHeight;
                     }
+                    
+                    return true; // History was loaded
+                } else {
+                    return false; // No history found
                 }
             })
             .catch(error => {
                 console.error('Error loading chat history:', error);
-                // Don't show error to user, just fail silently
+                return false; // Return false on error
             });
         },
 

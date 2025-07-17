@@ -78,7 +78,7 @@
     </div>
 
     <!-- Chat Widget Integration -->
-    <script src="http://localhost:5000/static/chatwidget.js"></script>
+    <script src="/static/chatwidget.js"></script>
     <script>
         // Add console logging to div
         const consoleDiv = document.getElementById('console');
@@ -89,9 +89,9 @@
             consoleDiv.scrollTop = consoleDiv.scrollHeight;
         };
 
-        // Initialize chat widget
+        // Initialize chat widget with relative URL
         ChatWidget.init({
-            apiUrl: 'http://localhost:5000',
+            apiUrl: window.location.origin,
             user_id: 'test_user_history',
             username: 'Test User',
             email: 'test@example.com',
@@ -105,7 +105,7 @@
         // Test functions
         function testHistoryAPI() {
             console.log('Testing history API...');
-            fetch('http://localhost:5000/widget_history', {
+            fetch('/widget_history', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -128,7 +128,7 @@
 
         function clearHistory() {
             console.log('Clearing history...');
-            fetch('http://localhost:5000/clear_session', {
+            fetch('/clear_session', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
