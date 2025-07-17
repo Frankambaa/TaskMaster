@@ -8,7 +8,7 @@ from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
 from vectorizer import DocumentVectorizer
 from rag_chain import RAGChain
-from models import db, ApiRule, ApiTool
+from models import db, ApiRule, ApiTool, UserConversation
 from session_memory import session_manager
 import json
 import subprocess
@@ -126,6 +126,12 @@ def chatbot():
                 break
     
     return render_template('chatbot.html', current_logo=current_logo)
+
+@app.route('/test_widget_history.html')
+def test_widget_history():
+    """Test page for widget history functionality"""
+    from flask import send_from_directory
+    return send_from_directory('.', 'test_widget_history.html')
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -651,10 +657,28 @@ def widget_history():
         # Format messages for widget display
         formatted_history = []
         for message in conversation_history:
+            # Handle different message formats that might be stored
+            if isinstance(message, dict):
+                # New format: direct message dict
+                role = message.get('role', message.get('type', 'user'))
+                content = message.get('content', '')
+                timestamp = message.get('timestamp', '')
+            else:
+                # Handle any other format
+                role = 'user'
+                content = str(message)
+                timestamp = ''
+            
+            # Convert role format if needed
+            if role == 'human':
+                role = 'user'
+            elif role == 'ai':
+                role = 'assistant'
+            
             formatted_history.append({
-                'role': message.get('role', 'user'),
-                'content': message.get('content', ''),
-                'timestamp': message.get('timestamp', '')
+                'role': role,
+                'content': content,
+                'timestamp': timestamp
             })
         
         return jsonify({

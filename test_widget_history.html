@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Widget History Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .instructions {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #2196f3;
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .console {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border: 1px solid #dee2e6;
+            font-family: monospace;
+            font-size: 14px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Chat Widget History Test</h1>
+        
+        <div class="instructions">
+            <h3>Testing Steps:</h3>
+            <ol>
+                <li>Open the browser console (F12) to see debug messages</li>
+                <li>Click the chat widget button in the bottom right</li>
+                <li>Send a few messages to the bot</li>
+                <li>Refresh this page (F5 or Ctrl+R)</li>
+                <li>Open the chat widget again - your messages should appear above the welcome message</li>
+            </ol>
+        </div>
+
+        <button class="btn" onclick="testHistoryAPI()">Test History API</button>
+        <button class="btn" onclick="clearHistory()">Clear History</button>
+        <button class="btn" onclick="location.reload()">Refresh Page</button>
+        
+        <div id="console" class="console"></div>
+    </div>
+
+    <!-- Chat Widget Integration -->
+    <script src="http://localhost:5000/static/chatwidget.js"></script>
+    <script>
+        // Add console logging to div
+        const consoleDiv = document.getElementById('console');
+        const originalLog = console.log;
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            consoleDiv.innerHTML += args.join(' ') + '<br>';
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+        };
+
+        // Initialize chat widget
+        ChatWidget.init({
+            apiUrl: 'http://localhost:5000',
+            user_id: 'test_user_history',
+            username: 'Test User',
+            email: 'test@example.com',
+            device_id: 'web_browser_test',
+            position: 'bottom-right',
+            title: 'Test Chat (History)',
+            persistentHistoryCount: 10,
+            welcomeMessage: 'Welcome! Your chat history is preserved.'
+        });
+
+        // Test functions
+        function testHistoryAPI() {
+            console.log('Testing history API...');
+            fetch('http://localhost:5000/widget_history', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    user_id: 'test_user_history',
+                    email: 'test@example.com',
+                    device_id: 'web_browser_test',
+                    limit: 10
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('History API response:', JSON.stringify(data, null, 2));
+            })
+            .catch(error => {
+                console.error('History API error:', error);
+            });
+        }
+
+        function clearHistory() {
+            console.log('Clearing history...');
+            fetch('http://localhost:5000/clear_session', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    user_id: 'test_user_history',
+                    email: 'test@example.com',
+                    device_id: 'web_browser_test'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Clear session response:', JSON.stringify(data, null, 2));
+            })
+            .catch(error => {
+                console.error('Clear session error:', error);
+            });
+        }
+
+        // Log when page loads
+        console.log('Page loaded, chat widget initialized');
+    </script>
+</body>
+</html>

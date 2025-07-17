@@ -861,9 +861,12 @@
                 return response.json();
             })
             .then(data => {
+                console.log('Widget history loaded:', data);
                 if (data.history && Array.isArray(data.history)) {
+                    console.log(`Loading ${data.history.length} messages from history`);
                     // Load messages without typing effect and without storing in history again
                     data.history.forEach(message => {
+                        console.log('Loading message:', message);
                         this.addMessage(message.content, message.role === 'user' ? 'user' : 'bot', false, false, false);
                     });
                     
