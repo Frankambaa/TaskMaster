@@ -193,6 +193,11 @@ templates/        # HTML templates
 - July 17, 2025: Added configurable options: `personalizedWelcome`, `showHistoryButton`, `autoScrollToBottom`, `smoothScrolling`
 - July 17, 2025: Enhanced scroll behavior to always show latest messages at bottom of chat interface
 - July 17, 2025: History loading now preserves welcome message and inserts conversation history after it
+- July 17, 2025: **AI TOOL CONFIDENCE**: Enhanced AI tool selection with conservative system prompt to prevent incorrect API calls
+- July 17, 2025: Added strict rules requiring direct, specific requests before using API tools (e.g., "credit limit" vs "buy credits")
+- July 17, 2025: Fixed chat history chronological order - questions now appear before answers in correct sequence
+- July 17, 2025: Improved load history button styling - smaller, subtle appearance above welcome message
+- July 17, 2025: Load history button now only appears when actual conversation history exists
 
 ## User Preferences
 

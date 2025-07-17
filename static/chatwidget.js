@@ -696,40 +696,54 @@
             const buttonDiv = document.createElement('div');
             buttonDiv.className = 'chat-widget-message bot';
             buttonDiv.style.textAlign = 'center';
-            buttonDiv.style.marginTop = '10px';
+            buttonDiv.style.marginTop = '5px';
+            buttonDiv.style.marginBottom = '10px';
             
             const button = document.createElement('button');
             button.className = 'load-history-btn';
             button.textContent = 'Load Previous Messages';
             button.style.cssText = `
-                background: #007bff;
-                color: white;
-                border: none;
-                padding: 8px 16px;
-                border-radius: 15px;
+                background: #f8f9fa;
+                color: #495057;
+                border: 1px solid #dee2e6;
+                padding: 6px 12px;
+                border-radius: 20px;
                 cursor: pointer;
-                font-size: 12px;
-                transition: background-color 0.3s;
+                font-size: 11px;
+                transition: all 0.2s;
+                box-shadow: none;
+                outline: none;
             `;
             
             button.addEventListener('mouseover', () => {
-                button.style.backgroundColor = '#0056b3';
+                button.style.backgroundColor = '#e9ecef';
+                button.style.borderColor = '#adb5bd';
             });
             
             button.addEventListener('mouseout', () => {
-                button.style.backgroundColor = '#007bff';
+                button.style.backgroundColor = '#f8f9fa';
+                button.style.borderColor = '#dee2e6';
             });
             
             button.addEventListener('click', () => {
                 button.textContent = 'Loading...';
                 button.disabled = true;
+                button.style.cursor = 'not-allowed';
                 this.loadChatHistoryOnDemand().then(() => {
                     buttonDiv.remove();
                 });
             });
             
             buttonDiv.appendChild(button);
-            messagesContainer.appendChild(buttonDiv);
+            
+            // Insert button before the welcome message
+            const welcomeMessage = messagesContainer.querySelector('.chat-widget-message.bot');
+            if (welcomeMessage) {
+                messagesContainer.insertBefore(buttonDiv, welcomeMessage);
+            } else {
+                messagesContainer.appendChild(buttonDiv);
+            }
+            
             this.scrollToBottom();
         },
 
@@ -1002,14 +1016,12 @@
                 if (data.history && Array.isArray(data.history) && data.history.length > 0) {
                     console.log(`Loading ${data.history.length} messages from history`);
                     // Load messages without typing effect and without storing in history again
-                    // History comes in reverse chronological order (newest first), so we need to reverse it
-                    const reversedHistory = [...data.history].reverse();
-                    
-                    reversedHistory.forEach((message, index) => {
+                    // History comes in chronological order (oldest first), so we can use it directly
+                    data.history.forEach((message, index) => {
                         console.log('Loading message:', message);
                         this.addMessage(message.content, message.role === 'user' ? 'user' : 'bot', false, false, false);
                         // Scroll to bottom after each message to ensure proper positioning
-                        if (index === reversedHistory.length - 1) {
+                        if (index === data.history.length - 1) {
                             setTimeout(() => this.scrollToBottom(), 50);
                         }
                     });
@@ -1066,10 +1078,13 @@
                     // Insert history messages BEFORE the welcome message in correct chronological order
                     const welcomeMessage = messagesContainer.querySelector('.chat-widget-message.bot');
                     
-                    // Reverse the history to insert oldest first (so they appear in correct order)
-                    const reversedHistory = [...data.history].reverse();
+                    // History comes in chronological order, but we need to insert them in reverse
+                    // so the oldest appears first when we insert before the welcome message
+                    const insertionPoint = welcomeMessage;
                     
-                    reversedHistory.forEach((message, index) => {
+                    // Insert messages in reverse order so they appear chronologically correct
+                    for (let i = data.history.length - 1; i >= 0; i--) {
+                        const message = data.history[i];
                         console.log('Loading message:', message);
                         const messageDiv = document.createElement('div');
                         messageDiv.className = `chat-widget-message ${message.role === 'user' ? 'user' : 'bot'}`;
@@ -1081,12 +1096,12 @@
                         messageDiv.appendChild(bubble);
                         
                         // Insert before welcome message
-                        if (welcomeMessage) {
-                            messagesContainer.insertBefore(messageDiv, welcomeMessage);
+                        if (insertionPoint) {
+                            messagesContainer.insertBefore(messageDiv, insertionPoint);
                         } else {
                             messagesContainer.appendChild(messageDiv);
                         }
-                    });
+                    }
                     
                     // Scroll to bottom after loading history
                     setTimeout(() => this.scrollToBottom(), 100);
