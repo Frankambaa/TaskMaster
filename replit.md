@@ -131,10 +131,24 @@ This is a full-stack AI-powered chatbot application built with Flask that implem
 
 ## Deployment Strategy
 
+### Local Development
+- **Environment**: SQLite database for quick setup
+- **Dependencies**: Python 3.11+, pip, virtualenv
+- **Setup**: Use `install_unix.sh` or `install_windows.bat` scripts
+
+### Production Deployment (AWS EC2)
+- **Containerization**: Docker with multi-service orchestration
+- **Database**: PostgreSQL with automated backups
+- **Web Server**: Nginx with SSL termination and rate limiting
+- **Caching**: Redis for session storage and caching
+- **Monitoring**: Health checks, resource monitoring, and alerting
+- **Security**: Firewall, fail2ban, automatic security updates
+
 ### Environment Configuration
 - **OpenAI API Key**: Required environment variable `OPENAI_API_KEY`
-- **Session Secret**: `SESSION_SECRET` for Flask session management
-- **File Storage**: Local filesystem for uploads and FAISS indices
+- **Database**: PostgreSQL connection string in `DATABASE_URL`
+- **Security**: Strong secret keys for session management
+- **SSL**: Let's Encrypt certificates for HTTPS
 
 ### Directory Structure
 ```
@@ -142,15 +156,19 @@ uploads/          # Uploaded documents
 faiss_index/      # FAISS vector indices
 static/           # CSS and JavaScript files
 templates/        # HTML templates
+logs/             # Application logs
+backups/          # Database and file backups
+deployment/       # Production deployment files
 ```
 
-### Production Considerations
-- File upload size limited to 16MB
-- CORS enabled for cross-origin requests
-- ProxyFix middleware for proper header handling
-- Debug mode configurable for development/production
-- Multi-database support (SQLite, MySQL, PostgreSQL)
-- Connection pooling and database optimization for production
+### Production Features
+- **Auto-scaling**: Ready for horizontal scaling with load balancer
+- **Backup**: Daily automated backups with 7-day retention
+- **Monitoring**: Real-time health checks and resource alerts
+- **Security**: Comprehensive security hardening and best practices
+- **Updates**: Automated security updates and easy application updates
+- **SSL**: Automatic SSL certificate management
+- **Performance**: Optimized for high-traffic scenarios
 
 ## Changelog
 - July 03, 2025: Initial RAG chatbot setup with admin panel
@@ -214,6 +232,18 @@ templates/        # HTML templates
 - July 17, 2025: **WIDGET ICON CUSTOMIZATION**: Added chatwidget icon customization feature in admin panel
 - July 17, 2025: Implemented icon upload, preview, and reset functionality with API endpoints for widget branding
 - July 17, 2025: Enhanced chatwidget.js to support iconUrl configuration parameter for custom chat button icons
+- July 18, 2025: **WIDGET TOGGLE OPTIMIZATION**: Fixed chatwidget toggle functionality and eliminated image reloading on open/close
+- July 18, 2025: Removed problematic close overlay (×) symbol that was appearing over custom chat icons
+- July 18, 2025: Optimized icon display by reusing single image element instead of recreating on each toggle
+- July 18, 2025: Added smooth CSS transitions for icon state changes (darkening when open, normal when closed)
+- July 18, 2025: **PRODUCTION DEPLOYMENT**: Created comprehensive AWS EC2 deployment package with full automation
+- July 18, 2025: Added Docker containerization with multi-service orchestration (app, database, nginx, redis)
+- July 18, 2025: Implemented production-ready configuration with SSL, rate limiting, health checks, and monitoring
+- July 18, 2025: Created automated deployment scripts with one-command setup for AWS EC2 instances
+- July 18, 2025: Added comprehensive security features including firewall, fail2ban, and automatic security updates
+- July 18, 2025: Implemented automated backup system with daily database and application file backups
+- July 18, 2025: Added systemd service integration for auto-startup and service management
+- July 18, 2025: Created monitoring and alerting system with health checks and resource usage tracking
 
 ## User Preferences
 
