@@ -73,6 +73,7 @@
     let inputField = null;
     let sendButton = null;
     let toggleButton = null;
+    let customIconImg = null;
 
     // Security functions
     const SecurityManager = {
@@ -494,29 +495,34 @@
                 toggleButton.style.boxShadow = 'none';
                 toggleButton.style.cursor = 'pointer';
                 
-                const iconImg = document.createElement('img');
-                iconImg.src = config.iconUrl + '?t=' + Date.now(); // Cache busting to ensure new images load
-                iconImg.alt = 'Chat';
-                iconImg.style.cssText = `
+                // Create the custom icon image once and store it
+                customIconImg = document.createElement('img');
+                customIconImg.src = config.iconUrl + '?t=' + Date.now(); // Cache busting to ensure new images load
+                customIconImg.alt = 'Chat';
+                customIconImg.style.cssText = `
                     width: ${config.buttonSize}px; 
                     height: ${config.buttonSize}px; 
                     object-fit: cover;
                     object-position: center;
-                    transition: transform 0.3s ease;
+                    transition: transform 0.3s ease, filter 0.3s ease;
                     cursor: pointer;
                     pointer-events: none;
                 `;
                 
                 // Add hover effect to the image - simple move animation
-                iconImg.addEventListener('mouseenter', function() {
-                    this.style.transform = 'translateY(-2px)';
+                customIconImg.addEventListener('mouseenter', function() {
+                    if (!isOpen) {
+                        this.style.transform = 'translateY(-2px)';
+                    }
                 });
                 
-                iconImg.addEventListener('mouseleave', function() {
-                    this.style.transform = 'translateY(0)';
+                customIconImg.addEventListener('mouseleave', function() {
+                    if (!isOpen) {
+                        this.style.transform = 'translateY(0)';
+                    }
                 });
                 
-                toggleButton.appendChild(iconImg);
+                toggleButton.appendChild(customIconImg);
             } else {
                 toggleButton.innerHTML = '💬';
             }
@@ -669,23 +675,11 @@
             chatWindow.style.display = 'flex';
             
             // Update toggle button to show close icon
-            if (config.iconUrl) {
+            if (config.iconUrl && customIconImg) {
                 // For custom icons, just darken the image slightly to indicate it's active
-                toggleButton.innerHTML = '';
-                const iconImg = document.createElement('img');
-                iconImg.src = config.iconUrl + '?t=' + Date.now();
-                iconImg.alt = 'Close Chat';
-                iconImg.style.cssText = `
-                    width: ${config.buttonSize}px; 
-                    height: ${config.buttonSize}px; 
-                    object-fit: cover;
-                    object-position: center;
-                    filter: brightness(0.7) contrast(1.1);
-                    cursor: pointer;
-                    pointer-events: none;
-                `;
-                
-                toggleButton.appendChild(iconImg);
+                customIconImg.alt = 'Close Chat';
+                customIconImg.style.filter = 'brightness(0.7) contrast(1.1)';
+                customIconImg.style.transform = 'translateY(0)'; // Reset hover effect
             } else {
                 toggleButton.innerHTML = '×';
             }
@@ -704,32 +698,11 @@
             chatWindow.style.display = 'none';
             
             // Update toggle button to show chat icon
-            if (config.iconUrl) {
-                toggleButton.innerHTML = '';
-                toggleButton.style.position = 'static';
-                
-                const iconImg = document.createElement('img');
-                iconImg.src = config.iconUrl + '?t=' + Date.now();
-                iconImg.alt = 'Chat';
-                iconImg.style.cssText = `
-                    width: ${config.buttonSize}px; 
-                    height: ${config.buttonSize}px; 
-                    object-fit: cover;
-                    object-position: center;
-                    transition: transform 0.3s ease;
-                    cursor: pointer;
-                `;
-                
-                // Add hover effect
-                iconImg.addEventListener('mouseenter', function() {
-                    this.style.transform = 'translateY(-2px)';
-                });
-                
-                iconImg.addEventListener('mouseleave', function() {
-                    this.style.transform = 'translateY(0)';
-                });
-                
-                toggleButton.appendChild(iconImg);
+            if (config.iconUrl && customIconImg) {
+                // For custom icons, restore original appearance
+                customIconImg.alt = 'Chat';
+                customIconImg.style.filter = 'none';
+                customIconImg.style.transform = 'translateY(0)'; // Reset position
             } else {
                 toggleButton.innerHTML = '💬';
             }
