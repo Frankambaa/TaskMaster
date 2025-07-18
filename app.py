@@ -776,6 +776,12 @@ def test_widget():
     </html>
     '''
 
+@app.route('/test_upload')
+def test_upload():
+    """Test page for upload functionality"""
+    with open('test_upload.html', 'r') as f:
+        return f.read()
+
 @app.route('/test_widget_fix')
 def test_widget_fix():
     """Test page for fixed widget integration"""

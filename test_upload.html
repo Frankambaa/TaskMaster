@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Upload</title>
+</head>
+<body>
+    <h1>Test Icon Upload</h1>
+    <form id="iconUploadForm" enctype="multipart/form-data">
+        <div class="input-group mb-3">
+            <input type="file" class="form-control" id="iconFile" name="iconFile" accept="image/*">
+            <button class="btn btn-outline-primary" type="submit">
+                Upload Icon
+            </button>
+        </div>
+    </form>
+    <div id="iconUploadStatus"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const iconUploadForm = document.getElementById('iconUploadForm');
+            iconUploadForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const fileInput = document.getElementById('iconFile');
+                const file = fileInput.files[0];
+                
+                if (!file) {
+                    alert('Please select a file first');
+                    return;
+                }
+                
+                const formData = new FormData();
+                formData.append('iconFile', file);
+                
+                fetch('/api/widget/icon', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Icon uploaded successfully!');
+                        console.log('Icon URL:', data.iconUrl);
+                    } else {
+                        alert('Upload failed: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Upload failed. Please try again.');
+                });
+            });
+        });
+    </script>
+</body>
+</html>
