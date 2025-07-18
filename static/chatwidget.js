@@ -666,7 +666,38 @@
             
             // Update toggle button to show close icon
             if (config.iconUrl) {
-                toggleButton.innerHTML = '×';
+                // For custom icons, keep the original styling but add close overlay
+                toggleButton.innerHTML = '';
+                const iconImg = document.createElement('img');
+                iconImg.src = config.iconUrl + '?t=' + Date.now();
+                iconImg.alt = 'Close Chat';
+                iconImg.style.cssText = `
+                    width: ${config.buttonSize}px; 
+                    height: ${config.buttonSize}px; 
+                    object-fit: cover;
+                    object-position: center;
+                    filter: brightness(0.8);
+                    cursor: pointer;
+                `;
+                
+                // Add close overlay
+                const closeOverlay = document.createElement('div');
+                closeOverlay.innerHTML = '×';
+                closeOverlay.style.cssText = `
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    color: white;
+                    font-size: ${Math.floor(config.buttonSize * 0.6)}px;
+                    font-weight: bold;
+                    text-shadow: 0 0 4px rgba(0,0,0,0.8);
+                    pointer-events: none;
+                `;
+                
+                toggleButton.style.position = 'relative';
+                toggleButton.appendChild(iconImg);
+                toggleButton.appendChild(closeOverlay);
             } else {
                 toggleButton.innerHTML = '×';
             }
@@ -687,10 +718,29 @@
             // Update toggle button to show chat icon
             if (config.iconUrl) {
                 toggleButton.innerHTML = '';
+                toggleButton.style.position = 'static';
+                
                 const iconImg = document.createElement('img');
-                iconImg.src = config.iconUrl;
+                iconImg.src = config.iconUrl + '?t=' + Date.now();
                 iconImg.alt = 'Chat';
-                iconImg.style.cssText = 'width: 24px; height: 24px; border-radius: 50%; object-fit: cover;';
+                iconImg.style.cssText = `
+                    width: ${config.buttonSize}px; 
+                    height: ${config.buttonSize}px; 
+                    object-fit: cover;
+                    object-position: center;
+                    transition: transform 0.3s ease;
+                    cursor: pointer;
+                `;
+                
+                // Add hover effect
+                iconImg.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-2px)';
+                });
+                
+                iconImg.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0)';
+                });
+                
                 toggleButton.appendChild(iconImg);
             } else {
                 toggleButton.innerHTML = '💬';
