@@ -1254,11 +1254,33 @@
 
         // Widget Icon Management Functions
         function initializeIconUpload() {
+            console.log('Initializing icon upload...');
             const iconUploadForm = document.getElementById('iconUploadForm');
+            if (!iconUploadForm) {
+                console.error('Icon upload form not found!');
+                return;
+            }
+            
+            console.log('Adding event listener to form...');
             iconUploadForm.addEventListener('submit', function(e) {
+                console.log('Form submitted, preventing default...');
                 e.preventDefault();
+                e.stopPropagation();
                 uploadIcon();
+                return false;
             });
+            
+            // Also handle button clicks directly
+            const uploadButton = iconUploadForm.querySelector('button[type="submit"]');
+            if (uploadButton) {
+                uploadButton.addEventListener('click', function(e) {
+                    console.log('Upload button clicked, preventing default...');
+                    e.preventDefault();
+                    e.stopPropagation();
+                    uploadIcon();
+                    return false;
+                });
+            }
             
             // Load current icon on page load
             loadCurrentIcon();
@@ -1452,13 +1474,16 @@
 
         // Initialize icon upload when page loads
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, initializing icon upload...');
             initializeIconUpload();
             
             // Initialize button size slider
             const buttonSizeRange = document.getElementById('buttonSizeRange');
-            buttonSizeRange.addEventListener('input', function() {
-                document.getElementById('buttonSizeValue').textContent = this.value + 'px';
-            });
+            if (buttonSizeRange) {
+                buttonSizeRange.addEventListener('input', function() {
+                    document.getElementById('buttonSizeValue').textContent = this.value + 'px';
+                });
+            }
         });
     </script>
 </body>
