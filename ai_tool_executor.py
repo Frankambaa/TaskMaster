@@ -6,6 +6,7 @@ from typing import Dict, List, Optional, Any, Tuple
 from openai import OpenAI
 import os
 from models import ApiTool
+from flask import current_app
 
 class AIToolExecutor:
     """AI-driven tool executor using OpenAI Function Calling"""
@@ -20,7 +21,8 @@ class AIToolExecutor:
     def get_available_tools(self) -> List[ApiTool]:
         """Get all active API tools from database"""
         try:
-            return ApiTool.query.filter_by(active=True).order_by(ApiTool.priority.desc()).all()
+            tools = ApiTool.query.filter_by(active=True).order_by(ApiTool.priority.desc()).all()
+            return tools
         except Exception as e:
             self.logger.error(f"Error loading API tools: {e}")
             return []

@@ -244,6 +244,10 @@ deployment/       # Production deployment files
 - July 18, 2025: Implemented automated backup system with daily database and application file backups
 - July 18, 2025: Added systemd service integration for auto-startup and service management
 - July 18, 2025: Created monitoring and alerting system with health checks and resource usage tracking
+- July 18, 2025: **CRITICAL API TOOL FIX**: Fixed OpenAI function naming validation error that was preventing API tools from working
+- July 18, 2025: Resolved "Job Status" tool name issue (spaces not allowed in OpenAI function names) by changing to "job_status"
+- July 18, 2025: Confirmed all three API tools now working: credits balance, job status, and job posts count
+- July 18, 2025: Enhanced Flask app context initialization to ensure AI tool executor has proper database access
 
 ## User Preferences
 

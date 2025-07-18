@@ -73,7 +73,9 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 # Initialize components
 vectorizer = DocumentVectorizer()
-rag_chain = RAGChain()
+# Initialize RAG chain after database is ready
+with app.app_context():
+    rag_chain = RAGChain()
 
 
 def allowed_file(filename):
