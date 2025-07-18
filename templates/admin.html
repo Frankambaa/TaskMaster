@@ -1458,17 +1458,17 @@
             
             // Update the sized widget script
             const sizedScript = document.getElementById('sizedWidgetScript');
-            const baseScript = `<script src="{{ request.url_root }}static/chatwidget.js"></script>
+            const baseScript = \`<script src="{{ request.url_root }}static/chatwidget.js"></script>
 <script>
     ChatWidget.init({
         apiUrl: '{{ request.url_root.rstrip('/') }}',
         user_id: 'your_user_id',
         username: 'User Name',
         email: 'user@example.com',
-        widgetSize: '${widgetSize}',
-        buttonSize: ${buttonSize}
+        widgetSize: '\${widgetSize}',
+        buttonSize: \${buttonSize}
     });
-</script>`;
+</script>\`;
             sizedScript.textContent = baseScript;
         }
 
