@@ -726,7 +726,12 @@ def get_user_conversation(user_identifier):
 @app.route('/widget_demo')
 def widget_demo():
     """Serve the widget demo page"""
-    return app.send_static_file('../widget_example.html')
+    try:
+        with open('widget_example.html', 'r') as f:
+            content = f.read()
+        return content
+    except FileNotFoundError:
+        return "Widget demo page not found", 404
 
 @app.route('/test_widget')
 def test_widget():

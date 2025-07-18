@@ -488,17 +488,35 @@
             
             // Use custom icon if provided, otherwise use default emoji
             if (config.iconUrl) {
+                // Remove background for custom icon - show only the image
+                toggleButton.style.background = 'transparent';
+                toggleButton.style.border = 'none';
+                toggleButton.style.padding = '0';
+                
                 const iconImg = document.createElement('img');
                 iconImg.src = config.iconUrl;
                 iconImg.alt = 'Chat';
-                const iconSize = Math.floor(config.buttonSize * 0.6); // Icon is 60% of button size
                 iconImg.style.cssText = `
-                    width: ${iconSize}px; 
-                    height: ${iconSize}px; 
+                    width: ${config.buttonSize}px; 
+                    height: ${config.buttonSize}px; 
                     border-radius: 50%; 
                     object-fit: cover;
                     object-position: center;
+                    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+                    transition: all 0.3s ease;
                 `;
+                
+                // Add hover effect to the image
+                iconImg.addEventListener('mouseenter', function() {
+                    this.style.transform = 'scale(1.1)';
+                    this.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.3)';
+                });
+                
+                iconImg.addEventListener('mouseleave', function() {
+                    this.style.transform = 'scale(1)';
+                    this.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.2)';
+                });
+                
                 toggleButton.appendChild(iconImg);
             } else {
                 toggleButton.innerHTML = '💬';
