@@ -487,11 +487,13 @@
             
             // Use custom icon if provided, otherwise use default emoji
             if (config.iconUrl) {
+                console.log('Creating toggle button with custom icon:', config.iconUrl);
                 // Remove all styling from button - show only the image
                 toggleButton.style.background = 'transparent';
                 toggleButton.style.border = 'none';
                 toggleButton.style.padding = '0';
                 toggleButton.style.boxShadow = 'none';
+                toggleButton.style.cursor = 'pointer';
                 
                 const iconImg = document.createElement('img');
                 iconImg.src = config.iconUrl + '?t=' + Date.now(); // Cache busting to ensure new images load
@@ -503,6 +505,7 @@
                     object-position: center;
                     transition: transform 0.3s ease;
                     cursor: pointer;
+                    pointer-events: none;
                 `;
                 
                 // Add hover effect to the image - simple move animation
@@ -520,6 +523,7 @@
             }
             
             toggleButton.title = 'Open Chat';
+            console.log('Toggle button created:', toggleButton);
 
             // Create chat window
             chatWindow = document.createElement('div');
@@ -612,7 +616,10 @@
 
         bindEvents: function() {
             // Toggle button
-            toggleButton.addEventListener('click', () => {
+            toggleButton.addEventListener('click', (e) => {
+                console.log('Toggle button clicked!', e.target);
+                e.preventDefault();
+                e.stopPropagation();
                 this.toggleWidget();
             });
 
@@ -654,6 +661,7 @@
         },
 
         toggleWidget: function() {
+            console.log('toggleWidget called, isOpen:', isOpen);
             if (isOpen) {
                 this.closeWidget();
             } else {
@@ -662,6 +670,7 @@
         },
 
         openWidget: function() {
+            console.log('openWidget called');
             chatWindow.style.display = 'flex';
             
             // Update toggle button to show close icon
