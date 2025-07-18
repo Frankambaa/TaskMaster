@@ -248,6 +248,10 @@ deployment/       # Production deployment files
 - July 18, 2025: Resolved "Job Status" tool name issue (spaces not allowed in OpenAI function names) by changing to "job_status"
 - July 18, 2025: Confirmed all three API tools now working: credits balance, job status, and job posts count
 - July 18, 2025: Enhanced Flask app context initialization to ensure AI tool executor has proper database access
+- July 18, 2025: **CONSERVATIVE AI TOOL SELECTION**: Fixed overly aggressive API tool calling for instructional questions
+- July 18, 2025: Updated system prompt to only use APIs for direct data requests ("give me my token" vs "how to check my token")
+- July 18, 2025: Blocked API calls for "how to", "how do I", "where do I" questions - these now use knowledge base correctly
+- July 18, 2025: Confirmed perfect distinction between API calls (personal data) and knowledge base (instructions)
 
 ## User Preferences
 
