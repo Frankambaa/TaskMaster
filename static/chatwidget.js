@@ -487,7 +487,6 @@
             
             // Use custom icon if provided, otherwise use default emoji
             if (config.iconUrl) {
-                console.log('Creating toggle button with custom icon:', config.iconUrl);
                 // Remove all styling from button - show only the image
                 toggleButton.style.background = 'transparent';
                 toggleButton.style.border = 'none';
@@ -523,7 +522,6 @@
             }
             
             toggleButton.title = 'Open Chat';
-            console.log('Toggle button created:', toggleButton);
 
             // Create chat window
             chatWindow = document.createElement('div');
@@ -617,7 +615,6 @@
         bindEvents: function() {
             // Toggle button
             toggleButton.addEventListener('click', (e) => {
-                console.log('Toggle button clicked!', e.target);
                 e.preventDefault();
                 e.stopPropagation();
                 this.toggleWidget();
@@ -661,7 +658,6 @@
         },
 
         toggleWidget: function() {
-            console.log('toggleWidget called, isOpen:', isOpen);
             if (isOpen) {
                 this.closeWidget();
             } else {
@@ -670,12 +666,11 @@
         },
 
         openWidget: function() {
-            console.log('openWidget called');
             chatWindow.style.display = 'flex';
             
             // Update toggle button to show close icon
             if (config.iconUrl) {
-                // For custom icons, keep the original styling but add close overlay
+                // For custom icons, just darken the image slightly to indicate it's active
                 toggleButton.innerHTML = '';
                 const iconImg = document.createElement('img');
                 iconImg.src = config.iconUrl + '?t=' + Date.now();
@@ -685,28 +680,12 @@
                     height: ${config.buttonSize}px; 
                     object-fit: cover;
                     object-position: center;
-                    filter: brightness(0.8);
+                    filter: brightness(0.7) contrast(1.1);
                     cursor: pointer;
-                `;
-                
-                // Add close overlay
-                const closeOverlay = document.createElement('div');
-                closeOverlay.innerHTML = '×';
-                closeOverlay.style.cssText = `
-                    position: absolute;
-                    top: 50%;
-                    left: 50%;
-                    transform: translate(-50%, -50%);
-                    color: white;
-                    font-size: ${Math.floor(config.buttonSize * 0.6)}px;
-                    font-weight: bold;
-                    text-shadow: 0 0 4px rgba(0,0,0,0.8);
                     pointer-events: none;
                 `;
                 
-                toggleButton.style.position = 'relative';
                 toggleButton.appendChild(iconImg);
-                toggleButton.appendChild(closeOverlay);
             } else {
                 toggleButton.innerHTML = '×';
             }
