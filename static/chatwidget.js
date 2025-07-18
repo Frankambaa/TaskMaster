@@ -228,10 +228,11 @@
 
         loadCustomIcon: async function() {
             try {
-                const response = await fetch(`${config.apiUrl}/api/widget/icon`);
+                const response = await fetch(`${config.apiUrl}/api/widget/icon?t=${Date.now()}`); // Cache busting
                 const data = await response.json();
                 if (data.iconUrl) {
                     config.iconUrl = data.iconUrl;
+                    console.log('Custom icon loaded:', data.iconUrl);
                 }
             } catch (error) {
                 console.log('Could not load custom icon, using default');
@@ -260,11 +261,9 @@
                 .chat-widget-toggle {
                     width: ${config.buttonSize}px;
                     height: ${config.buttonSize}px;
-                    border-radius: 50%;
                     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                     border: none;
                     cursor: pointer;
-                    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
                     transition: all 0.3s ease;
                     display: flex;
                     align-items: center;
@@ -488,32 +487,31 @@
             
             // Use custom icon if provided, otherwise use default emoji
             if (config.iconUrl) {
-                // Remove background for custom icon - show only the image
+                // Remove all styling from button - show only the image
                 toggleButton.style.background = 'transparent';
                 toggleButton.style.border = 'none';
                 toggleButton.style.padding = '0';
+                toggleButton.style.boxShadow = 'none';
                 
                 const iconImg = document.createElement('img');
-                iconImg.src = config.iconUrl;
+                iconImg.src = config.iconUrl + '?t=' + Date.now(); // Cache busting to ensure new images load
                 iconImg.alt = 'Chat';
                 iconImg.style.cssText = `
                     width: ${config.buttonSize}px; 
                     height: ${config.buttonSize}px; 
                     object-fit: cover;
                     object-position: center;
-                    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-                    transition: all 0.3s ease;
+                    transition: transform 0.3s ease;
+                    cursor: pointer;
                 `;
                 
                 // Add hover effect to the image - simple move animation
                 iconImg.addEventListener('mouseenter', function() {
                     this.style.transform = 'translateY(-2px)';
-                    this.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.3)';
                 });
                 
                 iconImg.addEventListener('mouseleave', function() {
                     this.style.transform = 'translateY(0)';
-                    this.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.2)';
                 });
                 
                 toggleButton.appendChild(iconImg);
