@@ -1202,9 +1202,11 @@
         }
 
         function loadCurrentIcon() {
+            console.log('Loading current icon...');
             fetch('/api/widget/icon')
                 .then(response => response.json())
                 .then(data => {
+                    console.log('Current icon response:', data);
                     if (data.iconUrl) {
                         updateIconDisplay(data.iconUrl);
                     }
@@ -1215,8 +1217,11 @@
         }
 
         function uploadIcon() {
+            console.log('Starting icon upload...');
             const fileInput = document.getElementById('iconFile');
             const file = fileInput.files[0];
+            
+            console.log('Selected file:', file);
             
             if (!file) {
                 showIconStatus('Please select a file first', 'danger');
@@ -1239,13 +1244,18 @@
             formData.append('iconFile', file);
             
             showIconStatus('Uploading icon...', 'info');
+            console.log('Sending upload request...');
             
             fetch('/api/widget/icon', {
                 method: 'POST',
                 body: formData
             })
-            .then(response => response.json())
+            .then(response => {
+                console.log('Upload response status:', response.status);
+                return response.json();
+            })
             .then(data => {
+                console.log('Upload response data:', data);
                 if (data.success) {
                     showIconStatus('Icon uploaded successfully!', 'success');
                     updateIconDisplay(data.iconUrl);
@@ -1269,7 +1279,7 @@
             `;
         }
 
-        function resetToDefaultIcon() {
+        window.resetToDefaultIcon = function() {
             if (confirm('Are you sure you want to reset to the default icon?')) {
                 fetch('/api/widget/icon', {
                     method: 'DELETE'
@@ -1295,7 +1305,7 @@
             }
         }
 
-        function previewIcon() {
+        window.previewIcon = function() {
             // Open a new window with the widget demo that includes the current icon
             window.open('/widget_demo', '_blank');
         }
@@ -1344,7 +1354,7 @@
                 // Add new iconUrl if provided
                 if (iconConfig) {
                     content = content.replace(
-                        /    });/,
+                        /    \}\);/,
                         `${iconConfig}\n    });`
                     );
                 }
