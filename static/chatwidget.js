@@ -57,7 +57,7 @@
         personalizedWelcome: true, // Show personalized welcome message with user's name
         iconUrl: null, // Custom icon URL for the chat widget toggle button
         widgetSize: 'medium', // Widget size: 'small', 'medium', 'large'
-        buttonSize: 60 // Toggle button size in pixels
+        buttonSize: null // Toggle button size in pixels (auto-calculated based on widgetSize)
     };
 
     // Widget state
@@ -220,11 +220,18 @@
 
         getWidgetDimensions: function() {
             const sizes = {
-                small: { width: 300, height: 400 },
-                medium: { width: 350, height: 500 },
-                large: { width: 400, height: 600 }
+                small: { width: 300, height: 400, buttonSize: 60 },
+                medium: { width: 350, height: 500, buttonSize: 80 },
+                large: { width: 400, height: 600, buttonSize: 100 }
             };
             return sizes[config.widgetSize] || sizes.medium;
+        },
+
+        getButtonSize: function() {
+            if (config.buttonSize) {
+                return config.buttonSize;
+            }
+            return this.getWidgetDimensions().buttonSize;
         },
 
         loadCustomIcon: async function() {
@@ -260,8 +267,8 @@
                 }
 
                 .chat-widget-toggle {
-                    width: ${config.buttonSize}px;
-                    height: ${config.buttonSize}px;
+                    width: ${this.getButtonSize()}px;
+                    height: ${this.getButtonSize()}px;
                     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                     border: none;
                     cursor: pointer;
@@ -270,7 +277,7 @@
                     align-items: center;
                     justify-content: center;
                     color: white;
-                    font-size: ${Math.floor(config.buttonSize * 0.4)}px;
+                    font-size: ${Math.floor(this.getButtonSize() * 0.4)}px;
                     overflow: hidden;
                 }
 
@@ -288,7 +295,7 @@
                     display: none;
                     flex-direction: column;
                     position: absolute;
-                    bottom: ${config.buttonSize + 20}px;
+                    bottom: ${this.getButtonSize() + 20}px;
                     right: 0;
                     overflow: hidden;
                 }
@@ -500,8 +507,8 @@
                 customIconImg.src = config.iconUrl + '?t=' + Date.now(); // Cache busting to ensure new images load
                 customIconImg.alt = 'Chat';
                 customIconImg.style.cssText = `
-                    width: ${config.buttonSize}px; 
-                    height: ${config.buttonSize}px; 
+                    width: ${this.getButtonSize()}px; 
+                    height: ${this.getButtonSize()}px; 
                     object-fit: cover;
                     object-position: center;
                     transition: transform 0.3s ease, filter 0.3s ease;

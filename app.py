@@ -137,6 +137,12 @@ def test_widget_history():
     from flask import send_from_directory
     return send_from_directory('.', 'test_widget_history.html')
 
+@app.route('/test_widget_sizes.html')
+def test_widget_sizes():
+    """Test page for widget size functionality"""
+    from flask import send_from_directory
+    return send_from_directory('.', 'test_widget_sizes.html')
+
 @app.route('/upload', methods=['POST'])
 def upload_file():
     """Handle file upload"""

@@ -252,6 +252,12 @@ deployment/       # Production deployment files
 - July 18, 2025: Updated system prompt to only use APIs for direct data requests ("give me my token" vs "how to check my token")
 - July 18, 2025: Blocked API calls for "how to", "how do I", "where do I" questions - these now use knowledge base correctly
 - July 18, 2025: Confirmed perfect distinction between API calls (personal data) and knowledge base (instructions)
+- July 18, 2025: **WIDGET SIZE CONFIGURATION**: Added comprehensive widget size options with three predefined sizes
+- July 18, 2025: Implemented small (60px), medium (80px), and large (100px) button sizes with proportional widget dimensions
+- July 18, 2025: Added widgetSize configuration parameter: 'small', 'medium', 'large' for easy size selection
+- July 18, 2025: Enhanced admin panel with widget size configuration section showing all available options
+- July 18, 2025: Created test_widget_sizes.html for testing and demonstrating different widget size configurations
+- July 18, 2025: Added support for custom buttonSize override while maintaining automatic size calculation
 
 ## User Preferences
 

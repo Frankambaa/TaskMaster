@@ -568,6 +568,98 @@
                                             </div>
                                         </div>
                                     </div>
+                                    <!-- Widget Size Configuration -->
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header" id="sizeHeading">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#sizeExample">
+                                                <i class="fas fa-expand-arrows-alt me-2"></i> Widget Size Configuration
+                                            </button>
+                                        </h2>
+                                        <div id="sizeExample" class="accordion-collapse collapse" data-bs-parent="#integrationExamples">
+                                            <div class="accordion-body">
+                                                <p>Configure widget dimensions and button sizes:</p>
+                                                
+                                                <div class="row mb-3">
+                                                    <div class="col-md-4">
+                                                        <div class="card">
+                                                            <div class="card-body">
+                                                                <h6 class="card-title">Small Widget</h6>
+                                                                <p class="card-text small">
+                                                                    Widget: 300px × 400px<br>
+                                                                    Button: 60px × 60px
+                                                                </p>
+                                                                <code>widgetSize: 'small'</code>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <div class="card">
+                                                            <div class="card-body">
+                                                                <h6 class="card-title">Medium Widget</h6>
+                                                                <p class="card-text small">
+                                                                    Widget: 350px × 500px<br>
+                                                                    Button: 80px × 80px
+                                                                </p>
+                                                                <code>widgetSize: 'medium'</code>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <div class="card">
+                                                            <div class="card-body">
+                                                                <h6 class="card-title">Large Widget</h6>
+                                                                <p class="card-text small">
+                                                                    Widget: 400px × 600px<br>
+                                                                    Button: 100px × 100px
+                                                                </p>
+                                                                <code>widgetSize: 'large'</code>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="position-relative">
+                                                    <pre class="bg-light p-3 rounded" style="font-size: 0.9rem;"><code id="sizeScript">&lt;script src="{{ request.url_root }}static/chatwidget.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+    ChatWidget.init({
+        apiUrl: '{{ request.url_root.rstrip('/') }}',
+        widgetSize: 'large',  // 'small', 'medium', 'large'
+        position: 'bottom-right',
+        title: 'Chat Assistant'
+    });
+    
+    // Or use custom button size
+    ChatWidget.init({
+        apiUrl: '{{ request.url_root.rstrip('/') }}',
+        widgetSize: 'medium',
+        buttonSize: 120,  // Custom button size in pixels
+        position: 'bottom-right'
+    });
+&lt;/script&gt;</code></pre>
+                                                    <button class="btn btn-sm btn-outline-secondary position-absolute top-0 end-0 m-2" 
+                                                            onclick="copyToClipboard('sizeScript')">
+                                                        <i class="fas fa-copy"></i>
+                                                    </button>
+                                                </div>
+                                                
+                                                <div class="alert alert-info mt-3">
+                                                    <i class="fas fa-info-circle"></i> <strong>Size Options:</strong>
+                                                    <ul class="mb-0 mt-2">
+                                                        <li><strong>widgetSize:</strong> 'small', 'medium', 'large' (affects both widget and button)</li>
+                                                        <li><strong>buttonSize:</strong> Custom button size in pixels (overrides widgetSize for button)</li>
+                                                        <li><strong>position:</strong> 'bottom-right', 'bottom-left'</li>
+                                                        <li>Widget automatically adapts to mobile devices</li>
+                                                    </ul>
+                                                </div>
+                                                
+                                                <div class="mt-3">
+                                                    <a href="/test_widget_sizes.html" class="btn btn-outline-primary" target="_blank">
+                                                        <i class="fas fa-external-link-alt"></i> Test Widget Sizes
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>

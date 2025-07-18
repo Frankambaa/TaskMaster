@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Widget Size Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 20px;
+        }
+        .size-demo {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+        .size-label {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .size-info {
+            color: #666;
+            font-size: 14px;
+        }
+        .test-button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #5a6fd8;
+        }
+    </style>
+</head>
+<body>
+    <h1>ChatWidget Size Test</h1>
+    <p>This page demonstrates the different widget sizes available for the ChatWidget.</p>
+    
+    <div class="size-demo">
+        <div class="size-label">Large Widget (100px button)</div>
+        <div class="size-info">Widget: 400px × 600px, Button: 100px × 100px</div>
+        <button class="test-button" onclick="testLargeWidget()">Test Large Widget</button>
+    </div>
+    
+    <div class="size-demo">
+        <div class="size-label">Medium Widget (80px button)</div>
+        <div class="size-info">Widget: 350px × 500px, Button: 80px × 80px</div>
+        <button class="test-button" onclick="testMediumWidget()">Test Medium Widget</button>
+    </div>
+    
+    <div class="size-demo">
+        <div class="size-label">Small Widget (60px button)</div>
+        <div class="size-info">Widget: 300px × 400px, Button: 60px × 60px</div>
+        <button class="test-button" onclick="testSmallWidget()">Test Small Widget</button>
+    </div>
+    
+    <div class="size-demo">
+        <div class="size-label">Custom Button Size</div>
+        <div class="size-info">You can also override button size manually</div>
+        <button class="test-button" onclick="testCustomWidget()">Test Custom Size (120px button)</button>
+    </div>
+    
+    <div class="size-demo">
+        <div class="size-label">Clear Widget</div>
+        <button class="test-button" onclick="clearWidget()">Clear Current Widget</button>
+    </div>
+
+    <script src="/static/chatwidget.js"></script>
+    <script>
+        let currentWidget = null;
+        
+        function clearWidget() {
+            if (currentWidget) {
+                // Remove existing widget
+                const existingContainer = document.querySelector('.chat-widget-container');
+                if (existingContainer) {
+                    existingContainer.remove();
+                }
+                currentWidget = null;
+            }
+        }
+        
+        function testLargeWidget() {
+            clearWidget();
+            ChatWidget.init({
+                apiUrl: 'http://localhost:5000',
+                user_id: 'size_test_user',
+                username: 'Size Test User',
+                widgetSize: 'large',
+                position: 'bottom-right',
+                title: 'Large Widget'
+            });
+            currentWidget = 'large';
+        }
+        
+        function testMediumWidget() {
+            clearWidget();
+            ChatWidget.init({
+                apiUrl: 'http://localhost:5000',
+                user_id: 'size_test_user',
+                username: 'Size Test User',
+                widgetSize: 'medium',
+                position: 'bottom-right',
+                title: 'Medium Widget'
+            });
+            currentWidget = 'medium';
+        }
+        
+        function testSmallWidget() {
+            clearWidget();
+            ChatWidget.init({
+                apiUrl: 'http://localhost:5000',
+                user_id: 'size_test_user',
+                username: 'Size Test User',
+                widgetSize: 'small',
+                position: 'bottom-right',
+                title: 'Small Widget'
+            });
+            currentWidget = 'small';
+        }
+        
+        function testCustomWidget() {
+            clearWidget();
+            ChatWidget.init({
+                apiUrl: 'http://localhost:5000',
+                user_id: 'size_test_user',
+                username: 'Size Test User',
+                widgetSize: 'medium',
+                buttonSize: 120, // Custom button size
+                position: 'bottom-right',
+                title: 'Custom Button Size'
+            });
+            currentWidget = 'custom';
+        }
+        
+        // Show usage instructions
+        console.log('Widget Size Usage:');
+        console.log('ChatWidget.init({ widgetSize: "small" });  // 60px button');
+        console.log('ChatWidget.init({ widgetSize: "medium" }); // 80px button');
+        console.log('ChatWidget.init({ widgetSize: "large" });  // 100px button');
+        console.log('ChatWidget.init({ buttonSize: 120 });     // Custom button size');
+    </script>
+</body>
+</html>
