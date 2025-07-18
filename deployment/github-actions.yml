@@ -1,0 +1,59 @@
+# GitHub Actions Workflow for Automated Deployment
+# Copy this to .github/workflows/deploy.yml in your repository
+
+name: Deploy RAG Chatbot
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup SSH
+      uses: webfactory/ssh-agent@v0.5.4
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+    
+    - name: Deploy to Server
+      run: |
+        ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.SERVER_HOST }} << 'EOF'
+          cd /opt/rag-chatbot
+          git pull origin main
+          docker-compose build
+          docker-compose down
+          docker-compose up -d
+          
+          # Wait for services to be ready
+          sleep 30
+          
+          # Health check
+          if curl -f -s http://localhost:5000/health > /dev/null; then
+            echo "Deployment successful - Application is healthy"
+          else
+            echo "Deployment failed - Application is not responding"
+            exit 1
+          fi
+        EOF
+    
+    - name: Notify Success
+      if: success()
+      run: echo "Deployment completed successfully!"
+    
+    - name: Notify Failure
+      if: failure()
+      run: echo "Deployment failed!"
+
+# To use this workflow:
+# 1. Create .github/workflows/deploy.yml in your repository
+# 2. Copy this content to that file
+# 3. Add these secrets in your GitHub repository settings:
+#    - SSH_PRIVATE_KEY: Your EC2 private key
+#    - SERVER_HOST: Your EC2 instance IP address
+# 4. Push to main branch to trigger automatic deployment

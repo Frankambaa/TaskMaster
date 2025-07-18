@@ -1,0 +1,162 @@
+# Docker-based Auto-Deploy Configuration
+# This sets up Watchtower for automatic container updates
+
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: rag-chatbot-app
+    restart: unless-stopped
+    environment:
+      - FLASK_ENV=production
+    env_file:
+      - .env.production
+    ports:
+      - "5000:5000"
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - ./uploads:/app/uploads
+      - ./faiss_index:/app/faiss_index
+      - ./logs:/app/logs
+      - ./static/widget_icons:/app/static/widget_icons
+    networks:
+      - rag-network
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  db:
+    image: postgres:15
+    container_name: rag-chatbot-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: chatbot_db
+      POSTGRES_USER: chatbot_user
+      POSTGRES_PASSWORD: ${PGPASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backups:/backups
+    ports:
+      - "5432:5432"
+    networks:
+      - rag-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chatbot_user -d chatbot_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: rag-chatbot-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - rag-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  nginx:
+    image: nginx:alpine
+    container_name: rag-chatbot-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./ssl:/etc/nginx/ssl
+      - /etc/letsencrypt:/etc/letsencrypt
+    depends_on:
+      - app
+    networks:
+      - rag-network
+
+  # Watchtower for automatic updates
+  watchtower:
+    image: containrrr/watchtower
+    container_name: rag-chatbot-watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_SCHEDULE=0 2 * * *  # Check daily at 2 AM
+      - WATCHTOWER_NOTIFICATIONS=email
+      - WATCHTOWER_NOTIFICATION_EMAIL_FROM=${NOTIFICATION_EMAIL}
+      - WATCHTOWER_NOTIFICATION_EMAIL_TO=${NOTIFICATION_EMAIL}
+      - WATCHTOWER_NOTIFICATION_EMAIL_SERVER=${SMTP_SERVER}
+      - WATCHTOWER_NOTIFICATION_EMAIL_SERVER_PORT=${SMTP_PORT}
+      - WATCHTOWER_NOTIFICATION_EMAIL_SERVER_USER=${SMTP_USER}
+      - WATCHTOWER_NOTIFICATION_EMAIL_SERVER_PASSWORD=${SMTP_PASSWORD}
+      - WATCHTOWER_NOTIFICATION_EMAIL_DELAY=2
+    networks:
+      - rag-network
+
+  # Webhook listener for GitHub deployments
+  webhook:
+    image: node:18-alpine
+    container_name: rag-chatbot-webhook
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+    volumes:
+      - ./webhook-listener.js:/app/webhook-listener.js
+      - ./deploy.sh:/app/deploy.sh
+      - ./logs:/app/logs
+      - /var/run/docker.sock:/var/run/docker.sock
+    working_dir: /app
+    command: node webhook-listener.js
+    environment:
+      - WEBHOOK_PORT=9000
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
+      - DEPLOY_PATH=/opt/rag-chatbot
+    networks:
+      - rag-network
+
+  # Backup service
+  backup:
+    image: postgres:15
+    container_name: rag-chatbot-backup
+    restart: "no"
+    volumes:
+      - ./backups:/backups
+      - ./backup-script.sh:/backup-script.sh
+    environment:
+      - PGPASSWORD=${PGPASSWORD}
+    depends_on:
+      - db
+    networks:
+      - rag-network
+    # Run backup manually or via cron
+    entrypoint: ["sh", "/backup-script.sh"]
+
+networks:
+  rag-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+
+# Environment variables needed in .env.production:
+# WEBHOOK_SECRET=your_webhook_secret_here
+# NOTIFICATION_EMAIL=your_email@domain.com
+# SMTP_SERVER=smtp.gmail.com
+# SMTP_PORT=587
+# SMTP_USER=your_email@gmail.com
+# SMTP_PASSWORD=your_app_password
