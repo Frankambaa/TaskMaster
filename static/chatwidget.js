@@ -499,21 +499,20 @@
                 iconImg.style.cssText = `
                     width: ${config.buttonSize}px; 
                     height: ${config.buttonSize}px; 
-                    border-radius: 50%; 
                     object-fit: cover;
                     object-position: center;
                     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
                     transition: all 0.3s ease;
                 `;
                 
-                // Add hover effect to the image
+                // Add hover effect to the image - simple move animation
                 iconImg.addEventListener('mouseenter', function() {
-                    this.style.transform = 'scale(1.1)';
+                    this.style.transform = 'translateY(-2px)';
                     this.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.3)';
                 });
                 
                 iconImg.addEventListener('mouseleave', function() {
-                    this.style.transform = 'scale(1)';
+                    this.style.transform = 'translateY(0)';
                     this.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.2)';
                 });
                 
