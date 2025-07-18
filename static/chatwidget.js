@@ -55,7 +55,9 @@
         smoothScrolling: false, // Use smooth scrolling animation
         showHistoryButton: true, // Show "Load History" button instead of auto-loading
         personalizedWelcome: true, // Show personalized welcome message with user's name
-        iconUrl: null // Custom icon URL for the chat widget toggle button
+        iconUrl: null, // Custom icon URL for the chat widget toggle button
+        widgetSize: 'medium', // Widget size: 'small', 'medium', 'large'
+        buttonSize: 60 // Toggle button size in pixels
     };
 
     // Widget state
@@ -203,13 +205,37 @@
         },
 
         initializeWidget: function() {
-            // Initialize the widget
-            this.createStyles();
-            this.createWidget();
-            this.bindEvents();
-            
-            isInitialized = true;
-            console.log('ChatWidget initialized');
+            // Load custom icon if available
+            this.loadCustomIcon().then(() => {
+                // Initialize the widget
+                this.createStyles();
+                this.createWidget();
+                this.bindEvents();
+                
+                isInitialized = true;
+                console.log('ChatWidget initialized');
+            });
+        },
+
+        getWidgetDimensions: function() {
+            const sizes = {
+                small: { width: 300, height: 400 },
+                medium: { width: 350, height: 500 },
+                large: { width: 400, height: 600 }
+            };
+            return sizes[config.widgetSize] || sizes.medium;
+        },
+
+        loadCustomIcon: async function() {
+            try {
+                const response = await fetch(`${config.apiUrl}/api/widget/icon`);
+                const data = await response.json();
+                if (data.iconUrl) {
+                    config.iconUrl = data.iconUrl;
+                }
+            } catch (error) {
+                console.log('Could not load custom icon, using default');
+            }
         },
 
         createStyles: function() {
@@ -232,8 +258,8 @@
                 }
 
                 .chat-widget-toggle {
-                    width: 60px;
-                    height: 60px;
+                    width: ${config.buttonSize}px;
+                    height: ${config.buttonSize}px;
                     border-radius: 50%;
                     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                     border: none;
@@ -244,7 +270,8 @@
                     align-items: center;
                     justify-content: center;
                     color: white;
-                    font-size: 24px;
+                    font-size: ${Math.floor(config.buttonSize * 0.4)}px;
+                    overflow: hidden;
                 }
 
                 .chat-widget-toggle:hover {
@@ -253,15 +280,15 @@
                 }
 
                 .chat-widget-window {
-                    width: 350px;
-                    height: 500px;
+                    width: ${this.getWidgetDimensions().width}px;
+                    height: ${this.getWidgetDimensions().height}px;
                     background: white;
                     border-radius: 12px;
                     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
                     display: none;
                     flex-direction: column;
                     position: absolute;
-                    bottom: 80px;
+                    bottom: ${config.buttonSize + 20}px;
                     right: 0;
                     overflow: hidden;
                 }
@@ -464,7 +491,14 @@
                 const iconImg = document.createElement('img');
                 iconImg.src = config.iconUrl;
                 iconImg.alt = 'Chat';
-                iconImg.style.cssText = 'width: 24px; height: 24px; border-radius: 50%; object-fit: cover;';
+                const iconSize = Math.floor(config.buttonSize * 0.6); // Icon is 60% of button size
+                iconImg.style.cssText = `
+                    width: ${iconSize}px; 
+                    height: ${iconSize}px; 
+                    border-radius: 50%; 
+                    object-fit: cover;
+                    object-position: center;
+                `;
                 toggleButton.appendChild(iconImg);
             } else {
                 toggleButton.innerHTML = '💬';

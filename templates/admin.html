@@ -352,8 +352,71 @@
                                                 <td>Custom icon URL for chat widget</td>
                                                 <td><span class="badge bg-warning">Optional</span></td>
                                             </tr>
+                                            <tr>
+                                                <td><code>widgetSize</code></td>
+                                                <td>Widget window size: 'small', 'medium', 'large'</td>
+                                                <td><span class="badge bg-warning">Optional</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td><code>buttonSize</code></td>
+                                                <td>Toggle button size in pixels (default: 60)</td>
+                                                <td><span class="badge bg-warning">Optional</span></td>
+                                            </tr>
                                         </tbody>
                                     </table>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Widget Size Configuration -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <i class="fas fa-expand"></i> Widget Size Configuration
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <h6><i class="fas fa-window-restore"></i> Widget Sizes</h6>
+                                                <div class="mb-3">
+                                                    <label class="form-label">Widget Window Size</label>
+                                                    <select class="form-select" id="widgetSizeSelect" onchange="updateWidgetExample()">
+                                                        <option value="small">Small (300x400)</option>
+                                                        <option value="medium" selected>Medium (350x500)</option>
+                                                        <option value="large">Large (400x600)</option>
+                                                    </select>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label">Toggle Button Size</label>
+                                                    <div class="input-group">
+                                                        <input type="range" class="form-range" id="buttonSizeRange" min="40" max="80" value="60" onchange="updateWidgetExample()">
+                                                        <span class="input-group-text" id="buttonSizeValue">60px</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <h6><i class="fas fa-code"></i> Updated Integration Code</h6>
+                                                <div class="position-relative">
+                                                    <pre class="bg-light p-3 rounded" style="font-size: 0.85rem; max-height: 200px; overflow-y: auto;"><code id="sizedWidgetScript">&lt;script src="{{ request.url_root }}static/chatwidget.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+    ChatWidget.init({
+        apiUrl: '{{ request.url_root.rstrip('/') }}',
+        user_id: 'your_user_id',
+        username: 'User Name',
+        email: 'user@example.com',
+        widgetSize: 'medium',
+        buttonSize: 60
+    });
+&lt;/script&gt;</code></pre>
+                                                    <button class="btn btn-sm btn-outline-secondary position-absolute top-0 end-0 m-2" 
+                                                            onclick="copyToClipboard('sizedWidgetScript')" title="Copy to clipboard">
+                                                        <i class="fas fa-copy"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1363,9 +1426,39 @@
             }
         }
 
+        // Widget Size Configuration Functions
+        function updateWidgetExample() {
+            const widgetSize = document.getElementById('widgetSizeSelect').value;
+            const buttonSize = document.getElementById('buttonSizeRange').value;
+            
+            // Update button size display
+            document.getElementById('buttonSizeValue').textContent = buttonSize + 'px';
+            
+            // Update the sized widget script
+            const sizedScript = document.getElementById('sizedWidgetScript');
+            const baseScript = `<script src="{{ request.url_root }}static/chatwidget.js"></script>
+<script>
+    ChatWidget.init({
+        apiUrl: '{{ request.url_root.rstrip('/') }}',
+        user_id: 'your_user_id',
+        username: 'User Name',
+        email: 'user@example.com',
+        widgetSize: '${widgetSize}',
+        buttonSize: ${buttonSize}
+    });
+</script>`;
+            sizedScript.textContent = baseScript;
+        }
+
         // Initialize icon upload when page loads
         document.addEventListener('DOMContentLoaded', function() {
             initializeIconUpload();
+            
+            // Initialize button size slider
+            const buttonSizeRange = document.getElementById('buttonSizeRange');
+            buttonSizeRange.addEventListener('input', function() {
+                document.getElementById('buttonSizeValue').textContent = this.value + 'px';
+            });
         });
     </script>
 </body>
