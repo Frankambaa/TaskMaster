@@ -2033,6 +2033,12 @@ def synthesize_voice():
         
         voice = data.get('voice', 'af_heart')  # Default to American female voice
         
+        # Initialize voice agent if not done
+        if 'voice_agent' not in globals():
+            from voice_agent import VoiceAgent
+            global voice_agent
+            voice_agent = VoiceAgent()
+        
         # Synthesize speech
         result = voice_agent.synthesize_speech(text, voice)
         

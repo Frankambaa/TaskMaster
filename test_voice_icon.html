@@ -57,12 +57,13 @@
         <button class="test-btn" id="destroyWidget">Destroy Widget</button>
         
         <div id="status" class="status">
-            <strong>Voice Testing Instructions:</strong><br>
+            <strong>📞 Continuous Voice Call Testing:</strong><br>
             1. Click "Initialize Voice Widget" to create the widget with voice enabled<br>
             2. Click "Open Chat Window" to see the chat interface<br>
-            3. Look for the 🎙️ icon next to the × close button<br>
-            4. Click the 🎙️ icon to start voice mode - it will speak a welcome message and start listening<br>
-            5. Speak your question when you see the 🎤 listening icon
+            3. Look for the 📞 call icon next to the × close button<br>
+            4. Click the 📞 icon to start voice call - continuous conversation mode<br>
+            5. Speak your questions - the bot will respond with voice and keep listening<br>
+            6. Click the 📞 icon again to disconnect the voice call
         </div>
     </div>
 
@@ -130,12 +131,14 @@
             if (voiceButton) {
                 voiceButton.click();
                 document.getElementById('status').innerHTML = `
-                    <strong>🎙️ Voice Mode Activated!</strong><br>
-                    The voice assistant should now:<br>
-                    1. Speak a welcome message<br>
-                    2. Show a 🎤 listening icon<br>
-                    3. Wait for your speech input<br>
-                    4. Respond with voice automatically
+                    <strong>📞 Voice Call Started!</strong><br>
+                    The voice call system now:<br>
+                    1. Speaks a welcome message<br>
+                    2. Continuously listens for your voice<br>
+                    3. Processes through RAG knowledge base<br>
+                    4. Responds with voice automatically<br>
+                    5. Keeps the conversation going<br>
+                    <strong>Click 📞 icon again to disconnect</strong>
                 `;
             } else {
                 document.getElementById('status').innerHTML = '<strong>❌ Error:</strong> Voice button not found. Make sure chat window is open.';

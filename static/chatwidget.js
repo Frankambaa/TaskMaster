@@ -61,6 +61,7 @@
         timeBasedGreeting: true, // Show time-based greeting for first-time users
         voiceEnabled: true, // Enable voice synthesis functionality
         autoPlayVoice: false, // Auto-play bot voice responses
+        continuousVoice: false, // Continuous voice conversation mode
         selectedVoice: 'indian_female', // Default voice selection (Indian English female for natural accent)
         showVoiceControls: true // Show voice control buttons in the interface
     };
@@ -416,6 +417,16 @@
                     animation: voice-pulse 1.5s infinite;
                 }
 
+                .chat-widget-voice-btn.continuous {
+                    background: rgba(76, 175, 80, 0.3);
+                    animation: call-pulse 2s infinite;
+                }
+
+                @keyframes call-pulse {
+                    0%, 100% { opacity: 0.8; transform: scale(1); }
+                    50% { opacity: 1; transform: scale(1.05); }
+                }
+
                 .chat-widget-voice-btn.listening {
                     background: rgba(244, 67, 54, 0.3);
                     animation: listening-pulse 1s infinite;
@@ -747,16 +758,15 @@
             const voiceBtn = chatWindow.querySelector('.chat-widget-voice-btn');
             if (voiceBtn) {
                 voiceBtn.addEventListener('click', () => {
-                    // If currently playing, stop the audio
-                    if (isPlayingVoice) {
+                    // If in continuous voice mode, disconnect
+                    if (config.continuousVoice) {
+                        this.disconnectVoiceMode();
+                    } else if (isPlayingVoice) {
+                        // Stop current audio playback
                         this.stopVoice();
-                    } else if (config.voiceEnabled) {
-                        // Start voice interaction mode
-                        this.startVoiceMode();
                     } else {
-                        // Enable voice and start voice mode
-                        this.toggleVoice();
-                        this.startVoiceMode();
+                        // Start continuous voice conversation mode
+                        this.startContinuousVoiceMode();
                     }
                 });
                 
@@ -1404,32 +1414,76 @@
             this.updateVoiceControls();
         },
 
-        startVoiceMode: function() {
-            // Provide welcome voice message and start speech recognition
-            const welcomeMessage = "Hello! Voice mode is now active. Please speak your question, and I'll respond with voice.";
+        startContinuousVoiceMode: function() {
+            // Start continuous voice conversation mode
+            config.continuousVoice = true;
+            config.autoPlayVoice = true;
+            config.voiceEnabled = true;
             
-            // Speak welcome message first
+            console.log('Starting continuous voice mode');
+            
+            // Update UI to show call is active
+            this.updateVoiceControls();
+            
+            // Add voice mode indicator message
+            this.addMessage("📞 Voice call started. Speak your question...", 'bot', false, false);
+            
+            // Provide welcome voice message and start speech recognition
+            const welcomeMessage = "Voice call connected. Please speak your question.";
+            
+            // Speak welcome message first, then start listening
             this.synthesizeVoice(welcomeMessage).then(() => {
                 // After welcome message, start speech recognition
+                setTimeout(() => {
+                    this.startSpeechRecognition();
+                }, 500); // Small delay after voice
+            }).catch(() => {
+                // If voice synthesis fails, still start recognition
                 this.startSpeechRecognition();
             });
+        },
+
+        disconnectVoiceMode: function() {
+            // Disconnect continuous voice mode
+            config.continuousVoice = false;
+            config.autoPlayVoice = false;
             
-            // Enable auto-play for future responses
-            config.autoPlayVoice = true;
+            console.log('Disconnecting voice mode');
             
-            // Update button state
+            // Stop any ongoing audio
+            this.stopVoice();
+            
+            // Update UI
             this.updateVoiceControls();
+            
+            // Add disconnection message
+            this.addMessage("📞 Voice call ended.", 'bot', false, false);
+            
+            // Stop any ongoing speech recognition
+            if (window.currentSpeechRecognition) {
+                window.currentSpeechRecognition.stop();
+                window.currentSpeechRecognition = null;
+            }
         },
 
         startSpeechRecognition: function() {
+            // Don't start if not in continuous voice mode
+            if (!config.continuousVoice) {
+                return;
+            }
+
             // Check if speech recognition is supported
             if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-                this.addMessage("Sorry, speech recognition is not supported in your browser. Please type your message instead.", 'bot');
+                this.addMessage("Sorry, speech recognition is not supported in your browser. Voice call will be disconnected.", 'bot');
+                this.disconnectVoiceMode();
                 return;
             }
 
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             const recognition = new SpeechRecognition();
+            
+            // Store globally so we can stop it when needed
+            window.currentSpeechRecognition = recognition;
             
             recognition.continuous = false;
             recognition.interimResults = false;
@@ -1492,6 +1546,9 @@
                     voiceBtn.classList.remove('listening');
                 }
                 this.updateVoiceControls();
+                
+                // Clear the global reference
+                window.currentSpeechRecognition = null;
             };
 
             // Start recognition
@@ -1564,11 +1621,18 @@
                     // Wait a moment for the typing to start, then synthesize voice
                     setTimeout(() => {
                         this.synthesizeVoice(data.answer).then(() => {
-                            // After voice finishes, optionally start speech recognition again for continuous conversation
-                            if (config.voiceEnabled) {
+                            // In continuous voice mode, start listening again after response
+                            if (config.continuousVoice) {
                                 setTimeout(() => {
                                     this.startSpeechRecognition();
                                 }, 1000); // Wait 1 second after voice finishes
+                            }
+                        }).catch(() => {
+                            // If voice synthesis fails but we're in continuous mode, still restart listening
+                            if (config.continuousVoice) {
+                                setTimeout(() => {
+                                    this.startSpeechRecognition();
+                                }, 1000);
                             }
                         });
                     }, 500); // Small delay to let typing animation start
@@ -1583,18 +1647,22 @@
             const voiceBtn = document.querySelector('.chat-widget-voice-btn');
             
             if (voiceBtn) {
-                if (isPlayingVoice) {
+                if (config.continuousVoice) {
+                    voiceBtn.className = 'chat-widget-voice-btn continuous';
+                    voiceBtn.innerHTML = '📞';
+                    voiceBtn.title = 'Voice Call Active (Click to disconnect)';
+                } else if (isPlayingVoice) {
                     voiceBtn.className = 'chat-widget-voice-btn playing';
                     voiceBtn.innerHTML = '🔊';
                     voiceBtn.title = 'Stop Voice';
                 } else if (config.voiceEnabled) {
                     voiceBtn.className = 'chat-widget-voice-btn active';
-                    voiceBtn.innerHTML = '🎙️';
-                    voiceBtn.title = 'Voice Enabled (Click to disable)';
+                    voiceBtn.innerHTML = '📞';
+                    voiceBtn.title = 'Start Voice Call';
                 } else {
                     voiceBtn.className = 'chat-widget-voice-btn';
                     voiceBtn.innerHTML = '🔇';
-                    voiceBtn.title = 'Voice Disabled (Click to enable)';
+                    voiceBtn.title = 'Voice Disabled';
                 }
             }
         },
