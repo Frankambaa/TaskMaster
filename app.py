@@ -283,8 +283,13 @@ def ask():
         else:
             logging.info(f"Processing question for session: {session_id}")
         
-        # Check for live chat keywords and webhook status
-        live_chat_keywords = ['live chat', 'chat with agent', 'talk to agent', 'human agent', 'speak to human', 'connect to agent']
+        # Enhanced live chat transfer keywords with semantic understanding
+        live_chat_keywords = [
+            'live chat', 'chat with agent', 'talk to agent', 'human agent', 'speak to human', 'connect to agent',
+            'i want to talk', 'speak with someone', 'customer service', 'support agent', 'real person',
+            'human help', 'agent help', 'call center', 'representative', 'operator', 'staff member',
+            'transfer me', 'escalate', 'human support', 'live support', 'personal assistance'
+        ]
         is_live_chat_request = any(keyword in question.lower() for keyword in live_chat_keywords)
         
         # Check if webhook is active
@@ -330,12 +335,55 @@ def ask():
                 response_type = 'rag_with_ai_tools'
                 
         elif is_live_chat_request and not active_webhook:
-            # Route to internal live chat system
-            answer = "I'll connect you with a live agent. Please wait while I transfer your chat to our support team."
-            response_type = 'internal_live_chat_transfer'
+            # Route to internal live chat system with conversation history
+            from live_chat_manager import live_chat_manager
+            from session_memory import session_memory_manager
             
-            # Here you could create a live chat session using live_chat_manager
-            # live_chat_manager.create_session(user_identifier, username, email, question)
+            try:
+                # Get conversation history for transfer
+                conversation_history = []
+                if user_identifier:
+                    # Get persistent conversation history
+                    user_conversations = UserConversation.query.filter_by(user_identifier=user_identifier).order_by(UserConversation.timestamp.desc()).limit(10).all()
+                    for conv in user_conversations:
+                        conversation_history.extend([
+                            {'role': 'user', 'content': conv.user_message, 'sender_id': user_identifier, 'sender_name': username or 'User'},
+                            {'role': 'assistant', 'content': conv.bot_response, 'sender_id': 'bot', 'sender_name': 'AI Assistant'}
+                        ])
+                else:
+                    # Get session-based memory
+                    memory = session_memory_manager.get_session_memory(session_id)
+                    if hasattr(memory, 'buffer'):
+                        for msg in memory.buffer[-10:]:  # Last 10 messages
+                            conversation_history.append({
+                                'role': msg.type,
+                                'content': msg.content,
+                                'sender_id': 'user' if msg.type == 'human' else 'bot',
+                                'sender_name': username or 'User' if msg.type == 'human' else 'AI Assistant'
+                            })
+                
+                # Create live chat session with conversation history
+                session = live_chat_manager.create_session(
+                    user_identifier=user_identifier or session_id,
+                    username=username,
+                    email=email,
+                    initial_message=question,
+                    department='support',
+                    priority='normal'
+                )
+                
+                # Import conversation history
+                if conversation_history:
+                    live_chat_manager.import_bot_conversation(session.session_id, conversation_history)
+                    logging.info(f"Imported {len(conversation_history)} messages to live chat session {session.session_id}")
+                
+                answer = f"I've transferred your chat to our live agent team. Session ID: {session.session_id}. An agent will be with you shortly and can see your previous conversation history."
+                response_type = 'internal_live_chat_transfer'
+                
+            except Exception as e:
+                logging.error(f"Error creating live chat session: {e}")
+                answer = "I'll connect you with a live agent. Please wait while I transfer your chat to our support team."
+                response_type = 'internal_live_chat_transfer'
             
         else:
             # Normal AI/RAG processing

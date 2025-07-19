@@ -2328,8 +2328,13 @@
         const message = inputField.value.trim();
         if (!message) return;
 
-        // Check if user wants to transfer to live chat
-        const liveChatKeywords = ['live chat', 'chat with agent', 'talk to agent', 'human agent', 'speak to human', 'connect to agent'];
+        // Enhanced live chat transfer detection with semantic understanding
+        const liveChatKeywords = [
+            'live chat', 'chat with agent', 'talk to agent', 'human agent', 'speak to human', 'connect to agent',
+            'i want to talk', 'speak with someone', 'customer service', 'support agent', 'real person',
+            'human help', 'agent help', 'call center', 'representative', 'operator', 'staff member',
+            'transfer me', 'escalate', 'human support', 'live support', 'personal assistance'
+        ];
         const messageText = message.toLowerCase();
         const requestsLiveChat = liveChatKeywords.some(keyword => messageText.includes(keyword));
 
