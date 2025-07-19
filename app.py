@@ -155,6 +155,12 @@ def test_voice_widget():
     from flask import send_from_directory
     return send_from_directory('.', 'test_voice_chatwidget.html')
 
+@app.route('/test_voice_icon')
+def test_voice_icon():
+    """Simple voice icon test page"""
+    from flask import send_from_directory
+    return send_from_directory('.', 'test_voice_icon.html')
+
 @app.route('/test_time_based_greeting.html')
 def test_time_based_greeting():
     """Test page for time-based greeting functionality"""

@@ -59,6 +59,9 @@
         widgetSize: 'medium', // Widget size: 'small', 'medium', 'large'
         buttonSize: null, // Toggle button size in pixels (auto-calculated based on widgetSize)
         timeBasedGreeting: true, // Show time-based greeting for first-time users
+        voiceEnabled: true, // Enable voice synthesis functionality
+        autoPlayVoice: false, // Auto-play bot voice responses
+        selectedVoice: 'indian_female' // Default voice selection
         voiceEnabled: false, // Enable voice synthesis for bot responses
         selectedVoice: 'indian_female', // Default voice for TTS (indian_female, af_heart, etc.)
         autoPlayVoice: false, // Automatically play voice responses
@@ -638,7 +641,7 @@
             header.innerHTML = `
                 <span>${config.title}</span>
                 <div class="chat-widget-header-controls">
-                    ${config.voiceEnabled ? '<button class="chat-widget-voice-btn" title="Toggle Voice">🎙️</button>' : ''}
+                    <button class="chat-widget-voice-btn" title="Toggle Voice">🎙️</button>
                     <button class="chat-widget-close">×</button>
                 </div>
             `;
@@ -733,9 +736,9 @@
                 this.closeWidget();
             });
 
-            // Voice button (if enabled)
+            // Voice button
             const voiceBtn = chatWindow.querySelector('.chat-widget-voice-btn');
-            if (voiceBtn && config.voiceEnabled) {
+            if (voiceBtn) {
                 voiceBtn.addEventListener('click', () => {
                     // If currently playing, stop the audio
                     if (isPlayingVoice) {

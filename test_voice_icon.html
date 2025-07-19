@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Icon Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 40px;
+            background: #f0f0f0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px;
+            font-size: 16px;
+        }
+        .test-btn:hover {
+            background: #5a6fd8;
+        }
+        .status {
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 8px;
+            background: #e3f2fd;
+            border: 1px solid #2196f3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎙️ Voice Icon Test</h1>
+            <p>This page will test if the voice icon appears in the chat header</p>
+        </div>
+        
+        <button class="test-btn" id="initWidget">Initialize Widget with Voice</button>
+        <button class="test-btn" id="toggleWidget">Toggle Chat Window</button>
+        <button class="test-btn" id="destroyWidget">Destroy Widget</button>
+        
+        <div id="status" class="status">
+            Click "Initialize Widget with Voice" to test the voice icon functionality.
+            The 🎙️ icon should appear next to the × close button in the chat header.
+        </div>
+    </div>
+
+    <!-- Load the chatwidget -->
+    <script src="/static/chatwidget.js"></script>
+    
+    <script>
+        let widgetInitialized = false;
+        
+        document.getElementById('initWidget').addEventListener('click', function() {
+            if (widgetInitialized) {
+                ChatWidget.destroy();
+            }
+            
+            // Initialize widget with voice enabled
+            ChatWidget.init({
+                apiUrl: window.location.origin,
+                user_id: 'voice_test_' + Date.now(),
+                username: 'Voice Test User',
+                email: 'test@example.com',
+                device_id: 'voice_test_device',
+                title: '🎤 Voice Assistant',
+                welcomeMessage: 'Hi! Look for the 🎙️ icon in the header to control voice!',
+                voiceEnabled: true,
+                autoPlayVoice: false,
+                selectedVoice: 'indian_female',
+                position: 'bottom-right',
+                widgetSize: 'large'
+            });
+            
+            widgetInitialized = true;
+            
+            document.getElementById('status').innerHTML = `
+                <strong>✅ Widget Initialized!</strong><br>
+                Voice functionality is enabled by default.<br>
+                Look for the 🎙️ icon next to the × close button in the chat header.<br>
+                Click the chat bubble to open the chat window.
+            `;
+        });
+        
+        document.getElementById('toggleWidget').addEventListener('click', function() {
+            if (!widgetInitialized) {
+                alert('Please initialize the widget first');
+                return;
+            }
+            
+            // Find and click the toggle button
+            const toggleButton = document.querySelector('.chat-widget-toggle');
+            if (toggleButton) {
+                toggleButton.click();
+                document.getElementById('status').innerHTML = '<strong>Chat Window Toggled!</strong><br>Check the header for the 🎙️ voice icon.';
+            } else {
+                document.getElementById('status').innerHTML = '<strong>Error:</strong> Toggle button not found.';
+            }
+        });
+        
+        document.getElementById('destroyWidget').addEventListener('click', function() {
+            if (widgetInitialized) {
+                ChatWidget.destroy();
+                widgetInitialized = false;
+                document.getElementById('status').innerHTML = '<strong>Widget Destroyed!</strong><br>Click "Initialize Widget with Voice" to test again.';
+            }
+        });
+    </script>
+</body>
+</html>
