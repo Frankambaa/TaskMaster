@@ -1724,6 +1724,176 @@
             });
         },
 
+        // Session and history management methods
+        loadSessionInfo: function() {
+            // Initialize session info - no async operations needed here
+            console.log('Session info loaded for user:', config.user_id || config.email || 'anonymous');
+        },
+
+        loadChatHistory: function() {
+            return new Promise((resolve) => {
+                // Only load history for identified users
+                if (!config.user_id && !config.email && !config.device_id) {
+                    resolve(false);
+                    return;
+                }
+
+                // Skip if persistentHistoryCount is 0 or disabled
+                if (!config.persistentHistoryCount || config.persistentHistoryCount <= 0) {
+                    resolve(false);
+                    return;
+                }
+
+                fetch(`${config.apiUrl}/widget_history?user_id=${encodeURIComponent(config.user_id || '')}&email=${encodeURIComponent(config.email || '')}&device_id=${encodeURIComponent(config.device_id || '')}&count=${config.persistentHistoryCount}`, {
+                    headers: {
+                        'X-Widget-Origin': window.location.origin
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.history && data.history.length > 0) {
+                        console.log('Loading chat history:', data.history.length, 'conversations');
+                        
+                        // Add history messages without storing them again
+                        data.history.forEach(item => {
+                            this.addMessage(item.question, 'user', false, false); // false = no typing, no store
+                            this.addMessage(item.response, 'bot', false, false); // false = no typing, no store
+                        });
+                        
+                        resolve(true);
+                    } else {
+                        resolve(false);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading chat history:', error);
+                    resolve(false);
+                });
+            });
+        },
+
+        loadChatHistoryOnDemand: function() {
+            return new Promise((resolve) => {
+                // Same implementation as loadChatHistory but called on demand
+                this.loadChatHistory().then((loaded) => {
+                    if (loaded) {
+                        // Scroll to bottom after loading history
+                        setTimeout(() => {
+                            this.scrollToBottom();
+                        }, 100);
+                    }
+                    resolve(loaded);
+                });
+            });
+        },
+
+        shouldShowFeedback: function(responseData) {
+            // Only show feedback for RAG responses after 3+ conversations
+            if (!responseData || !responseData.response_type) return false;
+            if (responseData.response_type !== 'RAG_KNOWLEDGE_BASE') return false;
+            
+            // Check conversation count (at least 3 back-and-forth exchanges)
+            return conversationCount >= 3;
+        },
+
+        addFeedbackButtons: function(messageDiv, text, responseData) {
+            // Create feedback container
+            const feedbackDiv = document.createElement('div');
+            feedbackDiv.className = 'feedback-buttons';
+            feedbackDiv.style.cssText = 'margin-top: 8px; text-align: center; opacity: 0.7;';
+
+            // Thumbs up button
+            const thumbsUpBtn = document.createElement('button');
+            thumbsUpBtn.innerHTML = '👍';
+            thumbsUpBtn.style.cssText = 'background: none; border: none; font-size: 16px; cursor: pointer; margin: 0 5px; padding: 2px; opacity: 0.6;';
+            thumbsUpBtn.title = 'Helpful response';
+
+            // Thumbs down button  
+            const thumbsDownBtn = document.createElement('button');
+            thumbsDownBtn.innerHTML = '👎';
+            thumbsDownBtn.style.cssText = 'background: none; border: none; font-size: 16px; cursor: pointer; margin: 0 5px; padding: 2px; opacity: 0.6;';
+            thumbsDownBtn.title = 'Not helpful';
+
+            // Add click handlers
+            thumbsUpBtn.onclick = () => this.submitFeedback(text, responseData, 'positive', feedbackDiv);
+            thumbsDownBtn.onclick = () => this.submitFeedback(text, responseData, 'negative', feedbackDiv);
+
+            feedbackDiv.appendChild(thumbsUpBtn);
+            feedbackDiv.appendChild(thumbsDownBtn);
+            
+            // Insert feedback buttons before the message
+            messageDiv.parentNode.insertBefore(feedbackDiv, messageDiv);
+        },
+
+        submitFeedback: function(responseText, responseData, rating, feedbackDiv) {
+            const feedbackData = {
+                response_text: responseText,
+                response_type: responseData.response_type,
+                rating: rating,
+                user_id: config.user_id || null,
+                email: config.email || null,
+                device_id: config.device_id || null,
+                session_id: sessionId,
+                response_metadata: responseData
+            };
+
+            fetch(`${config.apiUrl}/feedback`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Widget-Origin': window.location.origin
+                },
+                body: JSON.stringify(feedbackData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Remove feedback buttons immediately
+                    feedbackDiv.remove();
+                    
+                    // Add thank you message and close chat confirmation
+                    this.addMessage('Thank you for your feedback! Would you like to continue chatting or close this conversation?', 'bot', false);
+                    
+                    // Add continue/close buttons
+                    this.addChatCloseButtons();
+                } else {
+                    console.error('Feedback submission failed:', data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error submitting feedback:', error);
+            });
+        },
+
+        addChatCloseButtons: function() {
+            const messagesContainer = document.querySelector('.chat-widget-messages');
+            const buttonContainer = document.createElement('div');
+            buttonContainer.className = 'chat-close-buttons';
+            buttonContainer.style.cssText = 'text-align: center; margin: 10px 0; padding: 0 10px;';
+
+            const continueBtn = document.createElement('button');
+            continueBtn.textContent = 'Continue chatting';
+            continueBtn.style.cssText = 'background: #667eea; color: white; border: none; padding: 8px 16px; margin: 0 5px; border-radius: 15px; cursor: pointer; font-size: 12px;';
+
+            const closeBtn = document.createElement('button'); 
+            closeBtn.textContent = 'Yes, close chat';
+            closeBtn.style.cssText = 'background: #e2e8f0; color: #4a5568; border: none; padding: 8px 16px; margin: 0 5px; border-radius: 15px; cursor: pointer; font-size: 12px;';
+
+            continueBtn.onclick = () => {
+                buttonContainer.remove();
+            };
+
+            closeBtn.onclick = () => {
+                this.closeWidget();
+            };
+
+            buttonContainer.appendChild(continueBtn);
+            buttonContainer.appendChild(closeBtn);
+            messagesContainer.appendChild(buttonContainer);
+            
+            this.scrollToBottom();
+        },
+
         // All legacy ElevenLabs API functions removed - now using embedded agent
 
     };
