@@ -652,9 +652,13 @@ class WebhookConfig(db.Model):
             'name': self.name,
             'provider': self.provider,
             'webhook_url': self.webhook_url,
+            'incoming_webhook_url': getattr(self, 'incoming_webhook_url', None),
+            'outgoing_webhook_url': getattr(self, 'outgoing_webhook_url', None),
             'event_types': self.get_event_types(),
             'headers': self.get_headers(),
             'auth_type': self.auth_type,
+            'auth_token': getattr(self, 'auth_token', None),
+            'webhook_secret': getattr(self, 'webhook_secret', None),
             'is_active': self.is_active,
             'retry_count': self.retry_count,
             'timeout_seconds': self.timeout_seconds,
@@ -662,3 +666,38 @@ class WebhookConfig(db.Model):
             'updated_at': self.updated_at.isoformat(),
             'last_used': self.last_used.isoformat() if self.last_used else None
         }
+
+
+class WebhookMessage(db.Model):
+    """Messages sent/received through webhook integrations"""
+    __tablename__ = 'webhook_messages'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    external_user_id = db.Column(db.String(100), nullable=False)
+    external_conversation_id = db.Column(db.String(100))
+    platform = db.Column(db.String(50), nullable=False)
+    message_type = db.Column(db.String(20), nullable=False)  # 'incoming', 'outgoing', 'agent_outgoing'
+    message_content = db.Column(db.Text, nullable=False)
+    username = db.Column(db.String(100))
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    status = db.Column(db.String(20), default='pending')  # 'pending', 'sent', 'failed', 'received'
+    error_message = db.Column(db.Text)
+    message_metadata = db.Column(db.Text)  # JSON string for additional data
+    retry_count = db.Column(db.Integer, default=0)
+    
+    def to_dict(self):
+        """Convert to dictionary for JSON serialization"""
+        return {
+            'id': self.id,
+            'external_user_id': self.external_user_id,
+            'external_conversation_id': self.external_conversation_id,
+            'platform': self.platform,
+            'message_type': self.message_type,
+            'message_content': self.message_content,
+            'username': self.username,
+            'timestamp': self.timestamp.isoformat(),
+            'status': self.status,
+            'error_message': self.error_message,
+            'retry_count': self.retry_count
+        }
+

@@ -1759,3 +1759,155 @@ def test_webhook(webhook_id):
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
+
+
+# Import webhook integration
+try:
+    from webhook_integration import webhook_integration
+except ImportError:
+    webhook_integration = None
+
+# Webhook Integration Routes
+@app.route('/api/webhook/incoming', methods=['POST'])
+def webhook_incoming():
+    """Receive messages from third-party platforms"""
+    try:
+        webhook_data = request.get_json()
+        
+        if not webhook_data:
+            return jsonify({
+                'success': False,
+                'error': 'No data provided'
+            }), 400
+        
+        if not webhook_integration:
+            return jsonify({
+                'success': False,
+                'error': 'Webhook integration not available'
+            }), 500
+        
+        # Load webhook integration
+        webhook_integration.load_config()
+        
+        # Process the incoming message
+        result = webhook_integration.process_incoming_message(webhook_data)
+        
+        if result['success']:
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 400
+            
+    except Exception as e:
+        logger.error(f"Error processing webhook: {e}")
+        return jsonify({
+            'success': False,
+            'error': 'Internal server error'
+        }), 500
+
+
+@app.route('/api/webhook/config', methods=['GET', 'POST'])
+def webhook_config():
+    """Get or update webhook configuration"""
+    if request.method == 'GET':
+        try:
+            configs = WebhookConfig.query.all()
+            return jsonify({
+                'success': True,
+                'configs': [config.to_dict() for config in configs]
+            })
+        except Exception as e:
+            logger.error(f"Error getting webhook configs: {e}")
+            return jsonify({
+                'success': False,
+                'error': 'Internal server error'
+            }), 500
+    
+    elif request.method == 'POST':
+        try:
+            data = request.get_json()
+            
+            # Validate required fields
+            required_fields = ['name', 'provider']
+            missing_fields = [field for field in required_fields if field not in data]
+            if missing_fields:
+                return jsonify({
+                    'success': False,
+                    'error': f'Missing required fields: {missing_fields}'
+                }), 400
+            
+            # Deactivate other configs if this one is set as active
+            if data.get('is_active', False):
+                WebhookConfig.query.update({'is_active': False})
+            
+            # Create new webhook config
+            config = WebhookConfig(
+                name=data['name'],
+                provider=data['provider'],
+                webhook_url=data.get('outgoing_webhook_url', data.get('webhook_url', '')),
+                timeout_seconds=data.get('timeout_seconds', 30),
+                retry_count=data.get('retry_attempts', 3),
+                is_active=data.get('is_active', False)
+            )
+            
+            # Set custom headers if provided
+            if 'custom_headers' in data:
+                config.set_headers(data['custom_headers'])
+            
+            # Set auth token if provided
+            if 'auth_token' in data:
+                config.set_auth_credentials({'token': data['auth_token']})
+            
+            db.session.add(config)
+            db.session.commit()
+            
+            return jsonify({
+                'success': True,
+                'config': config.to_dict()
+            })
+            
+        except Exception as e:
+            logger.error(f"Error creating webhook config: {e}")
+            db.session.rollback()
+            return jsonify({
+                'success': False,
+                'error': 'Internal server error'
+            }), 500
+
+
+@app.route('/api/webhook/messages', methods=['GET'])
+def webhook_messages():
+    """Get webhook message history"""
+    try:
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 50, type=int)
+        platform = request.args.get('platform')
+        message_type = request.args.get('message_type')
+        status = request.args.get('status')
+        
+        query = WebhookMessage.query
+        
+        if platform:
+            query = query.filter(WebhookMessage.platform == platform)
+        if message_type:
+            query = query.filter(WebhookMessage.message_type == message_type)
+        if status:
+            query = query.filter(WebhookMessage.status == status)
+        
+        messages = query.order_by(WebhookMessage.timestamp.desc()).paginate(
+            page=page, per_page=per_page, error_out=False
+        )
+        
+        return jsonify({
+            'success': True,
+            'messages': [msg.to_dict() for msg in messages.items],
+            'total': messages.total,
+            'pages': messages.pages,
+            'current_page': page
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting webhook messages: {e}")
+        return jsonify({
+            'success': False,
+            'error': 'Internal server error'
+        }), 500
