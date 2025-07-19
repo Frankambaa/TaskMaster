@@ -1350,8 +1350,31 @@
                 return false;
             }
             
+            // Check if this is a simple greeting/small talk (exclude these from feedback)
+            const userMessage = responseData.user_question ? responseData.user_question.toLowerCase().trim() : '';
+            const botResponse = responseData.answer ? responseData.answer.toLowerCase() : '';
+            
+            // Simple greetings that shouldn't get feedback
+            const simpleGreetings = ['hi', 'hello', 'hey', 'how are you', 'good morning', 'good afternoon', 'good evening'];
+            const isSimpleGreeting = simpleGreetings.some(greeting => 
+                userMessage === greeting || userMessage.includes(greeting)
+            );
+            
+            // Simple bot responses that shouldn't get feedback
+            const isSimpleBotResponse = botResponse.length < 50 && (
+                botResponse.includes('how can i help') ||
+                botResponse.includes('what can i help') ||
+                botResponse.includes('hey!') ||
+                botResponse.includes('hello!') ||
+                botResponse.includes('hi!')
+            );
+            
+            // Skip feedback for simple greetings/responses
+            if (isSimpleGreeting || isSimpleBotResponse) {
+                return false;
+            }
+            
             // Check if this is a thank you response (user saying thanks/goodbye)
-            const userMessage = responseData.user_question ? responseData.user_question.toLowerCase() : '';
             const isThankYouMessage = userMessage.includes('thank') || 
                                       userMessage.includes('thanks') || 
                                       userMessage.includes('bye') || 
@@ -1379,11 +1402,10 @@
             feedbackContainer.style.cssText = `
                 display: flex;
                 align-items: center;
-                gap: 8px;
-                margin-top: 8px;
-                padding: 4px 0;
-                font-size: 12px;
-                color: #666;
+                gap: 6px;
+                margin-top: 6px;
+                padding: 2px 0;
+                opacity: 0.7;
             `;
 
             // Thumbs up button
@@ -1395,14 +1417,15 @@
                 background: none;
                 border: 1px solid #e0e0e0;
                 border-radius: 50%;
-                width: 28px;
-                height: 28px;
+                width: 24px;
+                height: 24px;
                 cursor: pointer;
-                font-size: 14px;
+                font-size: 12px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 transition: all 0.2s;
+                opacity: 0.8;
             `;
 
             // Thumbs down button
@@ -1412,12 +1435,7 @@
             thumbsDownBtn.title = 'This answer needs improvement';
             thumbsDownBtn.style.cssText = thumbsUpBtn.style.cssText;
 
-            // Feedback text
-            const feedbackText = document.createElement('span');
-            feedbackText.textContent = 'Was this helpful?';
-            feedbackText.style.marginRight = '4px';
-
-            feedbackContainer.appendChild(feedbackText);
+            // No feedback text, just add the buttons
             feedbackContainer.appendChild(thumbsUpBtn);
             feedbackContainer.appendChild(thumbsDownBtn);
             messageDiv.appendChild(feedbackContainer);

@@ -286,6 +286,9 @@ deployment/       # Production deployment files
 - July 19, 2025: **FEEDBACK TIMING CONTROL**: Fixed feedback buttons to only appear after 3+ RAG conversations or during thank you/goodbye messages
 - July 19, 2025: Added conversation tracking counter that resets on session clear and prevents feedback spam on first messages
 - July 19, 2025: Enhanced user experience by eliminating inappropriate feedback prompts on simple initial interactions
+- July 19, 2025: **FEEDBACK UI REFINEMENTS**: Simplified feedback interface to show only thumbs up/down icons without text
+- July 19, 2025: Enhanced greeting detection to exclude simple hi/hello exchanges from feedback collection
+- July 19, 2025: Reduced button size and opacity for subtle, non-intrusive feedback experience
 
 ## User Preferences
 
