@@ -1905,15 +1905,11 @@
 
 
 
-    // Override the original sendMessage method to handle live chat
+    // Modify the existing sendMessage to add live chat functionality
     const originalSendMessage = ChatWidget.sendMessage;
     ChatWidget.sendMessage = function() {
-        const inputField = document.querySelector('.chat-widget-input');
-        const message = inputField ? inputField.value.trim() : '';
+        const message = inputField.value.trim();
         if (!message) return;
-
-        ChatWidget.addMessage(message, 'user');
-        if (inputField) inputField.value = '';
 
         // Check if user wants to transfer to live chat
         const liveChatKeywords = ['live chat', 'chat with agent', 'talk to agent', 'human agent', 'speak to human', 'connect to agent'];
@@ -1921,17 +1917,27 @@
         const requestsLiveChat = liveChatKeywords.some(keyword => messageText.includes(keyword));
 
         if (requestsLiveChat && !isLiveChatActive) {
+            // Add user message first
+            ChatWidget.addMessage(message, 'user');
+            inputField.value = '';
+            
+            // Then transfer to agent
             liveChatMethods.transferToAgent(`User requested: ${message}`);
             return;
         }
 
         if (isLiveChatActive) {
+            // Add user message 
+            ChatWidget.addMessage(message, 'user');
+            inputField.value = '';
+            
+            // Send to live chat
             liveChatMethods.sendLiveChatMessage(message).catch(error => {
                 console.error('Error sending live chat message:', error);
                 ChatWidget.addMessage('Sorry, there was an error sending your message. Please try again.', 'bot');
             });
         } else {
-            // Use original AI/RAG functionality
+            // Use original AI/RAG functionality for regular messages
             originalSendMessage.call(this);
         }
     };
