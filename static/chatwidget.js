@@ -816,10 +816,13 @@
                 });
             }
 
-            // Clear button
-            chatWindow.querySelector('.chat-widget-clear-btn').addEventListener('click', () => {
-                this.clearConversation();
-            });
+            // Clear button (add error handling since it might not exist)
+            const clearBtn = chatWindow.querySelector('.chat-widget-clear-btn');
+            if (clearBtn) {
+                clearBtn.addEventListener('click', () => {
+                    this.clearConversation();
+                });
+            }
 
             // Send button
             sendButton.addEventListener('click', () => {
@@ -2095,28 +2098,21 @@
 
         loadCustomIcon: function() {
             return new Promise((resolve) => {
-                // Try to load custom icon from server
-                fetch(`${config.apiUrl}/api/widget_icon`, {
-                    headers: {
-                        'X-Widget-Origin': window.location.origin
-                    }
-                })
-                .then(response => {
-                    if (response.ok) {
-                        return response.blob();
-                    }
-                    throw new Error('No custom icon');
-                })
-                .then(blob => {
-                    const iconUrl = URL.createObjectURL(blob);
-                    config.iconUrl = iconUrl;
-                    console.log('Custom icon loaded');
+                // Try to load custom icon directly from static path
+                const iconPath = `${config.apiUrl}/static/widget_icons/widget_icon.png`;
+                
+                // Create a test image to check if icon exists
+                const testImg = new Image();
+                testImg.onload = () => {
+                    config.iconUrl = iconPath;
+                    console.log('Custom icon loaded from:', iconPath);
                     resolve();
-                })
-                .catch(() => {
-                    // No custom icon, use default
+                };
+                testImg.onerror = () => {
+                    console.log('No custom icon found, using default');
                     resolve();
-                });
+                };
+                testImg.src = iconPath;
             });
         },
 
@@ -2127,6 +2123,55 @@
                        .replace(/<[^>]*>/g, '')
                        .trim()
                        .substring(0, 500); // Limit length
+        },
+
+        clearConversation: function() {
+            // Clear the chat messages
+            const messagesContainer = document.querySelector('.chat-widget-messages');
+            if (messagesContainer) {
+                messagesContainer.innerHTML = '';
+            }
+            
+            // Reset conversation count
+            conversationCount = 0;
+            
+            // Generate new session ID
+            sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            
+            // Update session info display
+            this.updateSessionInfo();
+            
+            // Show welcome message again
+            if (config.welcomeMessage) {
+                const welcomeMsg = this.getPersonalizedWelcome();
+                this.addMessage(welcomeMsg, 'bot');
+            }
+            
+            // Clear memory on server side
+            this.clearMemory();
+        },
+
+        clearMemory: function() {
+            fetch(`${config.apiUrl}/clear_memory`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Widget-Origin': window.location.origin
+                },
+                body: JSON.stringify({
+                    session_id: sessionId,
+                    user_id: config.user_id,
+                    email: config.email,
+                    device_id: config.device_id
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Memory cleared:', data);
+            })
+            .catch(error => {
+                console.error('Error clearing memory:', error);
+            });
         },
 
         // All legacy ElevenLabs API functions removed - now using embedded agent
