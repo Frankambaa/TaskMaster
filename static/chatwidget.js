@@ -2272,6 +2272,7 @@
         transferToAgent: function(reason) {
             const transferData = {
                 user_identifier: config.user_id || config.email || config.device_id || 'anonymous',
+                session_id: sessionId, // Include current session ID for unified conversation continuity
                 username: config.username,
                 email: config.email,
                 initial_message: reason || 'User requested live agent assistance',

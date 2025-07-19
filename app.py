@@ -1864,24 +1864,42 @@ def agent_portal():
 
 @app.route('/api/live_chat/sessions', methods=['GET'])
 def get_live_chat_sessions():
-    """Get live chat sessions for agent dashboard"""
+    """Get live chat sessions for agent dashboard using unified conversations"""
     try:
+        from models import UnifiedConversation
+        
         status = request.args.get('status', 'all')
         agent_id = request.args.get('agent_id')
         
-        query = LiveChatSession.query
-        
-        if status != 'all':
-            query = query.filter_by(status=status)
+        # Query unified conversations that are live chat type
+        query = UnifiedConversation.query.filter_by(conversation_type='live_chat')
         
         if agent_id:
             query = query.filter_by(agent_id=agent_id)
         
-        sessions = query.order_by(LiveChatSession.updated_at.desc()).limit(50).all()
+        conversations = query.order_by(UnifiedConversation.updated_at.desc()).limit(50).all()
+        
+        # Convert to live chat session format for compatibility
+        sessions = []
+        for conv in conversations:
+            sessions.append({
+                'session_id': conv.session_id,
+                'user_identifier': conv.user_identifier,
+                'username': conv.username,
+                'email': conv.email,
+                'device_id': conv.device_id,
+                'status': 'active',  # Simplified status
+                'agent_id': conv.agent_id,
+                'priority': 'normal',
+                'department': 'support',
+                'created_at': conv.created_at.isoformat(),
+                'updated_at': conv.updated_at.isoformat(),
+                'initial_message': 'Live chat session'
+            })
         
         return jsonify({
             'success': True,
-            'sessions': [session.to_dict() for session in sessions]
+            'sessions': sessions
         })
         
     except Exception as e:
@@ -1890,14 +1908,30 @@ def get_live_chat_sessions():
 
 @app.route('/api/live_chat/sessions/<session_id>/messages', methods=['GET'])
 def get_session_messages(session_id):
-    """Get messages for a specific live chat session"""
+    """Get messages for a specific live chat session using unified conversation system"""
     try:
-        from live_chat_manager import live_chat_manager
-        messages = live_chat_manager.get_session_messages(session_id)
+        from models import UnifiedMessage
+        
+        # Get messages from unified conversation system
+        messages = UnifiedMessage.query.filter_by(session_id=session_id).order_by(UnifiedMessage.created_at.asc()).all()
+        
+        # Convert to live chat format for compatibility
+        live_chat_messages = []
+        for msg in messages:
+            live_chat_messages.append({
+                'id': msg.id,
+                'session_id': session_id,
+                'message_content': msg.content,
+                'sender_type': msg.message_type,
+                'sender_name': msg.sender,
+                'message_type': 'text',
+                'created_at': msg.created_at.isoformat(),
+                'metadata': {}
+            })
         
         return jsonify({
             'success': True,
-            'messages': [message.to_dict() for message in messages]
+            'messages': live_chat_messages
         })
         
     except Exception as e:
@@ -1950,24 +1984,51 @@ def update_session_status(session_id):
 
 @app.route('/api/live_chat/sessions/<session_id>/send_message', methods=['POST'])
 def send_live_chat_message(session_id):
-    """Send a message in a live chat session"""
+    """Send a message in a live chat session using unified conversation system"""
     try:
-        from live_chat_manager import live_chat_manager
+        from models import UnifiedConversation, UnifiedMessage
         data = request.json
         
-        message = live_chat_manager.send_message(
+        # Find the unified conversation
+        conversation = UnifiedConversation.query.filter_by(session_id=session_id).first()
+        if not conversation:
+            return jsonify({'success': False, 'error': 'Conversation not found'}), 404
+        
+        # Determine sender type and content
+        sender_type = data.get('sender_type', 'agent')
+        message_content = data.get('message_content', data.get('message', ''))
+        sender_name = data.get('sender_name', 'Agent' if sender_type == 'agent' else 'User')
+        
+        # Create unified message
+        message = UnifiedMessage(
             session_id=session_id,
-            sender_type=data.get('sender_type', 'agent'),
-            sender_id=data.get('sender_id'),
-            sender_name=data.get('sender_name'),
-            message_content=data.get('message_content'),
-            message_type=data.get('message_type', 'text'),
-            metadata=data.get('metadata')
+            message_type=sender_type,
+            content=message_content,
+            sender=sender_name,
+            created_at=datetime.utcnow()
         )
+        
+        db.session.add(message)
+        
+        # Update conversation timestamp
+        conversation.updated_at = datetime.utcnow()
+        if sender_type == 'agent' and not conversation.agent_id:
+            conversation.agent_id = data.get('sender_id', 'agent')
+        
+        db.session.commit()
+        
+        logging.info(f"Live chat message sent in session {session_id} by {sender_type}")
         
         return jsonify({
             'success': True,
-            'message': message.to_dict()
+            'message': {
+                'id': message.id,
+                'session_id': session_id,
+                'content': message_content,
+                'sender': sender_name,
+                'sender_type': sender_type,
+                'created_at': message.created_at.isoformat()
+            }
         })
         
     except Exception as e:
@@ -1976,32 +2037,71 @@ def send_live_chat_message(session_id):
 
 @app.route('/api/live_chat/transfer_to_agent', methods=['POST'])
 def transfer_to_agent():
-    """Transfer a chatbot conversation to live agent with full conversation history"""
+    """Transfer a chatbot conversation to live agent using unified conversation system"""
     try:
         from live_chat_manager import live_chat_manager
+        from models import UnifiedConversation, UnifiedMessage
+        from datetime import datetime
         data = request.json
         
-        # Create live chat session
-        session = live_chat_manager.create_session(
-            user_identifier=data.get('user_identifier', 'anonymous'),
-            username=data.get('username'),
-            email=data.get('email'),
-            initial_message=data.get('initial_message'),
-            department=data.get('department'),
-            priority=data.get('priority', 'normal')
-        )
+        user_identifier = data.get('user_identifier', 'anonymous')
+        session_id = data.get('session_id')
         
-        # Import previous conversation history if provided
-        conversation_history = data.get('conversation_history', [])
-        if conversation_history:
-            live_chat_manager.import_bot_conversation(session.session_id, conversation_history)
+        # Find existing unified conversation for this user
+        existing_conversation = UnifiedConversation.query.filter_by(
+            session_id=session_id,
+            user_identifier=user_identifier
+        ).first()
         
-        return jsonify({
-            'success': True,
-            'session_id': session.session_id,
-            'message': 'Chat transferred to live agent. You will be connected shortly.',
-            'imported_messages': len(conversation_history)
-        })
+        if existing_conversation:
+            # Update existing conversation to live chat type
+            existing_conversation.conversation_type = 'live_chat'
+            existing_conversation.agent_id = None  # Will be assigned when agent connects
+            existing_conversation.updated_at = datetime.utcnow()
+            
+            # Add transfer message to existing conversation
+            transfer_message = UnifiedMessage(
+                session_id=session_id,
+                message_type='system',
+                content=f"Chat transferred to live agent: {data.get('initial_message', 'User requested live chat')}",
+                sender='system',
+                created_at=datetime.utcnow()
+            )
+            
+            db.session.add(transfer_message)
+            db.session.commit()
+            
+            logging.info(f"Transferred existing conversation {session_id} to live chat for user {user_identifier}")
+            
+            return jsonify({
+                'success': True,
+                'session_id': session_id,
+                'message': 'Chat transferred to live agent. You will be connected shortly.',
+                'conversation_continued': True
+            })
+        else:
+            # Fallback: Create new live chat session if no existing conversation found
+            session = live_chat_manager.create_session(
+                user_identifier=user_identifier,
+                username=data.get('username'),
+                email=data.get('email'),
+                initial_message=data.get('initial_message'),
+                department=data.get('department'),
+                priority=data.get('priority', 'normal')
+            )
+            
+            # Import previous conversation history if provided
+            conversation_history = data.get('conversation_history', [])
+            if conversation_history:
+                live_chat_manager.import_bot_conversation(session.session_id, conversation_history)
+            
+            return jsonify({
+                'success': True,
+                'session_id': session.session_id,
+                'message': 'Chat transferred to live agent. You will be connected shortly.',
+                'imported_messages': len(conversation_history),
+                'conversation_continued': False
+            })
         
     except Exception as e:
         logging.error(f"Error transferring to agent: {str(e)}")
