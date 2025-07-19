@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Chat Agent Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .chat-container {
+            height: 500px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            background: #f8f9fa;
+        }
+        .message {
+            margin-bottom: 15px;
+            padding: 12px 16px;
+            border-radius: 18px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+        .message.user {
+            background: #e3f2fd;
+            margin-left: auto;
+            text-align: right;
+            border-bottom-right-radius: 4px;
+        }
+        .message.agent {
+            background: #e8f5e8;
+            margin-right: auto;
+            border-bottom-left-radius: 4px;
+        }
+        .message.bot {
+            background: #fff3cd;
+            margin-right: auto;
+            border-left: 4px solid #ffc107;
+        }
+        .message.system {
+            background: #f8d7da;
+            margin: 0 auto;
+            text-align: center;
+            font-style: italic;
+            max-width: 90%;
+        }
+        .session-card {
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        .session-card:hover {
+            background: #f0f8ff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .session-card.active {
+            background: #e3f2fd;
+            border-color: #2196f3;
+            box-shadow: 0 4px 12px rgba(33,150,243,0.3);
+        }
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+        .status-waiting { background: #ffc107; }
+        .status-active { background: #28a745; }
+        .status-closed { background: #6c757d; }
+        .status-transferred { background: #17a2b8; }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(33, 150, 243, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(33, 150, 243, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(33, 150, 243, 0); }
+        }
+        
+        .agent-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #28a745;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+        }
+
+        .priority-urgent { border-left: 4px solid #dc3545; }
+        .priority-high { border-left: 4px solid #ffc107; }
+        .priority-normal { border-left: 4px solid #17a2b8; }
+        .priority-low { border-left: 4px solid #6c757d; }
+
+        .message-content a {
+            color: #0066cc;
+            text-decoration: underline;
+        }
+
+        .typing-indicator {
+            display: none;
+            padding: 8px;
+            background: #f1f1f1;
+            border-radius: 12px;
+            margin: 5px 0;
+        }
+
+        .typing-indicator.show {
+            display: block;
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #dc3545;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .session-actions {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .session-card:hover .session-actions {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="agent-status" id="agent-status">
+        <i class="fas fa-circle"></i> Connecting...
+    </div>
+
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <!-- Sessions List -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5><i class="fas fa-comments"></i> Live Chat Sessions</h5>
+                        <div>
+                            <button class="btn btn-sm btn-outline-primary" onclick="refreshSessions()" title="Refresh">
+                                <i class="fas fa-sync"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-success" onclick="toggleAvailability()" id="availability-btn">
+                                <i class="fas fa-toggle-on"></i> Available
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="input-group p-2">
+                            <input type="text" class="form-control form-control-sm" id="session-search" 
+                                   placeholder="Search sessions..." onkeyup="filterSessions()">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        </div>
+                        <div id="sessions-list" style="max-height: 600px; overflow-y: auto;">
+                            <!-- Sessions will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Interface -->
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 id="chat-title">
+                                    <i class="fas fa-user"></i> Select a session to start chatting
+                                </h5>
+                                <small id="session-info" class="text-muted"></small>
+                            </div>
+                            <div id="session-controls" style="display: none;">
+                                <button class="btn btn-sm btn-outline-warning me-1" onclick="markSessionActive()" title="Mark as Active">
+                                    <i class="fas fa-play"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="closeSession()" title="Close Session">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="chat-container" class="chat-container">
+                            <div class="text-center text-muted">
+                                <i class="fas fa-arrow-left fa-2x"></i>
+                                <h5>Select a chat session from the left panel</h5>
+                                <p>Choose a waiting or active session to start helping customers</p>
+                            </div>
+                        </div>
+                        
+                        <div class="typing-indicator" id="typing-indicator">
+                            <i class="fas fa-spinner fa-spin"></i> Sending message...
+                        </div>
+                        
+                        <div id="message-input-area" class="mt-3" style="display: none;">
+                            <div class="input-group">
+                                <textarea id="message-input" class="form-control" rows="2"
+                                       placeholder="Type your message... (Shift+Enter for new line, Enter to send)" 
+                                       onkeydown="handleKeyPress(event)"></textarea>
+                                <button class="btn btn-primary" onclick="sendMessage()" id="send-btn">
+                                    <i class="fas fa-paper-plane"></i> Send
+                                </button>
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-muted">
+                                    Quick responses: 
+                                    <span class="badge bg-secondary me-1" onclick="insertQuickResponse('Hello! How can I help you today?')" style="cursor: pointer;">Greeting</span>
+                                    <span class="badge bg-secondary me-1" onclick="insertQuickResponse('Thank you for contacting us. Let me check that for you.')" style="cursor: pointer;">Checking</span>
+                                    <span class="badge bg-secondary me-1" onclick="insertQuickResponse('Is there anything else I can help you with?')" style="cursor: pointer;">Follow up</span>
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentSessionId = null;
+        let messageInterval = null;
+        let sessionInterval = null;
+        let agentId = 'agent_' + Math.random().toString(36).substr(2, 9);
+        let isAvailable = true;
+        let allSessions = [];
+
+        // Initialize the portal
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeAgent();
+            loadSessions();
+            
+            // Auto-refresh sessions every 3 seconds
+            sessionInterval = setInterval(loadSessions, 3000);
+            
+            // Set agent status to online
+            setAgentStatus('online');
+        });
+
+        function initializeAgent() {
+            // Register agent if needed
+            fetch('/api/live_chat/agents', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    agent_id: agentId,
+                    agent_name: 'Support Agent',
+                    email: 'agent@support.com',
+                    department: 'general',
+                    max_concurrent_chats: 5
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Agent initialized:', data);
+            })
+            .catch(error => console.log('Agent already exists or error:', error));
+        }
+
+        function setAgentStatus(status) {
+            fetch(`/api/live_chat/agents/${agentId}/status`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: status })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Agent status updated:', data);
+                updateAgentStatusUI(status);
+            })
+            .catch(error => console.error('Error updating agent status:', error));
+        }
+
+        function updateAgentStatusUI(status) {
+            const statusElement = document.getElementById('agent-status');
+            
+            switch(status) {
+                case 'online':
+                    statusElement.style.background = '#28a745';
+                    statusElement.innerHTML = '<i class="fas fa-circle"></i> Agent Online';
+                    break;
+                case 'busy':
+                    statusElement.style.background = '#ffc107';
+                    statusElement.innerHTML = '<i class="fas fa-circle"></i> Agent Busy';
+                    break;
+                case 'offline':
+                    statusElement.style.background = '#6c757d';
+                    statusElement.innerHTML = '<i class="fas fa-circle"></i> Agent Offline';
+                    break;
+            }
+        }
+
+        function toggleAvailability() {
+            isAvailable = !isAvailable;
+            const btn = document.getElementById('availability-btn');
+            const newStatus = isAvailable ? 'online' : 'busy';
+            
+            if (isAvailable) {
+                btn.innerHTML = '<i class="fas fa-toggle-on"></i> Available';
+                btn.className = 'btn btn-sm btn-outline-success';
+            } else {
+                btn.innerHTML = '<i class="fas fa-toggle-off"></i> Busy';
+                btn.className = 'btn btn-sm btn-outline-warning';
+            }
+            
+            setAgentStatus(newStatus);
+        }
+
+        function loadSessions() {
+            fetch('/api/live_chat/sessions?status=all')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        allSessions = data.sessions;
+                        displaySessions(allSessions);
+                    }
+                })
+                .catch(error => console.error('Error loading sessions:', error));
+        }
+
+        function filterSessions() {
+            const searchTerm = document.getElementById('session-search').value.toLowerCase();
+            const filteredSessions = allSessions.filter(session => 
+                (session.username || session.user_identifier).toLowerCase().includes(searchTerm) ||
+                (session.email || '').toLowerCase().includes(searchTerm) ||
+                (session.initial_message || '').toLowerCase().includes(searchTerm)
+            );
+            displaySessions(filteredSessions);
+        }
+
+        function displaySessions(sessions) {
+            const container = document.getElementById('sessions-list');
+            if (!sessions || sessions.length === 0) {
+                container.innerHTML = `
+                    <div class="p-4 text-center text-muted">
+                        <i class="fas fa-inbox fa-3x mb-3"></i>
+                        <h6>No active sessions</h6>
+                        <p class="small">Waiting for customers...</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Sort sessions by priority and creation date
+            sessions.sort((a, b) => {
+                const priorityOrder = { 'urgent': 4, 'high': 3, 'normal': 2, 'low': 1 };
+                if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
+                    return priorityOrder[b.priority] - priorityOrder[a.priority];
+                }
+                return new Date(b.created_at) - new Date(a.created_at);
+            });
+
+            container.innerHTML = sessions.map(session => {
+                const isActive = session.session_id === currentSessionId;
+                const statusIcon = getStatusIcon(session.status);
+                const priorityBadge = getPriorityBadge(session.priority);
+                const timeAgo = getTimeAgo(session.created_at);
+                const lastActivity = getTimeAgo(session.updated_at);
+                const priorityClass = `priority-${session.priority}`;
+                
+                return `
+                    <div class="session-card card m-2 p-3 ${isActive ? 'active' : ''} ${priorityClass}" 
+                         onclick="selectSession('${session.session_id}', '${session.username || session.user_identifier}', '${session.email || ''}')">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center mb-1">
+                                    ${statusIcon}
+                                    <strong class="me-2">${session.username || session.user_identifier}</strong>
+                                    ${priorityBadge}
+                                </div>
+                                <small class="text-muted d-block">${session.email || 'No email'}</small>
+                                <div class="d-flex justify-content-between">
+                                    <small class="text-info">Started: ${timeAgo}</small>
+                                    <small class="text-muted">Last: ${lastActivity}</small>
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-${getStatusColorClass(session.status)}">${session.status}</span>
+                                ${session.unread_count ? `<br><span class="badge bg-danger mt-1">${session.unread_count} new</span>` : ''}
+                            </div>
+                        </div>
+                        ${session.initial_message ? `
+                            <div class="mt-2 p-2 bg-light rounded">
+                                <small><strong>Initial:</strong> "${session.initial_message.substring(0, 80)}${session.initial_message.length > 80 ? '...' : ''}"</small>
+                            </div>
+                        ` : ''}
+                        <div class="session-actions mt-2">
+                            <button class="btn btn-sm btn-outline-primary me-1" onclick="event.stopPropagation(); quickAccept('${session.session_id}')">
+                                <i class="fas fa-check"></i> Accept
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function getStatusIcon(status) {
+            switch(status) {
+                case 'waiting': return '<i class="fas fa-clock text-warning me-1"></i>';
+                case 'active': return '<i class="fas fa-comments text-success me-1"></i>';
+                case 'closed': return '<i class="fas fa-times-circle text-muted me-1"></i>';
+                case 'transferred': return '<i class="fas fa-share text-info me-1"></i>';
+                default: return '<i class="fas fa-circle text-secondary me-1"></i>';
+            }
+        }
+
+        function getPriorityBadge(priority) {
+            const colors = {
+                'urgent': 'danger',
+                'high': 'warning', 
+                'normal': 'primary',
+                'low': 'secondary'
+            };
+            return `<span class="badge bg-${colors[priority] || 'secondary'}">${priority}</span>`;
+        }
+
+        function getStatusColorClass(status) {
+            switch(status) {
+                case 'waiting': return 'warning';
+                case 'active': return 'success';
+                case 'closed': return 'secondary';
+                case 'transferred': return 'info';
+                default: return 'light';
+            }
+        }
+
+        function getTimeAgo(timestamp) {
+            const now = new Date();
+            const time = new Date(timestamp);
+            const diffMs = now - time;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMins / 60);
+            
+            if (diffMins < 1) return 'Just now';
+            if (diffMins < 60) return `${diffMins}m ago`;
+            if (diffHours < 24) return `${diffHours}h ago`;
+            return time.toLocaleDateString();
+        }
+
+        function selectSession(sessionId, username, email) {
+            // Update current session
+            if (currentSessionId === sessionId) return; // Already selected
+            
+            currentSessionId = sessionId;
+            
+            // Update UI
+            document.getElementById('chat-title').innerHTML = `<i class="fas fa-user"></i> ${username}`;
+            document.getElementById('session-info').innerHTML = `
+                <div class="d-flex justify-content-between align-items-center">
+                    <span>${email || 'No email provided'}</span>
+                </div>
+            `;
+            document.getElementById('message-input-area').style.display = 'block';
+            document.getElementById('session-controls').style.display = 'block';
+            
+            // Clear previous message polling
+            if (messageInterval) {
+                clearInterval(messageInterval);
+            }
+            
+            // Load messages and start real-time polling
+            loadMessages();
+            messageInterval = setInterval(loadMessages, 1000); // Poll every second for active session
+            
+            // Update session status to active
+            changeSessionStatus(sessionId, 'active');
+            
+            // Update active session styling
+            document.querySelectorAll('.session-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            event.target.closest('.session-card').classList.add('active');
+        }
+
+        function quickAccept(sessionId) {
+            changeSessionStatus(sessionId, 'active');
+            // Auto-select the session after accepting
+            setTimeout(() => {
+                const sessionCard = document.querySelector(`[onclick*="${sessionId}"]`);
+                if (sessionCard) {
+                    sessionCard.click();
+                }
+            }, 500);
+        }
+
+        function markSessionActive() {
+            if (currentSessionId) {
+                changeSessionStatus(currentSessionId, 'active');
+            }
+        }
+
+        function closeSession() {
+            if (currentSessionId && confirm('Are you sure you want to close this session?')) {
+                changeSessionStatus(currentSessionId, 'closed');
+            }
+        }
+
+        function changeSessionStatus(sessionId, newStatus) {
+            fetch(`/api/live_chat/sessions/${sessionId}/status`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log(`Session ${sessionId} status changed to ${newStatus}`);
+                    loadSessions(); // Refresh sessions list
+                    
+                    if (newStatus === 'closed' && currentSessionId === sessionId) {
+                        // Clear chat if current session was closed
+                        currentSessionId = null;
+                        document.getElementById('chat-container').innerHTML = `
+                            <div class="text-center text-muted">
+                                <i class="fas fa-check-circle fa-3x mb-3 text-success"></i>
+                                <h5>Session closed successfully</h5>
+                                <p>You can now select another session</p>
+                            </div>
+                        `;
+                        document.getElementById('message-input-area').style.display = 'none';
+                        document.getElementById('session-controls').style.display = 'none';
+                        if (messageInterval) {
+                            clearInterval(messageInterval);
+                        }
+                    }
+                }
+            })
+            .catch(error => console.error('Error changing session status:', error));
+        }
+
+        function loadMessages() {
+            if (!currentSessionId) return;
+            
+            fetch(`/api/live_chat/sessions/${currentSessionId}/messages`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayMessages(data.messages);
+                    }
+                })
+                .catch(error => console.error('Error loading messages:', error));
+        }
+
+        function displayMessages(messages) {
+            const container = document.getElementById('chat-container');
+            const shouldScroll = container.scrollTop + container.clientHeight >= container.scrollHeight - 20;
+            
+            if (!messages || messages.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-muted">
+                        <i class="fas fa-comment-slash fa-2x mb-3"></i>
+                        <h6>No messages yet</h6>
+                        <p>Start the conversation with this customer</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = messages.map(message => {
+                const messageClass = message.sender_type === 'user' ? 'user' : 
+                                   message.sender_type === 'agent' ? 'agent' : 
+                                   message.sender_type === 'bot' ? 'bot' : 'system';
+                const senderName = message.sender_name || message.sender_type;
+                const timestamp = new Date(message.created_at).toLocaleTimeString();
+                const senderIcon = getSenderIcon(message.sender_type);
+                
+                return `
+                    <div class="message ${messageClass}">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div class="d-flex align-items-center">
+                                ${senderIcon}
+                                <strong class="ms-1">${senderName}</strong>
+                            </div>
+                            <small class="text-muted">${timestamp}</small>
+                        </div>
+                        <div class="message-content">${formatMessageContent(message.message_content)}</div>
+                    </div>
+                `;
+            }).join('');
+            
+            // Auto-scroll to bottom for new messages
+            if (shouldScroll) {
+                setTimeout(() => {
+                    container.scrollTop = container.scrollHeight;
+                }, 100);
+            }
+        }
+
+        function getSenderIcon(senderType) {
+            switch(senderType) {
+                case 'user': return '<i class="fas fa-user text-primary"></i>';
+                case 'agent': return '<i class="fas fa-headset text-success"></i>';
+                case 'bot': return '<i class="fas fa-robot text-info"></i>';
+                case 'system': return '<i class="fas fa-cog text-warning"></i>';
+                default: return '<i class="fas fa-circle text-secondary"></i>';
+            }
+        }
+
+        function formatMessageContent(content) {
+            // Convert URLs to clickable links
+            const urlRegex = /(https?:\/\/[^\s]+)/g;
+            let formatted = content.replace(urlRegex, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+            
+            // Convert line breaks
+            formatted = formatted.replace(/\n/g, '<br>');
+            
+            return formatted;
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('message-input');
+            const message = input.value.trim();
+            
+            if (!message || !currentSessionId) {
+                if (!currentSessionId) {
+                    alert('Please select a chat session first');
+                }
+                return;
+            }
+            
+            // Show typing indicator
+            showTypingIndicator();
+            
+            fetch(`/api/live_chat/sessions/${currentSessionId}/messages`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message_content: message,
+                    sender_type: 'agent',
+                    sender_id: agentId,
+                    sender_name: 'Support Agent'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    input.value = '';
+                    hideTypingIndicator();
+                    loadMessages(); // Refresh messages immediately
+                    
+                    // Resize textarea back to default
+                    input.style.height = 'auto';
+                } else {
+                    hideTypingIndicator();
+                    alert('Failed to send message: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error sending message:', error);
+                hideTypingIndicator();
+                alert('Failed to send message. Please try again.');
+            });
+        }
+
+        function insertQuickResponse(text) {
+            const input = document.getElementById('message-input');
+            input.value = text;
+            input.focus();
+        }
+
+        function showTypingIndicator() {
+            document.getElementById('typing-indicator').classList.add('show');
+            const button = document.getElementById('send-btn');
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+            button.disabled = true;
+        }
+
+        function hideTypingIndicator() {
+            document.getElementById('typing-indicator').classList.remove('show');
+            const button = document.getElementById('send-btn');
+            button.innerHTML = '<i class="fas fa-paper-plane"></i> Send';
+            button.disabled = false;
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            } else if (event.key === 'Enter' && event.shiftKey) {
+                // Allow new line
+                return true;
+            }
+        }
+
+        function refreshSessions() {
+            loadSessions();
+            if (currentSessionId) {
+                loadMessages();
+            }
+            
+            // Visual feedback
+            const btn = event.target.closest('button');
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            setTimeout(() => {
+                btn.innerHTML = originalHtml;
+            }, 1000);
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            if (sessionInterval) clearInterval(sessionInterval);
+            if (messageInterval) clearInterval(messageInterval);
+            setAgentStatus('offline');
+        });
+
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', function(event) {
+            if (event.ctrlKey || event.metaKey) {
+                switch(event.key) {
+                    case 'r':
+                        event.preventDefault();
+                        refreshSessions();
+                        break;
+                    case '/':
+                        event.preventDefault();
+                        document.getElementById('session-search').focus();
+                        break;
+                }
+            }
+        });
+
+        // Auto-resize textarea
+        document.getElementById('message-input').addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+    </script>
+</body>
+</html>

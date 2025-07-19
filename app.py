@@ -1733,7 +1733,7 @@ def get_system_logs():
 @app.route('/agent_portal')
 def agent_portal():
     """Live chat agent portal interface"""
-    return render_template('agent_portal.html')
+    return render_template('agent_portal_enhanced.html')
 
 @app.route('/api/live_chat/sessions', methods=['GET'])
 def get_live_chat_sessions():
@@ -1770,11 +1770,55 @@ def get_session_messages(session_id):
         
         return jsonify({
             'success': True,
-            'messages': [message.to_dict() for message in reversed(messages)]
+            'messages': [message.to_dict() for message in messages]
         })
         
     except Exception as e:
         logging.error(f"Error getting session messages: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/live_chat/sessions/<session_id>/messages', methods=['POST'])
+def send_session_message(session_id):
+    """Send a message in a live chat session"""
+    try:
+        from live_chat_manager import live_chat_manager
+        data = request.json
+        
+        message = live_chat_manager.send_message(
+            session_id=session_id,
+            sender_type=data['sender_type'],
+            sender_id=data['sender_id'],
+            message_content=data['message_content'],
+            sender_name=data.get('sender_name'),
+            message_type=data.get('message_type', 'text'),
+            metadata=data.get('metadata', {})
+        )
+        
+        return jsonify({
+            'success': True,
+            'message': message.to_dict()
+        })
+        
+    except Exception as e:
+        logging.error(f"Error sending session message: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/live_chat/sessions/<session_id>/status', methods=['PUT'])
+def update_session_status(session_id):
+    """Update live chat session status"""
+    try:
+        from live_chat_manager import live_chat_manager
+        data = request.json
+        
+        success = live_chat_manager.update_session_status(session_id, data['status'])
+        
+        return jsonify({
+            'success': success,
+            'message': f"Session status updated to {data['status']}" if success else "Session not found"
+        })
+        
+    except Exception as e:
+        logging.error(f"Error updating session status: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/live_chat/sessions/<session_id>/send_message', methods=['POST'])

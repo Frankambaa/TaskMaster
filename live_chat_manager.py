@@ -219,6 +219,121 @@ class LiveChatManager:
         
         return True
     
+    def get_session_messages(self, session_id: str) -> List[LiveChatMessage]:
+        """
+        Get all messages for a live chat session
+        
+        Args:
+            session_id: Live chat session ID
+            
+        Returns:
+            List of LiveChatMessage instances
+        """
+        try:
+            messages = LiveChatMessage.query.filter_by(
+                session_id=session_id
+            ).order_by(LiveChatMessage.created_at.asc()).all()
+            
+            return messages
+            
+        except Exception as e:
+            self.logger.error(f"Error getting session messages: {str(e)}")
+            return []
+
+    def update_session_status(self, session_id: str, status: str) -> bool:
+        """
+        Update the status of a live chat session
+        
+        Args:
+            session_id: Live chat session ID
+            status: New status ('waiting', 'active', 'closed', 'transferred')
+            
+        Returns:
+            bool: True if update successful
+        """
+        try:
+            session = LiveChatSession.query.filter_by(session_id=session_id).first()
+            if not session:
+                self.logger.error(f"Session {session_id} not found for status update")
+                return False
+            
+            old_status = session.status
+            session.status = status
+            session.updated_at = datetime.utcnow()
+            
+            # If closing session, free up agent
+            if status == 'closed' and session.agent_id:
+                agent = LiveChatAgent.query.filter_by(agent_id=session.agent_id).first()
+                if agent and agent.current_chat_count > 0:
+                    agent.current_chat_count -= 1
+                    agent.last_activity = datetime.utcnow()
+                
+                # Send system message about session closure
+                self.send_message(
+                    session_id=session_id,
+                    sender_type='system',
+                    sender_id='system',
+                    message_content=f"Chat session has been {status}",
+                    message_type='system_notification'
+                )
+            
+            db.session.commit()
+            
+            self.logger.info(f"Session {session_id} status updated from {old_status} to {status}")
+            
+            # Send webhook notification
+            status_data = {
+                'session_id': session_id,
+                'old_status': old_status,
+                'new_status': status,
+                'updated_at': datetime.utcnow().isoformat()
+            }
+            self._send_webhook_notification('status_changed', status_data)
+            
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Error updating session status: {str(e)}")
+            db.session.rollback()
+            return False
+
+    def update_agent_status(self, agent_id: str, status: str) -> bool:
+        """
+        Update agent availability status
+        
+        Args:
+            agent_id: Agent ID
+            status: New status ('online', 'busy', 'offline')
+            
+        Returns:
+            bool: True if update successful
+        """
+        try:
+            agent = LiveChatAgent.query.filter_by(agent_id=agent_id).first()
+            if not agent:
+                # Create agent if doesn't exist
+                agent = LiveChatAgent(
+                    agent_id=agent_id,
+                    agent_name=f"Agent {agent_id}",
+                    status=status,
+                    is_active=True
+                )
+                db.session.add(agent)
+            else:
+                agent.status = status
+                agent.last_activity = datetime.utcnow()
+                agent.is_active = (status != 'offline')
+            
+            db.session.commit()
+            
+            self.logger.info(f"Agent {agent_id} status updated to {status}")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Error updating agent status: {str(e)}")
+            db.session.rollback()
+            return False
+
     def complete_session(self, session_id: str, agent_id: str = None) -> bool:
         """
         Complete a live chat session
@@ -317,107 +432,54 @@ class LiveChatManager:
         
         return True
     
-    def get_session_messages(self, session_id: str, limit: int = 50) -> List[LiveChatMessage]:
-        """Get messages for a live chat session"""
-        return LiveChatMessage.query.filter_by(session_id=session_id)\
-            .order_by(LiveChatMessage.created_at.desc())\
-            .limit(limit).all()
-    
-    def get_agent_sessions(self, agent_id: str, status: str = None) -> List[LiveChatSession]:
-        """Get sessions assigned to an agent"""
-        query = LiveChatSession.query.filter_by(agent_id=agent_id)
-        if status:
-            query = query.filter_by(status=status)
-        return query.order_by(LiveChatSession.updated_at.desc()).all()
-    
-    def get_waiting_sessions(self, department: str = None) -> List[LiveChatSession]:
-        """Get sessions waiting for agent assignment"""
-        query = LiveChatSession.query.filter_by(status='waiting')
-        if department:
-            query = query.filter_by(department=department)
-        return query.order_by(LiveChatSession.created_at.asc()).all()
-    
-    def update_agent_status(self, agent_id: str, status: str) -> bool:
-        """Update agent availability status"""
-        agent = LiveChatAgent.query.filter_by(agent_id=agent_id).first()
-        if not agent:
-            return False
-        
-        agent.status = status
-        agent.last_activity = datetime.utcnow()
-        db.session.commit()
-        
-        self.logger.info(f"Updated agent {agent_id} status to {status}")
-        return True
-    
     def _find_best_agent(self, department: str = None, priority: str = 'normal') -> Optional[LiveChatAgent]:
-        """Find the best available agent for assignment"""
-        query = LiveChatAgent.query.filter_by(status='online', is_active=True)\
-            .filter(LiveChatAgent.current_chat_count < LiveChatAgent.max_concurrent_chats)
+        """
+        Find the best available agent for assignment
         
+        Args:
+            department: Preferred department
+            priority: Session priority
+            
+        Returns:
+            LiveChatAgent instance or None
+        """
+        query = LiveChatAgent.query.filter_by(is_active=True, status='online')
+        
+        # Filter by department if specified
         if department:
             query = query.filter_by(department=department)
         
-        # Order by current chat count (load balancing)
+        # Order by current chat count (least busy first)
         agents = query.order_by(LiveChatAgent.current_chat_count.asc()).all()
         
-        # Filter by skills if needed for high priority requests
-        if priority in ['high', 'urgent'] and agents:
-            skilled_agents = [agent for agent in agents if 'escalation' in agent.get_skills()]
-            if skilled_agents:
-                return skilled_agents[0]
+        # Find agent with capacity
+        for agent in agents:
+            if agent.current_chat_count < agent.max_concurrent_chats:
+                return agent
         
-        return agents[0] if agents else None
+        return None
     
     def _calculate_session_duration(self, session: LiveChatSession) -> int:
         """Calculate session duration in minutes"""
-        if not session.completed_at:
-            return 0
-        duration = session.completed_at - session.created_at
+        if session.completed_at:
+            duration = session.completed_at - session.created_at
+        else:
+            duration = datetime.utcnow() - session.created_at
+        
         return int(duration.total_seconds() / 60)
     
-    def _send_webhook_notification(self, event_type: str, payload: Dict[str, Any]):
+    def _send_webhook_notification(self, event_type: str, data: Dict[str, Any]) -> None:
         """Send webhook notification for live chat events"""
         try:
-            webhook_manager.send_to_all_webhooks(event_type, payload)
+            active_config = WebhookConfig.query.filter_by(is_active=True).first()
+            if not active_config:
+                return
+            
+            if webhook_manager:
+                webhook_manager.send_webhook(active_config, event_type, data)
+                
         except Exception as e:
             self.logger.error(f"Error sending webhook notification: {str(e)}")
-    
-    def get_session_statistics(self, agent_id: str = None, 
-                             start_date: datetime = None, 
-                             end_date: datetime = None) -> Dict[str, Any]:
-        """Get live chat session statistics"""
-        query = LiveChatSession.query
-        
-        if agent_id:
-            query = query.filter_by(agent_id=agent_id)
-        
-        if start_date:
-            query = query.filter(LiveChatSession.created_at >= start_date)
-        
-        if end_date:
-            query = query.filter(LiveChatSession.created_at <= end_date)
-        
-        sessions = query.all()
-        
-        total_sessions = len(sessions)
-        completed_sessions = len([s for s in sessions if s.status == 'completed'])
-        active_sessions = len([s for s in sessions if s.status == 'active'])
-        waiting_sessions = len([s for s in sessions if s.status == 'waiting'])
-        
-        avg_duration = 0
-        if completed_sessions > 0:
-            total_duration = sum(self._calculate_session_duration(s) for s in sessions if s.completed_at)
-            avg_duration = total_duration / completed_sessions
-        
-        return {
-            'total_sessions': total_sessions,
-            'completed_sessions': completed_sessions,
-            'active_sessions': active_sessions,
-            'waiting_sessions': waiting_sessions,
-            'completion_rate': (completed_sessions / total_sessions * 100) if total_sessions > 0 else 0,
-            'average_duration_minutes': round(avg_duration, 2)
-        }
 
-# Global live chat manager instance
+# Create global instance
 live_chat_manager = LiveChatManager()
