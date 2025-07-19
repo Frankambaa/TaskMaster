@@ -3412,8 +3412,635 @@ Remember: Your goal is to provide the best possible user experience by being hel
                     </div>
                 </div>
             </div>
+
+            <!-- Webhook Integration Section -->
+            <div class="tab-pane fade" id="webhook-integration">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-plug"></i> Webhook Integration Management</h5>
+                        <p class="mb-0">Configure third-party platform integrations for external chat systems</p>
+                    </div>
+                    <div class="card-body">
+                        <!-- Current Webhook Status -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="card border-primary">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-toggle-on fa-3x text-success mb-3" id="webhookStatusIcon"></i>
+                                        <h5>Webhook Status</h5>
+                                        <div class="form-check form-switch d-flex justify-content-center">
+                                            <input class="form-check-input" type="checkbox" id="webhookEnabled" onchange="toggleWebhook()">
+                                            <label class="form-check-label ms-2" for="webhookEnabled" id="webhookStatusLabel">
+                                                Disabled
+                                            </label>
+                                        </div>
+                                        <small class="text-muted" id="webhookStatusDescription">
+                                            When enabled, live chat messages are routed to external platforms
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card border-info">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-link fa-3x text-info mb-3"></i>
+                                        <h5>Active Configuration</h5>
+                                        <p class="mb-1" id="activeWebhookName">No active webhook</p>
+                                        <small class="text-muted" id="activeWebhookProvider">Configure webhook below</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Webhook Configuration Form -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6><i class="fas fa-cog"></i> Create New Webhook Configuration</h6>
+                                <form id="webhookConfigForm" onsubmit="createWebhookConfig(event)">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="webhookName" class="form-label">Configuration Name</label>
+                                                <input type="text" class="form-control" id="webhookName" required
+                                                       placeholder="e.g., Freshchat Integration">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="webhookProvider" class="form-label">Platform Provider</label>
+                                                <select class="form-control" id="webhookProvider" required>
+                                                    <option value="">Select Provider</option>
+                                                    <option value="freshchat">Freshchat</option>
+                                                    <option value="zendesk">Zendesk</option>
+                                                    <option value="intercom">Intercom</option>
+                                                    <option value="crisp">Crisp</option>
+                                                    <option value="custom">Custom Platform</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="webhookOutgoingUrl" class="form-label">Outgoing Webhook URL</label>
+                                        <input type="url" class="form-control" id="webhookOutgoingUrl" required
+                                               placeholder="https://your-platform.com/webhook/incoming">
+                                        <div class="form-text">URL where we send chatbot responses to your platform</div>
+                                    </div>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="webhookAuthToken" class="form-label">Authentication Token</label>
+                                                <input type="password" class="form-control" id="webhookAuthToken"
+                                                       placeholder="Bearer token for authentication">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="mb-3">
+                                                <label for="webhookTimeout" class="form-label">Timeout (seconds)</label>
+                                                <input type="number" class="form-control" id="webhookTimeout" 
+                                                       value="30" min="5" max="120">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="mb-3">
+                                                <label for="webhookRetries" class="form-label">Retry Attempts</label>
+                                                <input type="number" class="form-control" id="webhookRetries" 
+                                                       value="3" min="0" max="10">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Custom Headers (Optional)</label>
+                                        <div id="customHeaders">
+                                            <div class="row mb-2">
+                                                <div class="col-md-5">
+                                                    <input type="text" class="form-control" placeholder="Header Name" 
+                                                           name="headerName[]">
+                                                </div>
+                                                <div class="col-md-5">
+                                                    <input type="text" class="form-control" placeholder="Header Value" 
+                                                           name="headerValue[]">
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <button type="button" class="btn btn-outline-primary" onclick="addCustomHeader()">
+                                                        <i class="fas fa-plus"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-check mb-3">
+                                        <input class="form-check-input" type="checkbox" id="setAsActive">
+                                        <label class="form-check-label" for="setAsActive">
+                                            Set as active configuration
+                                        </label>
+                                    </div>
+
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save"></i> Create Webhook Configuration
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Existing Configurations -->
+                        <div class="row">
+                            <div class="col-12">
+                                <h6><i class="fas fa-list"></i> Existing Webhook Configurations</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Name</th>
+                                                <th>Provider</th>
+                                                <th>Webhook URL</th>
+                                                <th>Status</th>
+                                                <th>Created</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="webhookConfigsList">
+                                            <tr>
+                                                <td colspan="6" class="text-center text-muted">
+                                                    <i class="fas fa-spinner fa-spin"></i> Loading webhook configurations...
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Webhook Messages History -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <h6><i class="fas fa-history"></i> Webhook Message History</h6>
+                                <div class="row mb-3">
+                                    <div class="col-md-3">
+                                        <select class="form-control" id="filterPlatform" onchange="loadWebhookMessages()">
+                                            <option value="">All Platforms</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <select class="form-control" id="filterMessageType" onchange="loadWebhookMessages()">
+                                            <option value="">All Message Types</option>
+                                            <option value="incoming">Incoming</option>
+                                            <option value="outgoing">Outgoing</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <select class="form-control" id="filterStatus" onchange="loadWebhookMessages()">
+                                            <option value="">All Statuses</option>
+                                            <option value="pending">Pending</option>
+                                            <option value="sent">Sent</option>
+                                            <option value="failed">Failed</option>
+                                            <option value="received">Received</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <button class="btn btn-outline-secondary" onclick="loadWebhookMessages()">
+                                            <i class="fas fa-refresh"></i> Refresh
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Platform</th>
+                                                <th>Type</th>
+                                                <th>User</th>
+                                                <th>Message</th>
+                                                <th>Status</th>
+                                                <th>Timestamp</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="webhookMessagesList">
+                                            <tr>
+                                                <td colspan="6" class="text-center text-muted">
+                                                    <i class="fas fa-spinner fa-spin"></i> Loading webhook messages...
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Integration Guide -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="card border-info">
+                                    <div class="card-header bg-info text-white">
+                                        <h6 class="mb-0"><i class="fas fa-book"></i> Integration Guide</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <h6>Incoming Webhook Endpoint:</h6>
+                                        <code>POST /api/webhook/incoming</code>
+                                        
+                                        <h6 class="mt-3">Required Payload Format:</h6>
+                                        <pre class="bg-light p-2 rounded"><code>{
+  "user_id": "external_user_123",
+  "username": "John Doe",
+  "message": "Hello, I need help",
+  "platform": "freshchat",
+  "conversation_id": "conv_456",
+  "timestamp": "2025-01-19T12:00:00Z"
+}</code></pre>
+                                        
+                                        <h6 class="mt-3">Message Routing Logic:</h6>
+                                        <ul>
+                                            <li><strong>Webhook OFF:</strong> Messages route to live chat interface</li>
+                                            <li><strong>Webhook ON:</strong> Messages process through AI/RAG and respond via external API</li>
+                                            <li><strong>Live Chat Keywords:</strong> "live chat", "talk to agent", "human agent" trigger live chat transfer</li>
+                                        </ul>
+                                        
+                                        <div class="mt-3">
+                                            <a href="/static/WEBHOOK_INTEGRATION_GUIDE.md" class="btn btn-outline-info btn-sm" target="_blank">
+                                                <i class="fas fa-external-link-alt"></i> Full Integration Guide
+                                            </a>
+                                            <button class="btn btn-outline-primary btn-sm ms-2" onclick="testWebhookIntegration()">
+                                                <i class="fas fa-play"></i> Test Integration
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
+
+    <script>
+        // Webhook Integration JavaScript Functions
+        let webhookConfigs = [];
+
+        function loadWebhookConfigs() {
+            fetch('/api/webhook/config')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        webhookConfigs = data.configs;
+                        updateWebhookConfigsList();
+                        updateWebhookStatus();
+                    }
+                })
+                .catch(error => console.error('Error loading webhook configs:', error));
+        }
+
+        function updateWebhookStatus() {
+            const activeConfig = webhookConfigs.find(config => config.is_active);
+            const statusIcon = document.getElementById('webhookStatusIcon');
+            const statusLabel = document.getElementById('webhookStatusLabel');
+            const statusDescription = document.getElementById('webhookStatusDescription');
+            const webhookEnabled = document.getElementById('webhookEnabled');
+            const activeWebhookName = document.getElementById('activeWebhookName');
+            const activeWebhookProvider = document.getElementById('activeWebhookProvider');
+
+            if (activeConfig) {
+                statusIcon.className = 'fas fa-toggle-on fa-3x text-success mb-3';
+                statusLabel.textContent = 'Enabled';
+                statusDescription.textContent = 'Live chat messages are routed to external platform';
+                webhookEnabled.checked = true;
+                activeWebhookName.textContent = activeConfig.name;
+                activeWebhookProvider.textContent = activeConfig.provider;
+            } else {
+                statusIcon.className = 'fas fa-toggle-off fa-3x text-muted mb-3';
+                statusLabel.textContent = 'Disabled';
+                statusDescription.textContent = 'Live chat messages stay in internal system';
+                webhookEnabled.checked = false;
+                activeWebhookName.textContent = 'No active webhook';
+                activeWebhookProvider.textContent = 'Configure webhook below';
+            }
+        }
+
+        function toggleWebhook() {
+            const isEnabled = document.getElementById('webhookEnabled').checked;
+            
+            if (isEnabled && webhookConfigs.length === 0) {
+                alert('Please create a webhook configuration first');
+                document.getElementById('webhookEnabled').checked = false;
+                return;
+            }
+
+            if (isEnabled) {
+                // Find first available config or let user choose
+                const availableConfigs = webhookConfigs.filter(config => !config.is_active);
+                if (availableConfigs.length > 0) {
+                    activateWebhookConfig(availableConfigs[0].id);
+                }
+            } else {
+                // Deactivate all configs
+                webhookConfigs.forEach(config => {
+                    if (config.is_active) {
+                        deactivateWebhookConfig(config.id);
+                    }
+                });
+            }
+        }
+
+        function activateWebhookConfig(configId) {
+            // First deactivate all configs
+            fetch('/api/webhook/config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'deactivate_all' })
+            })
+            .then(() => {
+                // Then activate the selected config
+                return fetch('/api/webhook/config', {
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'activate', config_id: configId })
+                });
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    loadWebhookConfigs(); // Refresh
+                    showAlert('Webhook activated successfully!', 'success');
+                } else {
+                    showAlert('Error activating webhook: ' + data.error, 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error activating webhook:', error);
+                showAlert('Error activating webhook', 'danger');
+            });
+        }
+
+        function createWebhookConfig(event) {
+            event.preventDefault();
+            
+            const formData = new FormData(event.target);
+            const headers = {};
+            
+            // Collect custom headers
+            const headerNames = document.querySelectorAll('input[name="headerName[]"]');
+            const headerValues = document.querySelectorAll('input[name="headerValue[]"]');
+            
+            for (let i = 0; i < headerNames.length; i++) {
+                if (headerNames[i].value && headerValues[i].value) {
+                    headers[headerNames[i].value] = headerValues[i].value;
+                }
+            }
+
+            const configData = {
+                name: document.getElementById('webhookName').value,
+                provider: document.getElementById('webhookProvider').value,
+                outgoing_webhook_url: document.getElementById('webhookOutgoingUrl').value,
+                auth_token: document.getElementById('webhookAuthToken').value,
+                timeout_seconds: parseInt(document.getElementById('webhookTimeout').value),
+                retry_attempts: parseInt(document.getElementById('webhookRetries').value),
+                custom_headers: headers,
+                is_active: document.getElementById('setAsActive').checked
+            };
+
+            fetch('/api/webhook/config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(configData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('Webhook configuration created successfully!', 'success');
+                    document.getElementById('webhookConfigForm').reset();
+                    loadWebhookConfigs(); // Refresh the list
+                } else {
+                    showAlert('Error creating webhook configuration: ' + data.error, 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error creating webhook config:', error);
+                showAlert('Error creating webhook configuration', 'danger');
+            });
+        }
+
+        function addCustomHeader() {
+            const headersContainer = document.getElementById('customHeaders');
+            const newHeaderRow = document.createElement('div');
+            newHeaderRow.className = 'row mb-2';
+            newHeaderRow.innerHTML = `
+                <div class="col-md-5">
+                    <input type="text" class="form-control" placeholder="Header Name" name="headerName[]">
+                </div>
+                <div class="col-md-5">
+                    <input type="text" class="form-control" placeholder="Header Value" name="headerValue[]">
+                </div>
+                <div class="col-md-2">
+                    <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.parentElement.remove()">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                </div>
+            `;
+            headersContainer.appendChild(newHeaderRow);
+        }
+
+        function updateWebhookConfigsList() {
+            const tbody = document.getElementById('webhookConfigsList');
+            if (webhookConfigs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No webhook configurations found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = webhookConfigs.map(config => `
+                <tr>
+                    <td>${config.name}</td>
+                    <td><span class="badge bg-secondary">${config.provider}</span></td>
+                    <td><small>${config.webhook_url}</small></td>
+                    <td>
+                        ${config.is_active ? 
+                            '<span class="badge bg-success">Active</span>' : 
+                            '<span class="badge bg-secondary">Inactive</span>'
+                        }
+                    </td>
+                    <td><small>${new Date(config.created_at).toLocaleDateString()}</small></td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            ${!config.is_active ? 
+                                `<button class="btn btn-outline-success" onclick="activateWebhookConfig(${config.id})" title="Activate">
+                                    <i class="fas fa-play"></i>
+                                </button>` : 
+                                `<button class="btn btn-outline-warning" onclick="deactivateWebhookConfig(${config.id})" title="Deactivate">
+                                    <i class="fas fa-pause"></i>
+                                </button>`
+                            }
+                            <button class="btn btn-outline-danger" onclick="deleteWebhookConfig(${config.id})" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function loadWebhookMessages() {
+            const platform = document.getElementById('filterPlatform').value;
+            const messageType = document.getElementById('filterMessageType').value;
+            const status = document.getElementById('filterStatus').value;
+
+            const params = new URLSearchParams();
+            if (platform) params.append('platform', platform);
+            if (messageType) params.append('message_type', messageType);
+            if (status) params.append('status', status);
+            params.append('per_page', '20');
+
+            fetch(`/api/webhook/messages?${params}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        updateWebhookMessagesList(data.messages);
+                        updatePlatformFilter(data.messages);
+                    }
+                })
+                .catch(error => console.error('Error loading webhook messages:', error));
+        }
+
+        function updateWebhookMessagesList(messages) {
+            const tbody = document.getElementById('webhookMessagesList');
+            if (messages.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No webhook messages found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = messages.map(msg => `
+                <tr>
+                    <td><span class="badge bg-info">${msg.platform}</span></td>
+                    <td>
+                        <span class="badge ${msg.message_type === 'incoming' ? 'bg-primary' : 'bg-success'}">
+                            ${msg.message_type}
+                        </span>
+                    </td>
+                    <td>${msg.username || 'Unknown'}</td>
+                    <td><small>${msg.message_content.substring(0, 50)}${msg.message_content.length > 50 ? '...' : ''}</small></td>
+                    <td>
+                        <span class="badge ${
+                            msg.status === 'sent' ? 'bg-success' :
+                            msg.status === 'failed' ? 'bg-danger' :
+                            msg.status === 'pending' ? 'bg-warning' : 'bg-secondary'
+                        }">
+                            ${msg.status}
+                        </span>
+                    </td>
+                    <td><small>${new Date(msg.timestamp).toLocaleString()}</small></td>
+                </tr>
+            `).join('');
+        }
+
+        function updatePlatformFilter(messages) {
+            const platforms = [...new Set(messages.map(msg => msg.platform))];
+            const select = document.getElementById('filterPlatform');
+            const currentValue = select.value;
+            
+            select.innerHTML = '<option value="">All Platforms</option>';
+            platforms.forEach(platform => {
+                const option = document.createElement('option');
+                option.value = platform;
+                option.textContent = platform;
+                if (platform === currentValue) option.selected = true;
+                select.appendChild(option);
+            });
+        }
+
+        function deactivateWebhookConfig(configId) {
+            if (!confirm('Are you sure you want to deactivate this webhook configuration?')) {
+                return;
+            }
+
+            fetch('/api/webhook/config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'deactivate_all' })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('Webhook deactivated successfully!', 'success');
+                    loadWebhookConfigs(); // Refresh
+                } else {
+                    showAlert('Error deactivating webhook: ' + data.error, 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error deactivating webhook:', error);
+                showAlert('Error deactivating webhook', 'danger');
+            });
+        }
+
+        function deleteWebhookConfig(configId) {
+            if (!confirm('Are you sure you want to delete this webhook configuration? This action cannot be undone.')) {
+                return;
+            }
+
+            fetch(`/api/webhook/config/${configId}`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('Webhook configuration deleted successfully!', 'success');
+                    loadWebhookConfigs(); // Refresh
+                } else {
+                    showAlert('Error deleting webhook: ' + data.error, 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error deleting webhook:', error);
+                showAlert('Error deleting webhook configuration', 'danger');
+            });
+        }
+
+        function testWebhookIntegration() {
+            const testData = {
+                user_id: 'test_user_123',
+                username: 'Test User',
+                message: 'This is a test message from admin panel',
+                platform: 'admin_test',
+                conversation_id: 'test_conv_' + Date.now(),
+                timestamp: new Date().toISOString()
+            };
+
+            fetch('/api/webhook/incoming', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(testData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('Test webhook processed successfully! Check message history below.', 'success');
+                    loadWebhookMessages(); // Refresh messages
+                } else {
+                    showAlert('Test webhook failed: ' + data.error, 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error testing webhook:', error);
+                showAlert('Error testing webhook integration', 'danger');
+            });
+        }
+
+        // Load webhook data when tab is activated
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load webhook configs and messages when the webhook tab is shown
+            const webhookTab = document.querySelector('[href="#webhook-integration"]');
+            if (webhookTab) {
+                webhookTab.addEventListener('click', function() {
+                    setTimeout(() => {
+                        loadWebhookConfigs();
+                        loadWebhookMessages();
+                    }, 100);
+                });
+            }
+        });
+    </script>
 
 </body>
 </html>

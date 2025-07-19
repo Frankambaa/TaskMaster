@@ -99,7 +99,7 @@ class WebhookIntegration:
             db.session.add(response_msg)
             
             # Send response back to third party if webhook URL is configured
-            if self.config and self.config.outgoing_webhook_url:
+            if self.config and self.config.webhook_url:
                 webhook_response = self.send_response_to_webhook(
                     response=response,
                     original_data=webhook_data,
@@ -133,21 +133,32 @@ class WebhookIntegration:
                        platform: str, conversation_id: str) -> Dict[str, Any]:
         """Send message to internal chatbot system and get response"""
         try:
-            from rag_chain import process_question_with_memory
+            from rag_chain import RAGChain
+            from session_memory import session_manager
             
             # Create user identifier for memory system
             webhook_user_id = f"webhook_{platform}_{user_id}"
             
             # Process through RAG system
-            response = process_question_with_memory(
+            rag_chain = RAGChain()
+            response = rag_chain.get_answer(
                 question=message,
-                user_id=webhook_user_id,
+                index_folder='faiss_index',
+                session_id=conversation_id,
+                user_identifier=webhook_user_id,
                 username=username,
                 email=None,
                 device_id=conversation_id
             )
             
-            return response
+            # Format response to match expected structure
+            formatted_response = {
+                'answer': response,
+                'response_type': 'webhook_processed',
+                'status': 'success'
+            }
+            
+            return formatted_response
             
         except Exception as e:
             logger.error(f"Error sending to chatbot: {e}")
@@ -162,7 +173,7 @@ class WebhookIntegration:
                                response_message_id: int) -> Dict[str, Any]:
         """Send chatbot response back to third-party webhook"""
         try:
-            if not self.config or not self.config.outgoing_webhook_url:
+            if not self.config or not self.config.webhook_url:
                 return {'success': False, 'error': 'No outgoing webhook URL configured'}
             
             # Prepare webhook payload
@@ -183,25 +194,31 @@ class WebhookIntegration:
             
             # Add authentication headers if configured
             headers = {'Content-Type': 'application/json'}
-            if self.config.auth_token:
-                headers['Authorization'] = f'Bearer {self.config.auth_token}'
-            if self.config.custom_headers:
+            if self.config.auth_credentials:
                 try:
-                    custom_headers = json.loads(self.config.custom_headers)
+                    auth_data = json.loads(self.config.auth_credentials)
+                    if 'token' in auth_data:
+                        headers['Authorization'] = f'Bearer {auth_data["token"]}'
+                except:
+                    logger.warning("Invalid auth credentials format")
+            
+            if self.config.headers:
+                try:
+                    custom_headers = json.loads(self.config.headers)
                     headers.update(custom_headers)
                 except:
-                    logger.warning("Invalid custom headers JSON format")
+                    logger.warning("Invalid custom headers format")
             
             # Send webhook request
             response_obj = self.session.post(
-                self.config.outgoing_webhook_url,
+                self.config.webhook_url,
                 json=webhook_payload,
                 headers=headers,
                 timeout=30
             )
             
             if response_obj.status_code == 200:
-                logger.info(f"Webhook response sent successfully to {self.config.outgoing_webhook_url}")
+                logger.info(f"Webhook response sent successfully to {self.config.webhook_url}")
                 return {
                     'success': True,
                     'status_code': response_obj.status_code,

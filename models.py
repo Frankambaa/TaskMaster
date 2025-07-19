@@ -598,7 +598,7 @@ class WebhookConfig(db.Model):
     provider = db.Column(db.String(100), nullable=False)  # freshchat, zendesk, intercom, etc.
     webhook_url = db.Column(db.Text, nullable=False)  # Target webhook URL
     webhook_secret = db.Column(db.String(255), nullable=True)  # Secret for verification
-    event_types = db.Column(db.Text, nullable=False)  # JSON array of events to send
+    event_types = db.Column(db.Text, nullable=False, default='["message"]')  # JSON array of events to send
     headers = db.Column(db.Text, nullable=True)  # JSON object of custom headers
     auth_type = db.Column(db.String(50), default='none')  # none, bearer, basic, api_key
     auth_credentials = db.Column(db.Text, nullable=True)  # JSON object with auth details

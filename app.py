@@ -8,7 +8,7 @@ from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
 from vectorizer import DocumentVectorizer
 from rag_chain import RAGChain
-from models import db, ApiRule, ApiTool, UserConversation, SystemPrompt, RagFeedback, ChatSettings, ResponseTemplate, LiveChatSession, LiveChatMessage, LiveChatAgent, WebhookConfig
+from models import db, ApiRule, ApiTool, UserConversation, SystemPrompt, RagFeedback, ChatSettings, ResponseTemplate, LiveChatSession, LiveChatMessage, LiveChatAgent, WebhookConfig, WebhookMessage
 from session_memory import session_manager
 import json
 import subprocess
@@ -264,10 +264,65 @@ def ask():
         else:
             logging.info(f"Processing question for session: {session_id}")
         
-        # Use RAG chain with AI-driven tool selection and persistent memory
-        logging.info(f"Using RAG chain with AI tool selection and {'user-based' if user_identifier else 'session-based'} memory")
-        answer = rag_chain.get_answer(question, FAISS_INDEX_FOLDER, session_id, user_identifier, username, email, device_id)
-        response_type = 'rag_with_ai_tools'
+        # Check for live chat keywords and webhook status
+        live_chat_keywords = ['live chat', 'chat with agent', 'talk to agent', 'human agent', 'speak to human', 'connect to agent']
+        is_live_chat_request = any(keyword in question.lower() for keyword in live_chat_keywords)
+        
+        # Check if webhook is active
+        active_webhook = WebhookConfig.query.filter_by(is_active=True).first()
+        
+        if is_live_chat_request and active_webhook:
+            # Route to external platform via webhook
+            try:
+                from webhook_integration import webhook_integration
+                webhook_integration.load_config()
+                
+                # Create webhook payload for live chat transfer
+                webhook_data = {
+                    'user_id': user_identifier or session_id,
+                    'username': username or 'Anonymous User',
+                    'message': question,
+                    'platform': 'live_chat_transfer',
+                    'conversation_id': f'live_{session_id}',
+                    'timestamp': datetime.utcnow().isoformat(),
+                    'metadata': {
+                        'request_type': 'live_chat_transfer',
+                        'original_session': session_id,
+                        'email': email,
+                        'device_id': device_id
+                    }
+                }
+                
+                # Process through webhook
+                result = webhook_integration.process_incoming_message(webhook_data)
+                
+                if result['success']:
+                    answer = "I'm connecting you with a live agent through our external support platform. Please wait a moment while we transfer your chat."
+                    response_type = 'webhook_live_chat_transfer'
+                else:
+                    # Fallback to standard response if webhook fails
+                    answer = rag_chain.get_answer(question, FAISS_INDEX_FOLDER, session_id, user_identifier, username, email, device_id)
+                    response_type = 'rag_with_ai_tools'
+                    
+            except Exception as e:
+                logging.error(f"Error processing webhook live chat transfer: {e}")
+                # Fallback to standard response
+                answer = rag_chain.get_answer(question, FAISS_INDEX_FOLDER, session_id, user_identifier, username, email, device_id)
+                response_type = 'rag_with_ai_tools'
+                
+        elif is_live_chat_request and not active_webhook:
+            # Route to internal live chat system
+            answer = "I'll connect you with a live agent. Please wait while I transfer your chat to our support team."
+            response_type = 'internal_live_chat_transfer'
+            
+            # Here you could create a live chat session using live_chat_manager
+            # live_chat_manager.create_session(user_identifier, username, email, question)
+            
+        else:
+            # Normal AI/RAG processing
+            logging.info(f"Using RAG chain with AI tool selection and {'user-based' if user_identifier else 'session-based'} memory")
+            answer = rag_chain.get_answer(question, FAISS_INDEX_FOLDER, session_id, user_identifier, username, email, device_id)
+            response_type = 'rag_with_ai_tools'
         
         # Get current logo
         current_logo = None
@@ -1846,7 +1901,8 @@ def webhook_config():
                 webhook_url=data.get('outgoing_webhook_url', data.get('webhook_url', '')),
                 timeout_seconds=data.get('timeout_seconds', 30),
                 retry_count=data.get('retry_attempts', 3),
-                is_active=data.get('is_active', False)
+                is_active=data.get('is_active', False),
+                event_types='["message"]'  # Default event types
             )
             
             # Set custom headers if provided
@@ -1866,7 +1922,7 @@ def webhook_config():
             })
             
         except Exception as e:
-            logger.error(f"Error creating webhook config: {e}")
+            logging.error(f"Error creating webhook config: {e}")
             db.session.rollback()
             return jsonify({
                 'success': False,
@@ -1906,7 +1962,35 @@ def webhook_messages():
         })
         
     except Exception as e:
-        logger.error(f"Error getting webhook messages: {e}")
+        logging.error(f"Error getting webhook messages: {e}")
+        return jsonify({
+            'success': False,
+            'error': 'Internal server error'
+        }), 500
+
+
+@app.route('/api/webhook/config/<int:config_id>', methods=['DELETE'])
+def delete_webhook_config(config_id):
+    """Delete a webhook configuration"""
+    try:
+        config = WebhookConfig.query.get(config_id)
+        if not config:
+            return jsonify({
+                'success': False,
+                'error': 'Webhook configuration not found'
+            }), 404
+        
+        db.session.delete(config)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Webhook configuration deleted successfully'
+        })
+        
+    except Exception as e:
+        logging.error(f"Error deleting webhook config: {e}")
+        db.session.rollback()
         return jsonify({
             'success': False,
             'error': 'Internal server error'
