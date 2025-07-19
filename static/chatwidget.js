@@ -2083,6 +2083,52 @@
             return responseData.response_type === 'RAG_KNOWLEDGE_BASE';
         },
 
+        updateSessionInfo: function(userInfo) {
+            // Update session information with user data
+            if (userInfo) {
+                if (userInfo.user_id) config.user_id = userInfo.user_id;
+                if (userInfo.username) config.username = userInfo.username;
+                if (userInfo.email) config.email = userInfo.email;
+                console.log('Session info updated:', userInfo);
+            }
+        },
+
+        loadCustomIcon: function() {
+            return new Promise((resolve) => {
+                // Try to load custom icon from server
+                fetch(`${config.apiUrl}/api/widget_icon`, {
+                    headers: {
+                        'X-Widget-Origin': window.location.origin
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        return response.blob();
+                    }
+                    throw new Error('No custom icon');
+                })
+                .then(blob => {
+                    const iconUrl = URL.createObjectURL(blob);
+                    config.iconUrl = iconUrl;
+                    console.log('Custom icon loaded');
+                    resolve();
+                })
+                .catch(() => {
+                    // No custom icon, use default
+                    resolve();
+                });
+            });
+        },
+
+        sanitizeInput: function(input) {
+            // Basic input sanitization
+            if (typeof input !== 'string') return input;
+            return input.replace(/<script[^>]*>.*?<\/script>/gi, '')
+                       .replace(/<[^>]*>/g, '')
+                       .trim()
+                       .substring(0, 500); // Limit length
+        },
+
         // All legacy ElevenLabs API functions removed - now using embedded agent
 
     };
