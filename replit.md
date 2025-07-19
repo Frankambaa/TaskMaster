@@ -369,6 +369,8 @@ deployment/       # Production deployment files
 - July 19, 2025: Improved audio/speech coordination - recognition now waits for audio completion before restarting
 - July 19, 2025: Added comprehensive error handling to distinguish between intentional stops and actual errors
 - July 19, 2025: Optimized timing delays and restart logic for smooth voice conversation flow
+- July 19, 2025: **ELEVENLABS ERROR HANDLING**: Enhanced error categorization for network/no-speech vs critical errors
+- July 19, 2025: Implemented intelligent restart delays based on error type for better stability and user experience
 
 ## Known Issues
 

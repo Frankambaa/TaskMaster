@@ -1794,13 +1794,23 @@
                 }
                 this.updateElevenLabsControls();
                 
-                // Only restart on non-aborted errors to prevent loops
-                if (event.error !== 'aborted' && config.elevenlabsActive && !window.speechRecognitionPaused) {
+                // Handle different error types appropriately
+                const restartableErrors = ['network', 'no-speech'];
+                const skipRestartErrors = ['aborted', 'not-allowed', 'service-not-allowed'];
+                
+                if (restartableErrors.includes(event.error) && config.elevenlabsActive && !window.speechRecognitionPaused) {
                     setTimeout(() => {
                         if (config.elevenlabsActive && !window.currentSpeechRecognition && !window.elevenLabsCurrentAudio) {
                             this.startElevenLabsSpeechRecognition();
                         }
-                    }, 2000);
+                    }, 3000); // Longer delay for network/no-speech errors
+                } else if (!skipRestartErrors.includes(event.error) && config.elevenlabsActive && !window.speechRecognitionPaused) {
+                    // Restart on unexpected errors after a longer delay
+                    setTimeout(() => {
+                        if (config.elevenlabsActive && !window.currentSpeechRecognition && !window.elevenLabsCurrentAudio) {
+                            this.startElevenLabsSpeechRecognition();
+                        }
+                    }, 5000);
                 }
             };
 
