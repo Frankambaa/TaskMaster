@@ -8,7 +8,7 @@ from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
 from vectorizer import DocumentVectorizer
 from rag_chain import RAGChain
-from models import db, ApiRule, ApiTool, UserConversation, SystemPrompt, RagFeedback
+from models import db, ApiRule, ApiTool, UserConversation, SystemPrompt, RagFeedback, ChatSettings
 from session_memory import session_manager
 import json
 import subprocess
@@ -1189,6 +1189,102 @@ def get_feedback_stats():
             'status': 'error',
             'message': 'Error retrieving feedback statistics'
         }), 500
+
+# Chat Settings API endpoints
+@app.route('/chat_settings', methods=['GET'])
+def get_chat_settings():
+    """Get all chat settings"""
+    try:
+        settings = ChatSettings.query.all()
+        settings_dict = {}
+        for setting in settings:
+            if setting.setting_type == 'boolean':
+                settings_dict[setting.setting_name] = setting.setting_value.lower() in ('true', '1', 'yes')
+            elif setting.setting_type == 'integer':
+                try:
+                    settings_dict[setting.setting_name] = int(setting.setting_value)
+                except ValueError:
+                    settings_dict[setting.setting_name] = 0
+            elif setting.setting_type == 'json':
+                try:
+                    settings_dict[setting.setting_name] = json.loads(setting.setting_value)
+                except json.JSONDecodeError:
+                    settings_dict[setting.setting_name] = {}
+            else:
+                settings_dict[setting.setting_name] = setting.setting_value
+        
+        # Add defaults for required settings
+        defaults = {
+            'typing_effect_enabled': True,
+            'typing_effect_speed': 25,  # milliseconds per character
+            'auto_scroll_during_typing': False
+        }
+        
+        for key, default_value in defaults.items():
+            if key not in settings_dict:
+                settings_dict[key] = default_value
+                # Create the setting in database
+                setting_type = 'boolean' if isinstance(default_value, bool) else 'integer'
+                ChatSettings.set_setting(key, default_value, setting_type)
+        
+        return jsonify({'success': True, 'settings': settings_dict})
+        
+    except Exception as e:
+        logging.error(f"Error getting chat settings: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/chat_settings', methods=['POST'])
+def update_chat_settings():
+    """Update chat settings"""
+    try:
+        data = request.get_json()
+        
+        # Define allowed settings and their types
+        allowed_settings = {
+            'typing_effect_enabled': 'boolean',
+            'typing_effect_speed': 'integer',
+            'auto_scroll_during_typing': 'boolean'
+        }
+        
+        updated_settings = {}
+        for key, value in data.items():
+            if key in allowed_settings:
+                setting_type = allowed_settings[key]
+                ChatSettings.set_setting(key, value, setting_type)
+                updated_settings[key] = value
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Chat settings updated successfully',
+            'updated_settings': updated_settings
+        })
+        
+    except Exception as e:
+        logging.error(f"Error updating chat settings: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/chat_settings/<setting_name>', methods=['GET'])
+def get_chat_setting(setting_name):
+    """Get a specific chat setting"""
+    try:
+        setting = ChatSettings.query.filter_by(setting_name=setting_name).first()
+        if not setting:
+            return jsonify({'success': False, 'error': 'Setting not found'}), 404
+        
+        value = ChatSettings.get_setting(setting_name)
+        return jsonify({
+            'success': True, 
+            'setting': {
+                'name': setting_name,
+                'value': value,
+                'type': setting.setting_type,
+                'description': setting.description
+            }
+        })
+        
+    except Exception as e:
+        logging.error(f"Error getting chat setting {setting_name}: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

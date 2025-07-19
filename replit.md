@@ -292,6 +292,11 @@ deployment/       # Production deployment files
 - July 19, 2025: **FEEDBACK FLOW REDESIGN**: Moved feedback buttons to appear before message cards instead of after
 - July 19, 2025: Implemented new thank you flow - feedback buttons removed immediately, replaced with bot message and close chat confirmation
 - July 19, 2025: Added "Yes, close chat" vs "Continue chatting" options after feedback submission for better user experience
+- July 19, 2025: **BACKEND TYPING CONTROL**: Implemented comprehensive chat settings management with database storage
+- July 19, 2025: Added ChatSettings model with typing effect toggle, speed control, and scroll behavior configuration
+- July 19, 2025: Enhanced admin panel with chat widget settings section for real-time configuration
+- July 19, 2025: **IMPROVED SCROLL BEHAVIOR**: Fixed scroll interruption during typing - users can now scroll up without being forced back down
+- July 19, 2025: Added auto_scroll_during_typing setting (disabled by default) to prevent scroll flickering during bot responses
 
 ## User Preferences
 

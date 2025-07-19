@@ -679,6 +679,87 @@
             </div>
         </div>
 
+        <!-- Chat Settings Section -->
+        <div class="row">
+            <div class="col-md-12 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-cogs"></i> Chat Widget Settings
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> <strong>Chat Settings:</strong> Configure typing effects and user experience settings for the chat widget.
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <i class="fas fa-keyboard"></i> Typing Effects
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-check form-switch mb-3">
+                                            <input class="form-check-input" type="checkbox" id="typingEffectEnabled">
+                                            <label class="form-check-label" for="typingEffectEnabled">
+                                                Enable Typing Effect
+                                            </label>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <label for="typingEffectSpeed" class="form-label">Typing Speed (ms per character)</label>
+                                            <input type="range" class="form-range" id="typingEffectSpeed" min="10" max="100" step="5" value="25">
+                                            <div class="d-flex justify-content-between">
+                                                <small class="text-muted">Fast (10ms)</small>
+                                                <small class="text-muted" id="typingSpeedValue">25ms</small>
+                                                <small class="text-muted">Slow (100ms)</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <i class="fas fa-mouse"></i> Scroll Behavior
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-check form-switch mb-3">
+                                            <input class="form-check-input" type="checkbox" id="autoScrollDuringTyping">
+                                            <label class="form-check-label" for="autoScrollDuringTyping">
+                                                Auto-scroll During Typing
+                                            </label>
+                                            <small class="form-text text-muted">
+                                                When disabled, users can scroll up to read previous messages while the bot is typing without being interrupted.
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <i class="fas fa-save"></i> Actions
+                                    </div>
+                                    <div class="card-body">
+                                        <button class="btn btn-primary" onclick="saveChatSettings()">
+                                            <i class="fas fa-save"></i> Save Settings
+                                        </button>
+                                        <button class="btn btn-outline-secondary ms-2" onclick="loadChatSettings()">
+                                            <i class="fas fa-sync"></i> Reload
+                                        </button>
+                                        
+                                        <div id="chatSettingsStatus" class="mt-3"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- System Prompt Management Section -->
         <div class="row">
             <div class="col-md-12 mb-4">
@@ -2091,6 +2172,87 @@ Remember: Your goal is to provide the best possible user experience by being hel
                 })
                 .catch(error => console.error('Error viewing feedback:', error));
         }
+        
+        // Chat Settings Management
+        function loadChatSettings() {
+            fetch('/chat_settings')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.settings) {
+                        // Update UI with current settings
+                        document.getElementById('typingEffectEnabled').checked = data.settings.typing_effect_enabled;
+                        document.getElementById('typingEffectSpeed').value = data.settings.typing_effect_speed;
+                        document.getElementById('typingSpeedValue').textContent = data.settings.typing_effect_speed + 'ms';
+                        document.getElementById('autoScrollDuringTyping').checked = data.settings.auto_scroll_during_typing;
+                        
+                        showChatSettingsStatus('Settings loaded successfully!', 'success');
+                    } else {
+                        showChatSettingsStatus('Failed to load settings', 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading chat settings:', error);
+                    showChatSettingsStatus('Error loading settings', 'danger');
+                });
+        }
+        
+        function saveChatSettings() {
+            const settings = {
+                typing_effect_enabled: document.getElementById('typingEffectEnabled').checked,
+                typing_effect_speed: parseInt(document.getElementById('typingEffectSpeed').value),
+                auto_scroll_during_typing: document.getElementById('autoScrollDuringTyping').checked
+            };
+            
+            fetch('/chat_settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(settings)
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showChatSettingsStatus('Settings saved successfully!', 'success');
+                    } else {
+                        showChatSettingsStatus('Failed to save settings: ' + (data.error || 'Unknown error'), 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error saving chat settings:', error);
+                    showChatSettingsStatus('Error saving settings', 'danger');
+                });
+        }
+        
+        function showChatSettingsStatus(message, type) {
+            const statusDiv = document.getElementById('chatSettingsStatus');
+            statusDiv.innerHTML = `
+                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            
+            // Auto-hide success messages after 3 seconds
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusDiv.innerHTML = '';
+                }, 3000);
+            }
+        }
+        
+        // Update typing speed display when slider changes
+        document.addEventListener('DOMContentLoaded', function() {
+            const typingSpeedSlider = document.getElementById('typingEffectSpeed');
+            const typingSpeedValue = document.getElementById('typingSpeedValue');
+            
+            if (typingSpeedSlider && typingSpeedValue) {
+                typingSpeedSlider.addEventListener('input', function() {
+                    typingSpeedValue.textContent = this.value + 'ms';
+                });
+            }
+            
+            // Load settings on page load
+            loadChatSettings();
+        });
     </script>
 </body>
 </html>

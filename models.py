@@ -62,6 +62,71 @@ class UserConversation(db.Model):
             'message_count': len(self.get_conversation_history())
         }
 
+class ChatSettings(db.Model):
+    """Model for storing chat widget configuration settings"""
+    __tablename__ = 'chat_settings'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    setting_name = db.Column(db.String(255), unique=True, nullable=False)
+    setting_value = db.Column(db.Text, nullable=False)
+    setting_type = db.Column(db.String(50), default='string')  # string, boolean, integer, json
+    description = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    @staticmethod
+    def get_setting(name, default_value=None):
+        """Get a setting value by name"""
+        setting = ChatSettings.query.filter_by(setting_name=name).first()
+        if not setting:
+            return default_value
+            
+        if setting.setting_type == 'boolean':
+            return setting.setting_value.lower() in ('true', '1', 'yes')
+        elif setting.setting_type == 'integer':
+            try:
+                return int(setting.setting_value)
+            except ValueError:
+                return default_value
+        elif setting.setting_type == 'json':
+            try:
+                return json.loads(setting.setting_value)
+            except json.JSONDecodeError:
+                return default_value
+        else:
+            return setting.setting_value
+    
+    @staticmethod
+    def set_setting(name, value, setting_type='string', description=None):
+        """Set or update a setting"""
+        setting = ChatSettings.query.filter_by(setting_name=name).first()
+        
+        # Convert value to string for storage
+        if setting_type == 'boolean':
+            str_value = str(bool(value)).lower()
+        elif setting_type in ('integer', 'json'):
+            str_value = str(value) if setting_type == 'integer' else json.dumps(value)
+        else:
+            str_value = str(value)
+        
+        if setting:
+            setting.setting_value = str_value
+            setting.setting_type = setting_type
+            if description:
+                setting.description = description
+            setting.updated_at = datetime.utcnow()
+        else:
+            setting = ChatSettings(
+                setting_name=name,
+                setting_value=str_value,
+                setting_type=setting_type,
+                description=description or f'Chat widget setting: {name}'
+            )
+            db.session.add(setting)
+        
+        db.session.commit()
+        return setting
+
 class SystemPrompt(db.Model):
     """Model for storing system prompts"""
     __tablename__ = 'system_prompts'

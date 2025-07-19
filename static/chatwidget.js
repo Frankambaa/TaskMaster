@@ -66,6 +66,12 @@
     let conversationHistory = [];
     let sessionId = null;
     let ragResponseCount = 0; // Track number of RAG responses for feedback timing
+    let isTyping = false; // Track if bot is currently typing
+    let chatSettings = {
+        typing_effect_enabled: true,
+        typing_effect_speed: 25,
+        auto_scroll_during_typing: false
+    }; // Store backend chat settings
 
     // DOM elements
     let widgetContainer = null;
@@ -207,15 +213,47 @@
         },
 
         initializeWidget: function() {
-            // Load custom icon if available
-            this.loadCustomIcon().then(() => {
+            // Load chat settings and custom icon
+            Promise.all([this.loadChatSettings(), this.loadCustomIcon()]).then(() => {
                 // Initialize the widget
                 this.createStyles();
                 this.createWidget();
                 this.bindEvents();
                 
                 isInitialized = true;
-                console.log('ChatWidget initialized');
+                console.log('ChatWidget initialized with settings:', chatSettings);
+            }).catch(error => {
+                console.error('ChatWidget: Error during initialization:', error);
+                // Initialize with defaults
+                this.createStyles();
+                this.createWidget();
+                this.bindEvents();
+                
+                isInitialized = true;
+                console.log('ChatWidget initialized with default settings');
+            });
+        },
+
+        loadChatSettings: function() {
+            return fetch(`${config.apiUrl}/chat_settings`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Widget-Origin': window.location.origin
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.settings) {
+                    chatSettings = { ...chatSettings, ...data.settings };
+                    console.log('ChatWidget: Chat settings loaded:', chatSettings);
+                } else {
+                    console.warn('ChatWidget: Failed to load settings, using defaults');
+                }
+            })
+            .catch(error => {
+                console.error('ChatWidget: Error loading chat settings:', error);
+                // Keep default settings
             });
         },
 
@@ -875,8 +913,9 @@
                 }
             }
             
-            // Enable typing effect for bot messages
-            if (enableTyping && sender === 'bot') {
+            // Enable typing effect for bot messages based on backend settings
+            if (chatSettings.typing_effect_enabled && enableTyping && sender === 'bot') {
+                isTyping = true; // Set typing state
                 this.typeMessage(bubble, text, 0, responseData);
             } else {
                 bubble.innerHTML = this.formatMessage(text, sender === 'user');
@@ -912,17 +951,22 @@
                 
                 element.innerHTML = displayText;
                 
-                // Scroll to bottom during typing
-                this.scrollToBottom();
+                // Only auto-scroll during typing if setting is enabled
+                if (chatSettings.auto_scroll_during_typing) {
+                    this.scrollToBottom();
+                }
                 
-                // Continue typing
+                // Continue typing with backend-configured speed
                 setTimeout(() => {
                     this.typeMessage(element, text, index + 1, responseData);
-                }, 25); // Adjust speed here (lower = faster)
+                }, chatSettings.typing_effect_speed || 25);
             } else {
-                // Typing complete - apply full formatting without truncation
+                // Typing complete - apply full formatting and finalize
+                isTyping = false; // Clear typing state
                 element.innerHTML = formattedText;
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                
+                // Always scroll to bottom when typing is complete
+                this.scrollToBottom();
                 
                 // Add feedback buttons for RAG responses after typing is complete (only after 3+ conversations)
                 if (responseData && this.shouldShowFeedback(responseData)) {
