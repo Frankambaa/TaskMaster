@@ -1,0 +1,39 @@
+ => [app  5/16] RUN pip install --no-cache-dir --upgrade pip                                                                                                                            4.1s
+ => ERROR [app  6/16] RUN pip install --no-cache-dir -r requirements.txt                                                                                                                3.8s
+------
+ > [app  6/16] RUN pip install --no-cache-dir -r requirements.txt:
+1.335 Collecting Flask==2.3.3 (from -r requirements.txt (line 2))
+1.389   Downloading flask-2.3.3-py3-none-any.whl.metadata (3.6 kB)
+1.409 Collecting Flask-CORS==4.0.0 (from -r requirements.txt (line 3))
+1.413   Downloading Flask_Cors-4.0.0-py2.py3-none-any.whl.metadata (5.4 kB)
+1.426 Collecting Flask-SQLAlchemy==3.0.5 (from -r requirements.txt (line 4))
+1.430   Downloading flask_sqlalchemy-3.0.5-py3-none-any.whl.metadata (3.3 kB)
+1.448 Collecting gunicorn==21.2.0 (from -r requirements.txt (line 5))
+1.452   Downloading gunicorn-21.2.0-py3-none-any.whl.metadata (4.1 kB)
+1.546 Collecting psycopg2-binary==2.9.9 (from -r requirements.txt (line 8))
+1.549   Downloading psycopg2_binary-2.9.9-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.4 kB)
+1.607 Collecting openai==1.3.5 (from -r requirements.txt (line 11))
+1.612   Downloading openai-1.3.5-py3-none-any.whl.metadata (16 kB)
+1.649 Collecting tiktoken==0.5.2 (from -r requirements.txt (line 12))
+1.655   Downloading tiktoken-0.5.2-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (6.6 kB)
+1.694 Collecting faiss-cpu==1.7.4 (from -r requirements.txt (line 13))
+1.698   Downloading faiss_cpu-1.7.4-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (1.3 kB)
+1.911 Collecting numpy==1.24.4 (from -r requirements.txt (line 14))
+1.915   Downloading numpy-1.24.4-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (5.6 kB)
+1.934 Collecting PyPDF2==3.0.1 (from -r requirements.txt (line 17))
+1.937   Downloading pypdf2-3.0.1-py3-none-any.whl.metadata (6.8 kB)
+1.950 Collecting python-docx==0.8.11 (from -r requirements.txt (line 18))
+1.954   Downloading python-docx-0.8.11.tar.gz (5.6 MB)
+1.996      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 5.6/5.6 MB 189.5 MB/s eta 0:00:00
+2.303   Preparing metadata (setup.py): started
+3.340   Preparing metadata (setup.py): finished with status 'done'
+3.357 Collecting python-dotenv==1.0.0 (from -r requirements.txt (line 21))
+3.360   Downloading python_dotenv-1.0.0-py3-none-any.whl.metadata (21 kB)
+3.602 ERROR: Ignored the following yanked versions: 37.0.3, 38.0.2, 45.0.0
+3.602 ERROR: Ignored the following versions that require a different python version: 1.21.2 Requires-Python >=3.7,<3.11; 1.21.3 Requires-Python >=3.7,<3.11; 1.21.4 Requires-Python >=3.7,<3.11; 1.21.5 Requires-Python >=3.7,<3.11; 1.21.6 Requires-Python >=3.7,<3.11
+3.602 ERROR: Could not find a version that satisfies the requirement cryptography==41.0.8 (from versions: 0.1, 0.2, 0.2.1, 0.2.2, 0.3, 0.4, 0.5, 0.5.1, 0.5.2, 0.5.3, 0.5.4, 0.6, 0.6.1, 0.7, 0.7.1, 0.7.2, 0.8, 0.8.1, 0.8.2, 0.9, 0.9.1, 0.9.2, 0.9.3, 1.0, 1.0.1, 1.0.2, 1.1, 1.1.1, 1.1.2, 1.2, 1.2.1, 1.2.2, 1.2.3, 1.3, 1.3.1, 1.3.2, 1.3.3, 1.3.4, 1.4, 1.5, 1.5.1, 1.5.2, 1.5.3, 1.6, 1.7, 1.7.1, 1.7.2, 1.8, 1.8.1, 1.8.2, 1.9, 2.0, 2.0.1, 2.0.2, 2.0.3, 2.1, 2.1.1, 2.1.2, 2.1.3, 2.1.4, 2.2, 2.2.1, 2.2.2, 2.3, 2.3.1, 2.4, 2.4.1, 2.4.2, 2.5, 2.6, 2.6.1, 2.7, 2.8, 2.9, 2.9.1, 2.9.2, 3.0, 3.1, 3.1.1, 3.2, 3.2.1, 3.3, 3.3.1, 3.3.2, 3.4, 3.4.1, 3.4.2, 3.4.3, 3.4.4, 3.4.5, 3.4.6, 3.4.7, 3.4.8, 35.0.0, 36.0.0, 36.0.1, 36.0.2, 37.0.0, 37.0.1, 37.0.2, 37.0.4, 38.0.0, 38.0.1, 38.0.3, 38.0.4, 39.0.0, 39.0.1, 39.0.2, 40.0.0, 40.0.1, 40.0.2, 41.0.0, 41.0.1, 41.0.2, 41.0.3, 41.0.4, 41.0.5, 41.0.6, 41.0.7, 42.0.0, 42.0.1, 42.0.2, 42.0.3, 42.0.4, 42.0.5, 42.0.6, 42.0.7, 42.0.8, 43.0.0, 43.0.1, 43.0.3, 44.0.0, 44.0.1, 44.0.2, 44.0.3, 45.0.1, 45.0.2, 45.0.3, 45.0.4, 45.0.5)
+3.696 ERROR: No matching distribution found for cryptography==41.0.8
+------
+WARN[0000] buildx: failed to read current commit information with git rev-parse --is-inside-work-tree
+failed to solve: process "/bin/sh -c pip install --no-cache-dir -r requirements.txt" did not complete successfully: exit code: 1
+ubuntu@ip-172-31-34-203:~/apna/deployment_clean$
