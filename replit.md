@@ -297,6 +297,19 @@ deployment/       # Production deployment files
 - July 19, 2025: Enhanced admin panel with chat widget settings section for real-time configuration
 - July 19, 2025: **IMPROVED SCROLL BEHAVIOR**: Fixed scroll interruption during typing - users can now scroll up without being forced back down
 - July 19, 2025: Added auto_scroll_during_typing setting (disabled by default) to prevent scroll flickering during bot responses
+- July 19, 2025: **ADMIN INTERFACE SIMPLIFICATION**: Consolidated duplicate feedback sections into single "User Feedback & Response Training" interface
+- July 19, 2025: Removed duplicate "RAG Feedback Management" section - now unified with organized tabs: All Feedback, Poor Responses, Templates
+- July 19, 2025: Enhanced OpenAI API error handling with user-friendly messages for quota/rate limit issues
+- July 19, 2025: Fixed JavaScript feedback loading for consolidated admin interface with proper filter integration
+
+## Known Issues
+
+**OpenAI API Quota Exceeded**: The chatbot currently shows "quota exceeded" errors due to API usage limits. This affects:
+- AI tool selection functionality  
+- RAG response generation
+- Small talk responses may still work as they use fallback logic
+
+**Resolution**: Contact support or add OpenAI API credits to resolve the quota issue.
 
 ## User Preferences
 

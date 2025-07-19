@@ -824,6 +824,10 @@
                             <i class="fas fa-info-circle"></i> <strong>How it works:</strong> Users give thumbs up/down feedback on responses. Analyze poor responses and create better templates to automatically improve similar questions in the future.
                         </div>
                         
+                        <div class="alert alert-warning" id="apiQuotaWarning" style="display: none;">
+                            <i class="fas fa-exclamation-triangle"></i> <strong>OpenAI API Notice:</strong> The chatbot may show quota exceeded errors. This is due to API usage limits. Please contact support or add OpenAI credits to resolve this issue.
+                        </div>
+                        
                         <!-- Feedback Stats -->
                         <div class="row mb-4">
                             <div class="col-md-3">
@@ -894,6 +898,13 @@
                                     
                                     <div id="feedbackList">
                                         <!-- All feedback will be loaded here -->
+                                    </div>
+                                    
+                                    <!-- Load More Button -->
+                                    <div class="text-center mt-3">
+                                        <button class="btn btn-outline-secondary" id="loadMoreFeedback" onclick="loadMoreFeedback()" style="display: none;">
+                                            Load More Feedback
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -2477,13 +2488,16 @@ Remember: Your goal is to provide the best possible user experience by being hel
             loadFeedbackStats();
             loadFeedback(true);
             
+            // Show API quota warning - we know there's an issue from the logs
+            document.getElementById('apiQuotaWarning').style.display = 'block';
+            
             // Initialize response templates
             loadResponseTemplates();
             
-            // Add feedback filter event listener
-            const feedbackFilter = document.getElementById('feedbackFilter');
-            if (feedbackFilter) {
-                feedbackFilter.addEventListener('change', function() {
+            // Add feedback filter event listener for the new consolidated interface
+            const feedbackTypeFilter = document.getElementById('feedbackTypeFilter');
+            if (feedbackTypeFilter) {
+                feedbackTypeFilter.addEventListener('change', function() {
                     loadFeedback(true); // Reset and reload with filter
                 });
             }
@@ -2522,7 +2536,8 @@ Remember: Your goal is to provide the best possible user experience by being hel
                 currentFeedbackOffset = 0;
             }
             
-            const filterType = document.getElementById('feedbackFilter').value;
+            const filterElement = document.getElementById('feedbackTypeFilter');
+            const filterType = filterElement ? filterElement.value : '';
             let url = `/feedback?limit=${feedbackLimit}&offset=${currentFeedbackOffset}`;
             
             if (filterType) {
