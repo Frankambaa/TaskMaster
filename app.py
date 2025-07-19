@@ -1677,7 +1677,7 @@ def send_live_chat_message(session_id):
 
 @app.route('/api/live_chat/transfer_to_agent', methods=['POST'])
 def transfer_to_agent():
-    """Transfer a chatbot conversation to live agent"""
+    """Transfer a chatbot conversation to live agent with full conversation history"""
     try:
         from live_chat_manager import live_chat_manager
         data = request.json
@@ -1692,10 +1692,16 @@ def transfer_to_agent():
             priority=data.get('priority', 'normal')
         )
         
+        # Import previous conversation history if provided
+        conversation_history = data.get('conversation_history', [])
+        if conversation_history:
+            live_chat_manager.import_bot_conversation(session.session_id, conversation_history)
+        
         return jsonify({
             'success': True,
             'session_id': session.session_id,
-            'message': 'Chat transferred to live agent. You will be connected shortly.'
+            'message': 'Chat transferred to live agent. You will be connected shortly.',
+            'imported_messages': len(conversation_history)
         })
         
     except Exception as e:

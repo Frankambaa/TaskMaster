@@ -63,6 +63,43 @@ class LiveChatManager:
         
         return session
     
+    def import_bot_conversation(self, session_id: str, conversation_history: List[Dict]) -> None:
+        """
+        Import conversation history from chatbot to live chat session
+        
+        Args:
+            session_id: Live chat session ID
+            conversation_history: List of conversation messages from chatbot
+        """
+        try:
+            for conv in conversation_history:
+                # Check if message already exists
+                existing = LiveChatMessage.query.filter_by(
+                    session_id=session_id,
+                    message_content=conv['content'],
+                    sender_type=conv['role']
+                ).first()
+                
+                if not existing:
+                    message = LiveChatMessage(
+                        message_id=f"import_{uuid.uuid4().hex[:8]}",
+                        session_id=session_id,
+                        sender_type='bot' if conv['role'] == 'assistant' else 'user',
+                        sender_id=conv.get('sender_id', 'imported'),
+                        sender_name=conv.get('sender_name', 'Bot' if conv['role'] == 'assistant' else 'User'),
+                        message_content=conv['content'],
+                        message_type='text',
+                        created_at=datetime.utcnow() - timedelta(minutes=len(conversation_history))
+                    )
+                    db.session.add(message)
+            
+            db.session.commit()
+            self.logger.info(f"Imported {len(conversation_history)} messages to session {session_id}")
+            
+        except Exception as e:
+            self.logger.error(f"Error importing conversation history: {str(e)}")
+            db.session.rollback()
+
     def send_message(self, session_id: str, sender_type: str, sender_id: str,
                     message_content: str, sender_name: str = None,
                     message_type: str = 'text', metadata: Dict[str, Any] = None) -> LiveChatMessage:

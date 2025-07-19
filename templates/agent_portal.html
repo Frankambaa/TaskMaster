@@ -223,27 +223,68 @@
             if (messages.length === 0) {
                 container.innerHTML = `
                     <div class="text-center text-muted">
-                        <i class="fas fa-comment"></i> No messages yet
+                        <i class="fas fa-comment"></i> No messages yet - awaiting conversation history
                     </div>
                 `;
                 return;
             }
 
-            // Show last 5 messages as requested
-            const recentMessages = messages.slice(-5);
-            
-            container.innerHTML = recentMessages.map(message => `
-                <div class="message ${message.sender_type}">
-                    <div class="d-flex justify-content-between align-items-start mb-1">
-                        <strong>${message.sender_name || message.sender_type}</strong>
-                        <small class="text-muted">${formatTime(message.created_at)}</small>
+            // Show ALL messages to give agent full context of customer issue
+            container.innerHTML = messages.map(message => {
+                const messageClass = message.sender_type;
+                const senderIcon = getSenderIcon(message.sender_type);
+                const messageStyle = getMessageStyle(message.sender_type);
+                
+                return `
+                    <div class="message ${messageClass}" style="${messageStyle}">
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                            <strong>
+                                ${senderIcon} ${message.sender_name || message.sender_type}
+                                ${message.sender_type === 'bot' ? '(AI Assistant)' : ''}
+                            </strong>
+                            <small class="text-muted">${formatTime(message.created_at)}</small>
+                        </div>
+                        <div>${message.message_content}</div>
                     </div>
-                    <div>${message.message_content}</div>
+                `;
+            }).join('');
+            
+            // Add conversation summary at top
+            const botMessages = messages.filter(m => m.sender_type === 'bot').length;
+            const userMessages = messages.filter(m => m.sender_type === 'user').length;
+            const agentMessages = messages.filter(m => m.sender_type === 'agent').length;
+            
+            const summaryDiv = `
+                <div class="alert alert-info mb-3">
+                    <h6><i class="fas fa-info-circle"></i> Conversation Summary</h6>
+                    <small>Total: ${messages.length} messages | Bot: ${botMessages} | User: ${userMessages} | Agent: ${agentMessages}</small>
                 </div>
-            `).join('');
+            `;
+            
+            container.innerHTML = summaryDiv + container.innerHTML;
             
             // Scroll to bottom
             container.scrollTop = container.scrollHeight;
+        }
+
+        function getSenderIcon(senderType) {
+            switch(senderType) {
+                case 'user': return '👤';
+                case 'bot': return '🤖';
+                case 'agent': return '👨‍💼';
+                case 'system': return '⚙️';
+                default: return '💬';
+            }
+        }
+
+        function getMessageStyle(senderType) {
+            switch(senderType) {
+                case 'user': return 'background: #e3f2fd; margin-left: auto; text-align: right;';
+                case 'bot': return 'background: #f3e5f5; margin-right: auto; border-left: 3px solid #9c27b0;';
+                case 'agent': return 'background: #e8f5e8; margin-right: auto; border-left: 3px solid #4caf50;';
+                case 'system': return 'background: #fff3cd; margin: 0 auto; text-align: center; font-style: italic;';
+                default: return 'background: #f5f5f5;';
+            }
         }
 
         function updateChatTitle(sessionId) {
