@@ -358,13 +358,28 @@ def ask():
                 # Get conversation history for transfer
                 conversation_history = []
                 if user_identifier:
-                    # Get persistent conversation history
-                    user_conversations = UserConversation.query.filter_by(user_identifier=user_identifier).order_by(UserConversation.timestamp.desc()).limit(10).all()
-                    for conv in user_conversations:
-                        conversation_history.extend([
-                            {'role': 'user', 'content': conv.user_message, 'sender_id': user_identifier, 'sender_name': username or 'User'},
-                            {'role': 'assistant', 'content': conv.bot_response, 'sender_id': 'bot', 'sender_name': 'AI Assistant'}
-                        ])
+                    # Get persistent conversation history from UserConversation model
+                    user_conv_record = UserConversation.query.filter_by(user_identifier=user_identifier).order_by(UserConversation.last_activity.desc()).first()
+                    if user_conv_record:
+                        history = user_conv_record.get_conversation_history()
+                        # Take last 8 messages for context
+                        recent_messages = history[-8:] if len(history) > 8 else history
+                        
+                        for msg in recent_messages:
+                            if msg.get('type') == 'human':
+                                conversation_history.append({
+                                    'role': 'user', 
+                                    'content': msg.get('content', ''),
+                                    'sender_id': user_identifier, 
+                                    'sender_name': username or 'User'
+                                })
+                            elif msg.get('type') == 'ai':
+                                conversation_history.append({
+                                    'role': 'assistant', 
+                                    'content': msg.get('content', ''),
+                                    'sender_id': 'bot', 
+                                    'sender_name': 'AI Assistant'
+                                })
                 else:
                     # Get session-based memory
                     memory = session_memory_manager.get_session_memory(session_id)
