@@ -1359,7 +1359,7 @@
                         window.speechRecognitionPaused = false;
                         setTimeout(() => {
                             this.startSpeechRecognition();
-                        }, 500); // Brief delay to ensure audio has finished
+                        }, 1000); // 1 second delay for more natural conversation flow
                     }
 
                     resolve();
@@ -1374,7 +1374,7 @@
                         window.speechRecognitionPaused = false;
                         setTimeout(() => {
                             this.startSpeechRecognition();
-                        }, 500);
+                        }, 1000);
                     }
 
                     reject(error);
@@ -1473,7 +1473,7 @@
             this.addMessage("📞 Voice call connected. Listening actively...", 'bot', false, false);
             
             // Provide welcome voice message and start speech recognition
-            const welcomeMessage = "Hello! Welcome to voice mode. How can I help you today? This is Ria.";
+            const welcomeMessage = "Hello! Welcome to voice mode. I'm Ria, your assistant. How can I help you today? You can speak naturally or say 'stop' to pause me anytime.";
             
             // Speak welcome message first, then start listening
             this.synthesizeVoice(welcomeMessage).then(() => {
@@ -1562,7 +1562,7 @@
                 }
                 
                 // Show visual feedback
-                this.addMessage("🎤 Listening... Please speak your question", 'bot', false, false);
+                this.addMessage("🎤 Listening... Speak naturally or say 'stop' to pause", 'bot', false, false);
             };
 
             recognition.onresult = (event) => {
@@ -1583,6 +1583,33 @@
                 
                 // If we have final results, process them
                 if (finalTranscript.trim()) {
+                    const command = finalTranscript.trim().toLowerCase();
+                    
+                    // Handle voice commands
+                    if (command === 'stop' || command === 'pause' || command === 'wait') {
+                        // Stop any ongoing voice playback
+                        this.stopVoice();
+                        
+                        // Remove listening message
+                        const messages = messagesContainer.querySelectorAll('.chat-widget-message');
+                        const lastMessage = messages[messages.length - 1];
+                        if (lastMessage && lastMessage.textContent.includes('🎤 Listening...')) {
+                            lastMessage.remove();
+                        }
+                        
+                        // Add acknowledgment and continue listening
+                        this.addMessage("⏸️ Stopped. I'm listening for your next question.", 'bot', false, false);
+                        
+                        // Stop current recognition and restart immediately for next question
+                        recognition.stop();
+                        setTimeout(() => {
+                            if (config.continuousVoice && !window.speechRecognitionPaused) {
+                                this.startSpeechRecognition();
+                            }
+                        }, 500);
+                        return;
+                    }
+                    
                     // Stop any ongoing voice playback when user speaks
                     this.stopVoice();
                     
@@ -1619,7 +1646,10 @@
                     lastMessage.remove();
                 }
                 
-                this.addMessage("Sorry, I couldn't understand your speech. Please try again or type your message.", 'bot');
+                // Don't show error message for aborted recognition (normal during voice interruption)
+                if (event.error !== 'aborted' && config.continuousVoice) {
+                    this.addMessage("🎤 Continue speaking... I'm listening", 'bot', false, false);
+                }
             };
 
             recognition.onend = () => {
@@ -1637,7 +1667,7 @@
                 if (config.continuousVoice && !window.voiceManuallyDisconnected && !window.speechRecognitionPaused) {
                     setTimeout(() => {
                         this.startSpeechRecognition();
-                    }, 1000); // Wait 1 second before restarting
+                    }, 500); // Shorter delay for more responsive listening
                 }
             };
 
@@ -1715,14 +1745,14 @@
                             if (config.continuousVoice && !window.voiceManuallyDisconnected) {
                                 setTimeout(() => {
                                     this.startSpeechRecognition();
-                                }, 1500); // Wait 1.5 seconds after voice finishes for natural pause
+                                }, 2000); // Wait 2 seconds after voice finishes for more natural conversation flow
                             }
                         }).catch(() => {
                             // If voice synthesis fails but we're in continuous mode, still restart listening
                             if (config.continuousVoice && !window.voiceManuallyDisconnected) {
                                 setTimeout(() => {
                                     this.startSpeechRecognition();
-                                }, 1000);
+                                }, 1500);
                             }
                         });
                     }, 500); // Small delay to let typing animation start

@@ -351,6 +351,10 @@ deployment/       # Production deployment files
 - July 19, 2025: Added continuous speech recognition that auto-restarts, stops speaking when user talks, handles natural pauses
 - July 19, 2025: Enhanced speech recognition with interim results, Indian English lang setting, and intelligent conversation flow
 - July 19, 2025: Fixed call disconnection issues with manual disconnect flags and proper recognition lifecycle management
+- July 19, 2025: **AUDIO FEEDBACK ISOLATION**: Fixed critical audio feedback loop - speech recognition now pauses during voice output
+- July 19, 2025: Implemented promise-based audio system with proper completion detection before resuming listening
+- July 19, 2025: **VOICE COMMANDS**: Added "stop", "pause", "wait" voice commands for better conversation control
+- July 19, 2025: Enhanced conversational timing with 2-second delays for more natural interaction flow
 
 ## Known Issues
 
