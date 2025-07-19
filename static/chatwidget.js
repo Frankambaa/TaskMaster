@@ -1631,13 +1631,17 @@
                     URL.revokeObjectURL(audioUrl);
                     window.elevenLabsCurrentAudio = null;
                     
-                    // Auto-restart listening after audio ends
-                    if (config.elevenlabsActive && !window.speechRecognitionPaused && !window.currentSpeechRecognition) {
+                    // Resume speech recognition after audio ends
+                    window.speechRecognitionPaused = false;
+                    
+                    // Auto-restart listening after audio ends with longer delay to prevent feedback
+                    if (config.elevenlabsActive && !window.voiceManuallyDisconnected && !window.currentSpeechRecognition) {
                         setTimeout(() => {
-                            if (config.elevenlabsActive && !window.currentSpeechRecognition) {
+                            if (config.elevenlabsActive && !window.currentSpeechRecognition && !window.elevenLabsCurrentAudio) {
+                                console.log('Resuming speech recognition after audio completion');
                                 this.startElevenLabsSpeechRecognition();
                             }
-                        }, 2000); // Longer delay after audio completion
+                        }, 3000); // Longer delay to prevent audio feedback loop
                     }
                     
                     resolve();
@@ -1647,14 +1651,23 @@
                     console.error('ElevenLabs audio playback error:', error);
                     URL.revokeObjectURL(audioUrl);
                     window.elevenLabsCurrentAudio = null;
+                    window.speechRecognitionPaused = false; // Resume on error
                     reject(error);
                 };
+
+                // Pause speech recognition during audio playback to prevent feedback
+                if (window.currentSpeechRecognition) {
+                    console.log('Pausing speech recognition during audio playback');
+                    window.speechRecognitionPaused = true;
+                    window.currentSpeechRecognition.stop();
+                }
 
                 // Start playback
                 audio.play().catch(error => {
                     console.error('Failed to play ElevenLabs audio:', error);
                     URL.revokeObjectURL(audioUrl);
                     window.elevenLabsCurrentAudio = null;
+                    window.speechRecognitionPaused = false;
                     reject(error);
                 });
             });
@@ -1667,9 +1680,9 @@
                 return;
             }
 
-            // Don't start recognition during audio playback
-            if (window.elevenLabsCurrentAudio) {
-                console.log('Audio playing, delaying speech recognition');
+            // Don't start recognition during audio playback or when paused
+            if (window.elevenLabsCurrentAudio || window.speechRecognitionPaused) {
+                console.log('Audio playing or recognition paused, skipping speech recognition start');
                 return;
             }
             

@@ -1,0 +1,72 @@
+Starting ElevenLabs voice mode
+chatwidget.js:1693 ElevenLabs speech recognition started
+chatwidget.js:1818 ElevenLabs speech recognition ended
+chatwidget.js:1693 ElevenLabs speech recognition started
+chatwidget.js:1818 ElevenLabs speech recognition ended
+chatwidget.js:1693 ElevenLabs speech recognition started
+3chatwidget.js:1715 ElevenLabs speech recognition result: hello
+chatwidget.js:1738 ElevenLabs voice command detected: hello
+chatwidget.js:1844 Sending ElevenLabs message: hello
+chatwidget.js:1818 ElevenLabs speech recognition ended
+chatwidget.js:1693 ElevenLabs speech recognition started
+chatwidget.js:1454 Audio loading started
+chatwidget.js:1472 Audio playback started successfully
+favicon.ico:1  GET https://kambaaincorporation.com/favicon.ico 404 (Not Found)Understand this error
+chatwidget.js:1715 ElevenLabs speech recognition result: hey
+chatwidget.js:1715 ElevenLabs speech recognition result: hey how
+chatwidget.js:1715 ElevenLabs speech recognition result: hey how can
+chatwidget.js:1715 ElevenLabs speech recognition result: hey how can I
+chatwidget.js:1715 ElevenLabs speech recognition result: hey how can I help
+chatwidget.js:1458 Audio playback ended
+3chatwidget.js:1715 ElevenLabs speech recognition result: hey how can I help
+chatwidget.js:1738 ElevenLabs voice command detected: hey how can i help
+chatwidget.js:1844 Sending ElevenLabs message: hey how can I help
+chatwidget.js:1818 ElevenLabs speech recognition ended
+chatwidget.js:1693 ElevenLabs speech recognition started
+chatwidget.js:1666 Speech recognition already active, skipping restart
+chatwidget.js:1454 Audio loading started
+chatwidget.js:1472 Audio playback started successfully
+chatwidget.js:1715 ElevenLabs speech recognition result: yes
+chatwidget.js:1715 ElevenLabs speech recognition result: yes I
+chatwidget.js:1715 ElevenLabs speech recognition result: yes I am
+chatwidget.js:1715 ElevenLabs speech recognition result: yes I am here
+chatwidget.js:1715 ElevenLabs speech recognition result: yes I am here to
+3chatwidget.js:1715 ElevenLabs speech recognition result: yes I am here to help
+2chatwidget.js:1715 ElevenLabs speech recognition result: yes I am here to help how
+3chatwidget.js:1715 ElevenLabs speech recognition result: yes I am here to help how can
+2chatwidget.js:1715 ElevenLabs speech recognition result: yes I am here to help how can I
+chatwidget.js:1715 ElevenLabs speech recognition result: yes I am here to help how can I say
+chatwidget.js:1715 ElevenLabs speech recognition result: yes I am here to help how can I assist
+chatwidget.js:1458 Audio playback ended
+chatwidget.js:1715 ElevenLabs speech recognition result: yes I am here to help how can I assist you
+6chatwidget.js:1715 ElevenLabs speech recognition result: yes I am here to help how can I assist you today
+chatwidget.js:1738 ElevenLabs voice command detected: yes i am here to help how can i assist you today
+chatwidget.js:1844 Sending ElevenLabs message: yes I am here to help how can I assist you today
+chatwidget.js:1818 ElevenLabs speech recognition ended
+chatwidget.js:1693 ElevenLabs speech recognition started
+chatwidget.js:1454 Audio loading started
+chatwidget.js:1472 Audio playback started successfully
+chatwidget.js:1715 ElevenLabs speech recognition result: yes
+chatwidget.js:1715 ElevenLabs speech recognition result: yes I
+chatwidget.js:1715 ElevenLabs speech recognition result: yes I am
+chatwidget.js:1715 ElevenLabs speech recognition result: yes I am here
+chatwidget.js:1715 ElevenLabs speech recognition result: yes I am here to
+4chatwidget.js:1715 ElevenLabs speech recognition result: yes I am here to help
+chatwidget.js:1715 ElevenLabs speech recognition result: yes I am here to help how
+2chatwidget.js:1715 ElevenLabs speech recognition result: yes I am here to help how can
+2chatwidget.js:1715 ElevenLabs speech recognition result: yes I am here to help how can I
+chatwidget.js:1458 Audio playback ended
+chatwidget.js:1715 ElevenLabs speech recognition result: yes I am here to help how can I assist
+chatwidget.js:1715 ElevenLabs speech recognition result: yes I am here to help how can I assist you
+5chatwidget.js:1715 ElevenLabs speech recognition result: yes I am here to help how can I assist you today
+chatwidget.js:1738 ElevenLabs voice command detected: yes i am here to help how can i assist you today
+chatwidget.js:1844 Sending ElevenLabs message: yes I am here to help how can I assist you today
+chatwidget.js:1818 ElevenLabs speech recognition ended
+chatwidget.js:1693 ElevenLabs speech recognition started
+chatwidget.js:1532 Disconnecting ElevenLabs voice mode
+chatwidget.js:1483 Stopping voice playback
+chatwidget.js:1454 Audio loading started
+chatwidget.js:1472 Audio playback started successfully
+chatwidget.js:1786 ElevenLabs speech recognition error: network
+chatwidget.js:1818 ElevenLabs speech recognition ended
+chatwidget.js:1458 Audio playback ended
