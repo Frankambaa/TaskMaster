@@ -1429,7 +1429,7 @@
             this.addMessage("📞 Voice call started. Speak your question...", 'bot', false, false);
             
             // Provide welcome voice message and start speech recognition
-            const welcomeMessage = "Voice call connected. Please speak your question.";
+            const welcomeMessage = "Hello! Welcome to voice mode. How can I help you today? This is Ria.";
             
             // Speak welcome message first, then start listening
             this.synthesizeVoice(welcomeMessage).then(() => {
@@ -1568,11 +1568,11 @@
 
             // Build request payload
             const payload = {
-                message: message,
-                user_id: config.user_id,
+                question: message,  // Backend expects 'question' not 'message'
+                user_id: config.userId,
                 username: config.username,
                 email: config.email,
-                device_id: config.device_id
+                device_id: config.deviceId
             };
 
             // Send request

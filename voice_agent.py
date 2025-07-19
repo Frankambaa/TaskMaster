@@ -68,10 +68,12 @@ class VoiceAgent:
             self.initialize_kokoro()
         
         if self.is_kokoro_initialized:
-            return self._synthesize_with_kokoro(cleaned_text, voice)
-        else:
-            # Fallback to gTTS
-            return self._synthesize_with_gtts(cleaned_text, voice)
+            kokoro_result = self._synthesize_with_kokoro(cleaned_text, voice)
+            if kokoro_result:
+                return kokoro_result
+        
+        # Fallback to gTTS or if Kokoro returned None (for indian_female)
+        return self._synthesize_with_gtts(cleaned_text, voice)
     
     def _synthesize_with_kokoro(self, text: str, voice: str = None) -> Optional[Dict[str, Any]]:
         """Synthesize speech using Kokoro TTS"""

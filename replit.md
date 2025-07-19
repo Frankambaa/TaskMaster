@@ -342,6 +342,11 @@ deployment/       # Production deployment files
 - July 19, 2025: Added startVoiceMode() with welcome message, speech recognition, and continuous conversation loop
 - July 19, 2025: Enhanced voice agent to prioritize gTTS Indian English for natural Indian accent over Kokoro TTS
 - July 19, 2025: Voice system now provides: welcome message → speech recognition → RAG processing → voice response → repeat cycle
+- July 19, 2025: **CONTINUOUS VOICE CALL SYSTEM**: Enhanced with 📞 call/disconnect functionality for phone-like experience
+- July 19, 2025: Implemented startContinuousVoiceMode() and disconnectVoiceMode() with automatic listening restart after each response
+- July 19, 2025: Fixed voice synthesis gTTS fallback system and API request parameter mapping (question vs message)
+- July 19, 2025: Added personalized welcome message: "Hello! Welcome to voice mode. How can I help you today? This is Ria."
+- July 19, 2025: Voice system now fully functional with Indian English accent and continuous conversation capability
 
 ## Known Issues
 

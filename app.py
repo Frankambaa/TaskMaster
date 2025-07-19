@@ -2033,26 +2033,34 @@ def synthesize_voice():
         
         voice = data.get('voice', 'af_heart')  # Default to American female voice
         
-        # Initialize voice agent if not done
-        if 'voice_agent' not in globals():
-            from voice_agent import VoiceAgent
-            global voice_agent
-            voice_agent = VoiceAgent()
-        
-        # Synthesize speech
-        result = voice_agent.synthesize_speech(text, voice)
+        # Synthesize speech using local VoiceAgent instance
+        from voice_agent import VoiceAgent
+        local_voice_agent = VoiceAgent()
+        result = local_voice_agent.synthesize_speech(text, voice)
         
         if result and result.get('success'):
             # Return audio file for download
             from flask import send_file
+            audio_file = result['audio_file']
+            engine = result.get('engine', 'unknown')
+            
+            # Determine file extension and mimetype based on engine
+            if engine == 'gtts':
+                mimetype = 'audio/mp3'
+                filename = f'speech_{uuid.uuid4().hex[:8]}.mp3'
+            else:
+                mimetype = 'audio/wav'  
+                filename = f'speech_{uuid.uuid4().hex[:8]}.wav'
+            
             return send_file(
-                result['audio_file'],
+                audio_file,
                 as_attachment=True,
-                download_name=f'speech_{uuid.uuid4().hex[:8]}.wav',
-                mimetype='audio/wav'
+                download_name=filename,
+                mimetype=mimetype
             )
         else:
             error_msg = result.get('error', 'Speech synthesis failed') if result else 'Speech synthesis failed'
+            logging.error(f"Voice synthesis failed: {error_msg}")
             return jsonify({'error': error_msg}), 500
             
     except Exception as e:
