@@ -1,0 +1,152 @@
+Speech recognition started
+chatwidget.js:1529 Speech recognition result: how
+chatwidget.js:1529 Speech recognition result: how can
+chatwidget.js:1529 Speech recognition result: how can I
+2chatwidget.js:1529 Speech recognition result: how can I help
+3chatwidget.js:1529 Speech recognition result: how can I help you
+4chatwidget.js:1529 Speech recognition result: how can I help you today
+chatwidget.js:1529 Speech recognition result: how can I help you today this
+chatwidget.js:1529 Speech recognition result: how can I help you today this is
+4chatwidget.js:1529 Speech recognition result: how can I help you today this is Riya
+chatwidget.js:1573 Speech recognition ended
+chatwidget.js:1502 Speech recognition started
+chatwidget.js:1529 Speech recognition result: tell
+chatwidget.js:1529 Speech recognition result: tell me
+3chatwidget.js:1529 Speech recognition result: tell me about
+2chatwidget.js:1529 Speech recognition result: tell me about apna
+chatwidget.js:1555 Speech recognition error: aborted
+overrideMethod @ hook.js:608
+recognition.onerror @ chatwidget.js:1555Understand this error
+chatwidget.js:1573 Speech recognition ended
+2chatwidget.js:1502 Speech recognition started
+chatwidget.js:1555 Speech recognition error: aborted
+overrideMethod @ hook.js:608
+recognition.onerror @ chatwidget.js:1555Understand this error
+chatwidget.js:1573 Speech recognition ended
+chatwidget.js:1555 Speech recognition error: aborted
+overrideMethod @ hook.js:608
+recognition.onerror @ chatwidget.js:1555Understand this error
+chatwidget.js:1502 Speech recognition started
+chatwidget.js:1573 Speech recognition ended
+chatwidget.js:1555 Speech recognition error: aborted
+overrideMethod @ hook.js:608
+recognition.onerror @ chatwidget.js:1555Understand this error
+chatwidget.js:1502 Speech recognition started
+chatwidget.js:1573 Speech recognition ended
+chatwidget.js:1555 Speech recognition error: aborted
+overrideMethod @ hook.js:608
+recognition.onerror @ chatwidget.js:1555Understand this error
+chatwidget.js:1573 Speech recognition ended
+chatwidget.js:1502 Speech recognition started
+chatwidget.js:1555 Speech recognition error: aborted
+overrideMethod @ hook.js:608
+recognition.onerror @ chatwidget.js:1555Understand this error
+chatwidget.js:1573 Speech recognition ended
+chatwidget.js:1502 Speech recognition started
+chatwidget.js:1529 Speech recognition result: tell
+chatwidget.js:1529 Speech recognition result: tell me
+chatwidget.js:1555 Speech recognition error: aborted
+overrideMethod @ hook.js:608
+recognition.onerror @ chatwidget.js:1555Understand this error
+chatwidget.js:1573 Speech recognition ended
+chatwidget.js:1502 Speech recognition started
+chatwidget.js:1555 Speech recognition error: aborted
+overrideMethod @ hook.js:608
+recognition.onerror @ chatwidget.js:1555Understand this error
+chatwidget.js:1502 Speech recognition started
+chatwidget.js:1573 Speech recognition ended
+chatwidget.js:1555 Speech recognition error: aborted
+overrideMethod @ hook.js:608
+recognition.onerror @ chatwidget.js:1555Understand this error
+chatwidget.js:1573 Speech recognition ended
+chatwidget.js:1502 Speech recognition started
+chatwidget.js:1555 Speech recognition error: aborted
+overrideMethod @ hook.js:608
+recognition.onerror @ chatwidget.js:1555Understand this error
+chatwidget.js:1502 Speech recognition started
+chatwidget.js:1573 Speech recognition ended
+chatwidget.js:1555 Speech recognition error: aborted
+overrideMethod @ hook.js:608
+recognition.onerror @ chatwidget.js:1555Understand this error
+chatwidget.js:1502 Speech recognition started
+chatwidget.js:1573 Speech recognition ended
+chatwidget.js:1555 Speech recognition error: aborted
+overrideMethod @ hook.js:608
+recognition.onerror @ chatwidget.js:1555Understand this error
+chatwidget.js:1502 Speech recognition started
+chatwidget.js:1573 Speech recognition ended
+chatwidget.js:1555 Speech recognition error: aborted
+overrideMethod @ hook.js:608
+recognition.onerror @ chatwidget.js:1555Understand this error
+chatwidget.js:1573 Speech recognition ended
+chatwidget.js:1502 Speech recognition started
+chatwidget.js:1555 Speech recognition error: aborted
+overrideMethod @ hook.js:608
+recognition.onerror @ chatwidget.js:1555Understand this error
+chatwidget.js:1502 Speech recognition started
+chatwidget.js:1573 Speech recognition ended
+chatwidget.js:1555 Speech recognition error: aborted
+overrideMethod @ hook.js:608
+recognition.onerror @ chatwidget.js:1555Understand this error
+chatwidget.js:1573 Speech recognition ended
+chatwidget.js:1502 Speech recognition started
+chatwidget.js:1555 Speech recognition error: aborted
+overrideMethod @ hook.js:608
+recognition.onerror @ chatwidget.js:1555Understand this error
+chatwidget.js:1502 Speech recognition started
+chatwidget.js:1573 Speech recognition ended
+chatwidget.js:1555 Speech recognition error: aborted
+overrideMethod @ hook.js:608
+recognition.onerror @ chatwidget.js:1555Understand this error
+chatwidget.js:1573 Speech recognition ended
+chatwidget.js:1502 Speech recognition started
+chatwidget.js:1555 Speech recognition error: aborted
+overrideMethod @ hook.js:608
+recognition.onerror @ chatwidget.js:1555Understand this error
+chatwidget.js:1502 Speech recognition started
+chatwidget.js:1573 Speech recognition ended
+chatwidget.js:1555 Speech recognition error: aborted
+overrideMethod @ hook.js:608
+recognition.onerror @ chatwidget.js:1555Understand this error
+chatwidget.js:1502 Speech recognition started
+chatwidget.js:1573 Speech recognition ended
+chatwidget.js:1555 Speech recognition error: aborted
+overrideMethod @ hook.js:608
+recognition.onerror @ chatwidget.js:1555Understand this error
+chatwidget.js:1502 Speech recognition started
+chatwidget.js:1573 Speech recognition ended
+chatwidget.js:1555 Speech recognition error: aborted
+overrideMethod @ hook.js:608
+recognition.onerror @ chatwidget.js:1555Understand this error
+chatwidget.js:1502 Speech recognition started
+chatwidget.js:1573 Speech recognition ended
+chatwidget.js:1555 Speech recognition error: aborted
+overrideMethod @ hook.js:608
+recognition.onerror @ chatwidget.js:1555Understand this error
+chatwidget.js:1502 Speech recognition started
+chatwidget.js:1573 Speech recognition ended
+chatwidget.js:1555 Speech recognition error: aborted
+overrideMethod @ hook.js:608
+recognition.onerror @ chatwidget.js:1555Understand this error
+chatwidget.js:1502 Speech recognition started
+chatwidget.js:1573 Speech recognition ended
+chatwidget.js:1555 Speech recognition error: aborted
+overrideMethod @ hook.js:608
+recognition.onerror @ chatwidget.js:1555Understand this error
+chatwidget.js:1502 Speech recognition started
+chatwidget.js:1573 Speech recognition ended
+chatwidget.js:1555 Speech recognition error: aborted
+overrideMethod @ hook.js:608
+recognition.onerror @ chatwidget.js:1555Understand this error
+chatwidget.js:1502 Speech recognition started
+chatwidget.js:1573 Speech recognition ended
+chatwidget.js:1555 Speech recognition error: aborted
+overrideMethod @ hook.js:608
+recognition.onerror @ chatwidget.js:1555Understand this error
+chatwidget.js:1502 Speech recognition started
+chatwidget.js:1573 Speech recognition ended
+chatwidget.js:1502 Speech recognition started
+chatwidget.js:1555 Speech recognition error: aborted
+overrideMethod @ hook.js:608
+recognition.onerror @ chatwidget.js:1555Understand this error
+chatwidget.js:1573 Speech recognition ended

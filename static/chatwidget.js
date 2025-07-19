@@ -1318,28 +1318,67 @@
                 return Promise.resolve();
             }
 
-            return fetch(`${config.apiUrl}/api/voice/synthesize`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Widget-Origin': window.location.origin
-                },
-                body: JSON.stringify({
-                    text: text,
-                    voice: config.selectedVoice
-                })
-            })
-            .then(response => {
-                if (response.ok) {
-                    return response.blob();
+            return new Promise((resolve, reject) => {
+                isPlayingVoice = true;
+                this.updateVoiceControls();
+
+                // Stop speech recognition while speaking to prevent feedback
+                if (window.currentSpeechRecognition && config.continuousVoice) {
+                    console.log('Pausing speech recognition during voice output');
+                    window.currentSpeechRecognition.stop();
+                    window.speechRecognitionPaused = true;
                 }
-                throw new Error('Voice synthesis failed');
-            })
-            .then(audioBlob => {
-                this.playAudioBlob(audioBlob);
-            })
-            .catch(error => {
-                console.error('Voice synthesis error:', error);
+
+                fetch(`${config.apiUrl}/api/voice/synthesize`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Widget-Origin': window.location.origin
+                    },
+                    body: JSON.stringify({
+                        text: text,
+                        voice: config.selectedVoice
+                    })
+                })
+                .then(response => {
+                    if (response.ok) {
+                        return response.blob();
+                    }
+                    throw new Error('Voice synthesis failed');
+                })
+                .then(audioBlob => {
+                    return this.playAudioBlob(audioBlob);
+                })
+                .then(() => {
+                    isPlayingVoice = false;
+                    this.updateVoiceControls();
+
+                    // Resume speech recognition after voice output finishes
+                    if (window.speechRecognitionPaused && config.continuousVoice) {
+                        console.log('Resuming speech recognition after voice output');
+                        window.speechRecognitionPaused = false;
+                        setTimeout(() => {
+                            this.startSpeechRecognition();
+                        }, 500); // Brief delay to ensure audio has finished
+                    }
+
+                    resolve();
+                })
+                .catch(error => {
+                    console.error('Voice synthesis error:', error);
+                    isPlayingVoice = false;
+                    this.updateVoiceControls();
+
+                    // Resume speech recognition even if voice fails
+                    if (window.speechRecognitionPaused && config.continuousVoice) {
+                        window.speechRecognitionPaused = false;
+                        setTimeout(() => {
+                            this.startSpeechRecognition();
+                        }, 500);
+                    }
+
+                    reject(error);
+                });
             });
         },
 
@@ -1360,38 +1399,41 @@
         },
 
         playAudioBlob: function(audioBlob) {
-            if (currentAudio) {
-                currentAudio.pause();
-                currentAudio = null;
-            }
-            
-            const audioUrl = URL.createObjectURL(audioBlob);
-            currentAudio = new Audio(audioUrl);
-            
-            currentAudio.addEventListener('loadstart', () => {
-                isPlayingVoice = true;
-                this.updateVoiceControls();
-            });
-            
-            currentAudio.addEventListener('ended', () => {
-                isPlayingVoice = false;
-                URL.revokeObjectURL(audioUrl);
-                currentAudio = null;
-                this.updateVoiceControls();
-            });
-            
-            currentAudio.addEventListener('error', () => {
-                isPlayingVoice = false;
-                URL.revokeObjectURL(audioUrl);
-                currentAudio = null;
-                this.updateVoiceControls();
-                console.error('Audio playback error');
-            });
-            
-            currentAudio.play().catch(error => {
-                console.error('Audio play failed:', error);
-                isPlayingVoice = false;
-                this.updateVoiceControls();
+            return new Promise((resolve, reject) => {
+                if (currentAudio) {
+                    currentAudio.pause();
+                    currentAudio = null;
+                }
+                
+                const audioUrl = URL.createObjectURL(audioBlob);
+                currentAudio = new Audio(audioUrl);
+                
+                currentAudio.addEventListener('loadstart', () => {
+                    console.log('Audio loading started');
+                });
+                
+                currentAudio.addEventListener('ended', () => {
+                    console.log('Audio playback ended');
+                    URL.revokeObjectURL(audioUrl);
+                    currentAudio = null;
+                    resolve();
+                });
+                
+                currentAudio.addEventListener('error', () => {
+                    console.error('Audio playback error');
+                    URL.revokeObjectURL(audioUrl);
+                    currentAudio = null;
+                    reject(new Error('Audio playback failed'));
+                });
+                
+                currentAudio.play().then(() => {
+                    console.log('Audio playback started successfully');
+                }).catch(error => {
+                    console.error('Audio play failed:', error);
+                    URL.revokeObjectURL(audioUrl);
+                    currentAudio = null;
+                    reject(error);
+                });
             });
         },
 
@@ -1420,6 +1462,7 @@
             config.autoPlayVoice = true;
             config.voiceEnabled = true;
             window.voiceManuallyDisconnected = false;  // Reset flag
+            window.speechRecognitionPaused = false;    // Reset pause flag
             
             console.log('Starting continuous voice mode');
             
@@ -1434,15 +1477,19 @@
             
             // Speak welcome message first, then start listening
             this.synthesizeVoice(welcomeMessage).then(() => {
-                // After welcome message, start speech recognition
+                // After welcome message, start speech recognition with longer delay
                 setTimeout(() => {
-                    this.startSpeechRecognition();
-                }, 1000); // Longer delay after voice to ensure it's finished
+                    if (config.continuousVoice && !window.speechRecognitionPaused) {
+                        this.startSpeechRecognition();
+                    }
+                }, 2000); // Longer delay to ensure voice is completely finished
             }).catch(() => {
                 // If voice synthesis fails, still start recognition
                 setTimeout(() => {
-                    this.startSpeechRecognition();
-                }, 500);
+                    if (config.continuousVoice && !window.speechRecognitionPaused) {
+                        this.startSpeechRecognition();
+                    }
+                }, 1000);
             });
         },
 
@@ -1451,6 +1498,7 @@
             config.continuousVoice = false;
             config.autoPlayVoice = false;
             window.voiceManuallyDisconnected = true;  // Flag to prevent auto-restart
+            window.speechRecognitionPaused = false;  // Reset pause flag
             
             console.log('Disconnecting voice mode');
             
@@ -1476,8 +1524,13 @@
         },
 
         startSpeechRecognition: function() {
-            // Don't start if not in continuous voice mode
-            if (!config.continuousVoice) {
+            // Don't start if not in continuous voice mode or if paused during voice output
+            if (!config.continuousVoice || window.speechRecognitionPaused) {
+                return;
+            }
+
+            // Don't start if already listening
+            if (window.currentSpeechRecognition) {
                 return;
             }
 
@@ -1580,8 +1633,8 @@
                 // Clear the global reference
                 window.currentSpeechRecognition = null;
                 
-                // Restart recognition if still in continuous voice mode (unless manually stopped)
-                if (config.continuousVoice && !window.voiceManuallyDisconnected) {
+                // Restart recognition if still in continuous voice mode (unless manually stopped or paused)
+                if (config.continuousVoice && !window.voiceManuallyDisconnected && !window.speechRecognitionPaused) {
                     setTimeout(() => {
                         this.startSpeechRecognition();
                     }, 1000); // Wait 1 second before restarting
