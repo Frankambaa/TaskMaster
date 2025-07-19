@@ -362,10 +362,10 @@ def ask():
                     user_conv_record = UserConversation.query.filter_by(user_identifier=user_identifier).order_by(UserConversation.last_activity.desc()).first()
                     if user_conv_record:
                         history = user_conv_record.get_conversation_history()
-                        # Take last 8 messages for context
-                        recent_messages = history[-8:] if len(history) > 8 else history
+                        # Import ALL conversation history (not just last 8)
+                        logging.info(f"Found {len(history)} total conversation messages for user {user_identifier}")
                         
-                        for msg in recent_messages:
+                        for msg in history:
                             if msg.get('type') == 'human':
                                 conversation_history.append({
                                     'role': 'user', 
@@ -406,7 +406,7 @@ def ask():
                 try:
                     if conversation_history:
                         live_chat_manager.import_bot_conversation(live_session.session_id, conversation_history)
-                        logging.info(f"✅ Successfully imported {len(conversation_history)} messages to live chat session {live_session.session_id}")
+                        logging.info(f"✅ Successfully imported ALL {len(conversation_history)} conversation messages to live chat session {live_session.session_id}")
                         
                         # Add agent welcome message with context
                         live_chat_manager.send_message(
@@ -414,7 +414,7 @@ def ask():
                             sender_type='agent',
                             sender_id='agent_john',
                             sender_name='John (Agent)',
-                            message_content=f'Hello {username or "there"}! I can see your previous conversation with our AI assistant. How can I help you today?',
+                            message_content=f'Hello {username or "there"}! I can see your complete conversation history with our AI assistant. How can I help you today?',
                             message_type='text'
                         )
                     else:
