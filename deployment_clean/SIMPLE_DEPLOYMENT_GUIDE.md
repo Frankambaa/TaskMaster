@@ -1,4 +1,6 @@
-# Simple AWS EC2 Deployment Guide
+# TaskMaster RAG Chatbot - AWS EC2 Deployment Guide
+
+Repository: https://github.com/Frankambaa/TaskMaster
 
 ## Step 1: Create AWS EC2 Instance
 - Launch Ubuntu 22.04 LTS instance
@@ -20,23 +22,20 @@ sudo usermod -aG docker ubuntu
 sudo systemctl start docker
 ```
 
-## Step 4: Setup Git Deployment (One-time)
+## Step 4: Deploy TaskMaster (Single Command)
 ```bash
 ssh -i your-key.pem ubuntu@your-server-ip
-cd /home/ubuntu/ragbot/deployment_clean
 
-# Configure your Git repository
-./setup-git-deploy.sh
-# Enter your Git repo URL when prompted
+# Download and run TaskMaster deployment
+curl -sSL https://raw.githubusercontent.com/Frankambaa/TaskMaster/main/deployment_clean/deploy-taskmaster.sh | bash
 ```
 
-## Step 5: Deploy (Single Command - Auto pulls from Git)
+**OR** manually:
 ```bash
 ssh -i your-key.pem ubuntu@your-server-ip
-cd /home/ubuntu/ragbot/deployment_clean
-
-# This automatically pulls latest code from Git and deploys
-./quick-deploy.sh
+git clone https://github.com/Frankambaa/TaskMaster.git /home/ubuntu/taskmaster
+cd /home/ubuntu/taskmaster/deployment_clean
+./deploy-taskmaster.sh
 ```
 
 ## Step 6: Quick Updates (After initial setup)

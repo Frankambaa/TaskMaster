@@ -262,6 +262,9 @@ deployment/       # Production deployment files
 - July 19, 2025: Created clean deployment folder with only 6 essential files (removed 25+ unnecessary scripts)
 - July 19, 2025: Fixed Docker build issues including cryptography version conflicts and missing module imports
 - July 19, 2025: Created comprehensive deployment guide for AWS EC2 with automated Docker installation
+- July 19, 2025: **GIT AUTOMATION**: Added complete Git automation to deployment scripts for TaskMaster repository
+- July 19, 2025: Configured deployment to automatically pull from https://github.com/Frankambaa/TaskMaster.git
+- July 19, 2025: Created one-command deployment script that handles Git clone, Docker build, and service startup
 
 ## User Preferences
 
