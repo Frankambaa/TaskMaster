@@ -93,15 +93,17 @@ class ElevenLabsVoiceAgent:
         """
         try:
             # Import the main RAG chain for processing
-            from rag_chain import process_question
+            from rag_chain import RAGChain
             
             logger.info(f"Processing voice conversation for: {text_message[:50]}...")
             
             # Process through the same RAG/AI system as main chatbot
-            response_text = process_question(
+            rag_chain = RAGChain()
+            response_text = rag_chain.get_answer(
                 question=text_message,
+                index_folder="faiss_index",
                 session_id=user_data.get('session_id') if user_data else None,
-                user_id=user_data.get('user_id') if user_data else None,
+                user_identifier=user_data.get('user_id') if user_data else None,
                 username=user_data.get('username') if user_data else None,
                 email=user_data.get('email') if user_data else None,
                 device_id=user_data.get('device_id') if user_data else None
