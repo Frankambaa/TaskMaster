@@ -3414,7 +3414,8 @@ Remember: Your goal is to provide the best possible user experience by being hel
             </div>
 
             <!-- Webhook Integration Section -->
-            <div class="tab-pane fade" id="webhook-integration">
+            <div class="row mb-4">
+                <div class="col-12" id="webhook-integration">
                 <div class="card">
                     <div class="card-header">
                         <h5><i class="fas fa-plug"></i> Webhook Integration Management</h5>
@@ -3673,9 +3674,8 @@ Remember: Your goal is to provide the best possible user experience by being hel
                         </div>
                     </div>
                 </div>
+                </div>
             </div>
-        </div>
-    </div>
 
     <script>
         // Webhook Integration JavaScript Functions
@@ -4027,18 +4027,13 @@ Remember: Your goal is to provide the best possible user experience by being hel
             });
         }
 
-        // Load webhook data when tab is activated
+        // Load webhook data when page is loaded
         document.addEventListener('DOMContentLoaded', function() {
-            // Load webhook configs and messages when the webhook tab is shown
-            const webhookTab = document.querySelector('[href="#webhook-integration"]');
-            if (webhookTab) {
-                webhookTab.addEventListener('click', function() {
-                    setTimeout(() => {
-                        loadWebhookConfigs();
-                        loadWebhookMessages();
-                    }, 100);
-                });
-            }
+            // Auto-load webhook configurations and messages on page load
+            setTimeout(() => {
+                loadWebhookConfigs();
+                loadWebhookMessages();
+            }, 500);
         });
     </script>
 
