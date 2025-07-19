@@ -402,15 +402,27 @@ def ask():
                     priority='normal'
                 )
                 
-                # Import conversation history
-                if conversation_history:
-                    try:
+                # IMMEDIATE conversation history import with error handling
+                try:
+                    if conversation_history:
                         live_chat_manager.import_bot_conversation(live_session.session_id, conversation_history)
-                        logging.info(f"Successfully imported {len(conversation_history)} messages to live chat session {live_session.session_id}")
-                    except Exception as import_error:
-                        logging.error(f"Error importing conversation history to session {live_session.session_id}: {import_error}")
-                else:
-                    logging.warning(f"No conversation history found for user {user_identifier} - live chat session {live_session.session_id} created without history")
+                        logging.info(f"✅ Successfully imported {len(conversation_history)} messages to live chat session {live_session.session_id}")
+                        
+                        # Add agent welcome message with context
+                        live_chat_manager.send_message(
+                            session_id=live_session.session_id,
+                            sender_type='agent',
+                            sender_id='agent_john',
+                            sender_name='John (Agent)',
+                            message_content=f'Hello {username or "there"}! I can see your previous conversation with our AI assistant. How can I help you today?',
+                            message_type='text'
+                        )
+                    else:
+                        logging.warning(f"❌ No conversation history found for user {user_identifier} - live chat session {live_session.session_id} created without history")
+                except Exception as import_error:
+                    logging.error(f"❌ CRITICAL: Error importing conversation history to session {live_session.session_id}: {import_error}")
+                    import traceback
+                    logging.error(traceback.format_exc())
                 
                 answer = f"I've transferred your chat to our live agent team. Session ID: {live_session.session_id}. An agent will be with you shortly and can see your previous conversation history."
                 response_type = 'internal_live_chat_transfer'
