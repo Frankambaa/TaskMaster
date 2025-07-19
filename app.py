@@ -1,14 +1,15 @@
 import os
 import logging
 import uuid
-from flask import Flask, request, jsonify, render_template, redirect, url_for, flash, session
+from datetime import datetime, timedelta
+from flask import Flask, request, jsonify, render_template, redirect, url_for, flash, session, make_response
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
 from vectorizer import DocumentVectorizer
 from rag_chain import RAGChain
-from models import db, ApiRule, ApiTool, UserConversation, SystemPrompt, RagFeedback, ChatSettings, ResponseTemplate, LiveChatSession, LiveChatMessage, LiveChatAgent, WebhookConfig, WebhookMessage
+from models import db, UnifiedConversation, UnifiedMessage, ApiRule, ApiTool, UserConversation, SystemPrompt, RagFeedback, ChatSettings, ResponseTemplate, LiveChatSession, LiveChatMessage, LiveChatAgent, WebhookConfig, WebhookMessage
 from session_memory import session_manager
 from voice_agent import voice_agent
 from elevenlabs_embedded import embedded_agent
@@ -1218,6 +1219,132 @@ def delete_widget_icon():
     
     except Exception as e:
         logging.error(f"Error deleting widget icon: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+# ===========================
+# UNIFIED CONVERSATIONS ENDPOINTS
+# ===========================
+
+@app.route('/api/conversations')
+def get_conversations():
+    """Get all conversations (both chatbot and live chat)"""
+    try:
+        # Get query parameters
+        conversation_type = request.args.get('type')  # 'chatbot', 'live_chat', or 'all'
+        user_identifier = request.args.get('user')
+        limit = int(request.args.get('limit', 50))
+        offset = int(request.args.get('offset', 0))
+        
+        # Build query
+        query = UnifiedConversation.query
+        
+        if conversation_type and conversation_type != 'all':
+            query = query.filter_by(conversation_type=conversation_type)
+        
+        if user_identifier:
+            query = query.filter_by(user_identifier=user_identifier)
+        
+        # Order by most recent first
+        query = query.order_by(UnifiedConversation.last_activity.desc())
+        
+        # Apply pagination
+        conversations = query.offset(offset).limit(limit).all()
+        total_count = query.count()
+        
+        return jsonify({
+            'conversations': [conv.to_dict() for conv in conversations],
+            'total_count': total_count,
+            'has_more': (offset + limit) < total_count
+        })
+        
+    except Exception as e:
+        logging.error(f"Error fetching conversations: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/conversations/<session_id>')
+def get_conversation_detail(session_id):
+    """Get detailed conversation with all messages"""
+    try:
+        conversation = UnifiedConversation.query.filter_by(session_id=session_id).first()
+        if not conversation:
+            return jsonify({'error': 'Conversation not found'}), 404
+        
+        # Get all messages for this conversation
+        messages = UnifiedMessage.query.filter_by(session_id=session_id)\
+            .order_by(UnifiedMessage.created_at.asc()).all()
+        
+        return jsonify({
+            'conversation': conversation.to_dict(),
+            'messages': [msg.to_dict() for msg in messages]
+        })
+        
+    except Exception as e:
+        logging.error(f"Error fetching conversation detail: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/conversations/<session_id>/export')
+def export_conversation(session_id):
+    """Export conversation as JSON download"""
+    try:
+        conversation = UnifiedConversation.query.filter_by(session_id=session_id).first()
+        if not conversation:
+            return jsonify({'error': 'Conversation not found'}), 404
+        
+        # Get all messages
+        messages = UnifiedMessage.query.filter_by(session_id=session_id)\
+            .order_by(UnifiedMessage.created_at.asc()).all()
+        
+        export_data = {
+            'conversation': conversation.to_dict(),
+            'messages': [msg.to_dict() for msg in messages],
+            'exported_at': datetime.utcnow().isoformat(),
+            'export_version': '1.0'
+        }
+        
+        # Create response with file download headers
+        response = make_response(jsonify(export_data))
+        response.headers['Content-Disposition'] = f'attachment; filename=conversation_{session_id}.json'
+        response.headers['Content-Type'] = 'application/json'
+        
+        return response
+        
+    except Exception as e:
+        logging.error(f"Error exporting conversation: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/conversations/stats')
+def get_conversation_stats():
+    """Get conversation statistics"""
+    try:
+        # Total conversations
+        total_conversations = UnifiedConversation.query.count()
+        chatbot_conversations = UnifiedConversation.query.filter_by(conversation_type='chatbot').count()
+        live_chat_conversations = UnifiedConversation.query.filter_by(conversation_type='live_chat').count()
+        
+        # Active conversations (last 24 hours)
+        yesterday = datetime.utcnow() - timedelta(days=1)
+        active_conversations = UnifiedConversation.query.filter(
+            UnifiedConversation.last_activity >= yesterday
+        ).count()
+        
+        # Total messages
+        total_messages = UnifiedMessage.query.count()
+        
+        # Unique users
+        unique_users = db.session.query(UnifiedConversation.user_identifier)\
+            .distinct().count()
+        
+        return jsonify({
+            'total_conversations': total_conversations,
+            'chatbot_conversations': chatbot_conversations,
+            'live_chat_conversations': live_chat_conversations,
+            'active_conversations_24h': active_conversations,
+            'total_messages': total_messages,
+            'unique_users': unique_users
+        })
+        
+    except Exception as e:
+        logging.error(f"Error fetching conversation stats: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 # ===========================
@@ -2571,98 +2698,9 @@ def test_elevenlabs_embedded():
     with open('test_elevenlabs_embedded.html', 'r') as f:
         return f.read()
 
-# Chatbot Conversations API Routes
-@app.route('/api/conversations', methods=['GET'])
-def get_conversations():
-    """Get all chatbot conversations"""
-    try:
-        conversations = UserConversation.query.order_by(UserConversation.last_activity.desc()).all()
-        
-        conversation_data = []
-        for conv in conversations:
-            history = conv.get_conversation_history()
-            conversation_data.append({
-                'user_identifier': conv.user_identifier,
-                'username': conv.username,
-                'email': conv.email,
-                'device_id': conv.device_id,
-                'created_at': conv.created_at.isoformat(),
-                'last_activity': conv.last_activity.isoformat(),
-                'message_count': len(history)
-            })
-        
-        return jsonify({
-            'conversations': conversation_data,
-            'status': 'success'
-        })
-        
-    except Exception as e:
-        logging.error(f"Error fetching conversations: {str(e)}")
-        return jsonify({'error': str(e)}), 500
 
-@app.route('/api/conversations/<user_identifier>', methods=['GET'])
-def get_conversation_details(user_identifier):
-    """Get detailed conversation for a specific user"""
-    try:
-        conversation = UserConversation.query.filter_by(user_identifier=user_identifier).first()
-        
-        if not conversation:
-            return jsonify({'error': 'Conversation not found'}), 404
-        
-        history = conversation.get_conversation_history()
-        
-        return jsonify({
-            'conversation': {
-                'user_identifier': conversation.user_identifier,
-                'username': conversation.username,
-                'email': conversation.email,
-                'device_id': conversation.device_id,
-                'created_at': conversation.created_at.isoformat(),
-                'last_activity': conversation.last_activity.isoformat()
-            },
-            'messages': history,
-            'status': 'success'
-        })
-        
-    except Exception as e:
-        logging.error(f"Error fetching conversation details: {str(e)}")
-        return jsonify({'error': str(e)}), 500
 
-@app.route('/api/conversations/<user_identifier>/export', methods=['GET'])
-def export_conversation(user_identifier):
-    """Export conversation as JSON file"""
-    try:
-        conversation = UserConversation.query.filter_by(user_identifier=user_identifier).first()
-        
-        if not conversation:
-            return jsonify({'error': 'Conversation not found'}), 404
-        
-        history = conversation.get_conversation_history()
-        
-        export_data = {
-            'user_info': {
-                'user_identifier': conversation.user_identifier,
-                'username': conversation.username,
-                'email': conversation.email,
-                'device_id': conversation.device_id,
-                'created_at': conversation.created_at.isoformat(),
-                'last_activity': conversation.last_activity.isoformat()
-            },
-            'messages': history,
-            'export_date': datetime.utcnow().isoformat(),
-            'total_messages': len(history)
-        }
-        
-        # Create response with JSON data
-        response = make_response(json.dumps(export_data, indent=2))
-        response.headers['Content-Type'] = 'application/json'
-        response.headers['Content-Disposition'] = f'attachment; filename=conversation_{user_identifier}_{datetime.utcnow().strftime("%Y%m%d")}.json'
-        
-        return response
-        
-    except Exception as e:
-        logging.error(f"Error exporting conversation: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+
 
 
 if __name__ == '__main__':

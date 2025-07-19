@@ -316,27 +316,48 @@
             </div>
         </div>
 
-        <!-- Chatbot Conversations Section -->
+        <!-- Unified Conversations Section -->
         <div class="row">
             <div class="col-12">
                 <div class="card">
                     <div class="card-header">
-                        <i class="fas fa-comments"></i> Chatbot Conversations
+                        <i class="fas fa-comments"></i> All Conversations
+                        <small class="text-muted">(Chatbot + Live Chat)</small>
                         <div class="float-end">
+                            <button class="btn btn-sm btn-outline-info" onclick="loadConversationStats()">
+                                <i class="fas fa-chart-bar"></i> Stats
+                            </button>
                             <button class="btn btn-sm btn-outline-secondary" onclick="refreshConversations()">
                                 <i class="fas fa-sync"></i> Refresh
                             </button>
                         </div>
                     </div>
                     <div class="card-body">
+                        <!-- Stats Row -->
+                        <div class="row mb-3" id="conversationStatsRow" style="display: none;">
+                            <div class="col-md-12">
+                                <div class="alert alert-info" id="conversationStats">
+                                    <!-- Stats will be loaded here -->
+                                </div>
+                            </div>
+                        </div>
+                        
                         <div class="row mb-3">
-                            <div class="col-md-4">
+                            <div class="col-md-3">
+                                <label for="conversationTypeFilter" class="form-label">Type:</label>
+                                <select class="form-select" id="conversationTypeFilter" onchange="filterConversations()">
+                                    <option value="all">All Conversations</option>
+                                    <option value="chatbot">Chatbot Only</option>
+                                    <option value="live_chat">Live Chat Only</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
                                 <label for="userFilter" class="form-label">Filter by User:</label>
                                 <select class="form-select" id="userFilter" onchange="filterConversations()">
                                     <option value="">All Users</option>
                                 </select>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label for="dateFilter" class="form-label">Date Range:</label>
                                 <select class="form-select" id="dateFilter" onchange="filterConversations()">
                                     <option value="">All Time</option>
@@ -345,10 +366,10 @@
                                     <option value="month">This Month</option>
                                 </select>
                             </div>
-                            <div class="col-md-4">
-                                <label for="searchConversations" class="form-label">Search Messages:</label>
+                            <div class="col-md-3">
+                                <label for="searchConversations" class="form-label">Search:</label>
                                 <input type="text" class="form-control" id="searchConversations" 
-                                       placeholder="Search conversation content..." onkeyup="searchConversations()">
+                                       placeholder="Search conversations..." onkeyup="searchConversations()">
                             </div>
                         </div>
                         
@@ -356,6 +377,21 @@
                             <div class="text-center">
                                 <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
                                 <p class="mt-2 text-muted">Loading conversations...</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Pagination -->
+                        <div class="d-flex justify-content-between align-items-center mt-3" id="conversationPagination" style="display: none;">
+                            <div>
+                                <small class="text-muted" id="conversationCount">Showing 0 conversations</small>
+                            </div>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-secondary" id="prevPageBtn" onclick="previousPage()" disabled>
+                                    <i class="fas fa-chevron-left"></i> Previous
+                                </button>
+                                <button class="btn btn-outline-secondary" id="nextPageBtn" onclick="nextPage()" disabled>
+                                    Next <i class="fas fa-chevron-right"></i>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -4235,20 +4271,81 @@ Remember: Your goal is to provide the best possible user experience by being hel
             });
         }
 
-        // Chatbot Conversations Management Functions
+        // Unified Conversations Management Functions
+        let currentPage = 0;
+        const pageSize = 20;
+        let totalConversations = 0;
+        let currentFilters = { type: 'all', user: '', date: '', search: '' };
+
         function refreshConversations() {
-            loadChatbotConversations();
+            currentPage = 0;
+            loadUnifiedConversations();
         }
 
-        function loadChatbotConversations() {
+        function loadConversationStats() {
+            fetch('/api/conversations/stats')
+                .then(response => response.json())
+                .then(data => {
+                    const statsHtml = `
+                        <div class="row text-center">
+                            <div class="col-md-2">
+                                <strong>${data.total_conversations}</strong><br>
+                                <small>Total Conversations</small>
+                            </div>
+                            <div class="col-md-2">
+                                <strong>${data.chatbot_conversations}</strong><br>
+                                <small>Chatbot</small>
+                            </div>
+                            <div class="col-md-2">
+                                <strong>${data.live_chat_conversations}</strong><br>
+                                <small>Live Chat</small>
+                            </div>
+                            <div class="col-md-2">
+                                <strong>${data.active_conversations_24h}</strong><br>
+                                <small>Active (24h)</small>
+                            </div>
+                            <div class="col-md-2">
+                                <strong>${data.total_messages}</strong><br>
+                                <small>Total Messages</small>
+                            </div>
+                            <div class="col-md-2">
+                                <strong>${data.unique_users}</strong><br>
+                                <small>Unique Users</small>
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('conversationStats').innerHTML = statsHtml;
+                    const statsRow = document.getElementById('conversationStatsRow');
+                    statsRow.style.display = statsRow.style.display === 'none' ? 'block' : 'none';
+                })
+                .catch(error => {
+                    console.error('Error loading stats:', error);
+                    alert('Error loading conversation statistics');
+                });
+        }
+
+        function loadUnifiedConversations() {
             const container = document.getElementById('conversationsContainer');
             container.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin fa-2x text-muted"></i><p class="mt-2 text-muted">Loading conversations...</p></div>';
             
-            fetch('/api/conversations')
+            // Build query parameters
+            const params = new URLSearchParams({
+                type: currentFilters.type,
+                limit: pageSize,
+                offset: currentPage * pageSize
+            });
+            
+            if (currentFilters.user) params.append('user', currentFilters.user);
+            if (currentFilters.date) params.append('date', currentFilters.date);
+            if (currentFilters.search) params.append('search', currentFilters.search);
+            
+            fetch(`/api/conversations?${params}`)
                 .then(response => response.json())
                 .then(data => {
+                    totalConversations = data.total_count;
                     displayConversations(data.conversations || []);
                     populateUserFilter(data.conversations || []);
+                    updatePagination(data.has_more);
                 })
                 .catch(error => {
                     console.error('Error loading conversations:', error);
@@ -4268,16 +4365,22 @@ Remember: Your goal is to provide the best possible user experience by being hel
             conversations.forEach(conv => {
                 const lastActivity = new Date(conv.last_activity).toLocaleString();
                 const messageCount = conv.message_count || 0;
+                const conversationType = conv.conversation_type || 'chatbot';
+                const typeIcon = conversationType === 'live_chat' ? 'fas fa-headset' : 'fas fa-robot';
+                const typeBadge = conversationType === 'live_chat' ? 'badge bg-info' : 'badge bg-primary';
+                const agentInfo = conv.agent_name ? `<br><small class="text-muted">Agent: ${conv.agent_name}</small>` : '';
                 
                 html += `
                     <div class="card mb-3">
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <div>
-                                <strong><i class="fas fa-user"></i> ${conv.username || conv.user_identifier}</strong>
-                                <small class="text-muted">(${conv.user_identifier})</small>
+                                <strong><i class="${typeIcon}"></i> ${conv.username || conv.user_identifier}</strong>
+                                <span class="${typeBadge} ms-2">${conversationType.replace('_', ' ').toUpperCase()}</span>
+                                <small class="text-muted d-block">(${conv.user_identifier})</small>
+                                ${agentInfo}
                             </div>
                             <div class="text-end">
-                                <span class="badge bg-primary">${messageCount} messages</span>
+                                <span class="badge bg-secondary">${messageCount} messages</span>
                                 <small class="text-muted d-block">${lastActivity}</small>
                             </div>
                         </div>
@@ -4293,10 +4396,10 @@ Remember: Your goal is to provide the best possible user experience by being hel
                                 </div>
                             </div>
                             <div class="mt-3">
-                                <button class="btn btn-sm btn-outline-primary" onclick="viewConversationDetails('${conv.user_identifier}')">
+                                <button class="btn btn-sm btn-outline-primary" onclick="viewConversationDetails('${conv.session_id}')">
                                     <i class="fas fa-eye"></i> View Messages
                                 </button>
-                                <button class="btn btn-sm btn-outline-info" onclick="exportConversation('${conv.user_identifier}')">
+                                <button class="btn btn-sm btn-outline-info" onclick="exportConversation('${conv.session_id}')">
                                     <i class="fas fa-download"></i> Export
                                 </button>
                             </div>
@@ -4328,19 +4431,58 @@ Remember: Your goal is to provide the best possible user experience by being hel
             userFilter.value = currentValue;
         }
 
+        function updatePagination(hasMore) {
+            const pagination = document.getElementById('conversationPagination');
+            const prevBtn = document.getElementById('prevPageBtn');
+            const nextBtn = document.getElementById('nextPageBtn');
+            const countText = document.getElementById('conversationCount');
+            
+            // Update count text
+            const startCount = (currentPage * pageSize) + 1;
+            const endCount = Math.min((currentPage + 1) * pageSize, totalConversations);
+            countText.textContent = `Showing ${startCount}-${endCount} of ${totalConversations} conversations`;
+            
+            // Update buttons
+            prevBtn.disabled = currentPage === 0;
+            nextBtn.disabled = !hasMore;
+            
+            // Show pagination if there are results
+            pagination.style.display = totalConversations > 0 ? 'flex' : 'none';
+        }
+
+        function previousPage() {
+            if (currentPage > 0) {
+                currentPage--;
+                loadUnifiedConversations();
+            }
+        }
+
+        function nextPage() {
+            currentPage++;
+            loadUnifiedConversations();
+        }
+
         function filterConversations() {
-            // This would filter the displayed conversations based on filters
-            loadChatbotConversations(); // For now, reload with filters
+            // Update filters from form values
+            currentFilters.type = document.getElementById('conversationTypeFilter').value;
+            currentFilters.user = document.getElementById('userFilter').value;
+            currentFilters.date = document.getElementById('dateFilter').value;
+            currentFilters.search = document.getElementById('searchConversations').value;
+            
+            // Reset to first page and reload
+            currentPage = 0;
+            loadUnifiedConversations();
         }
 
         function searchConversations() {
-            // This would search through conversation content
-            const searchTerm = document.getElementById('searchConversations').value;
-            // Implementation for search functionality
+            // Update search filter and reload
+            currentFilters.search = document.getElementById('searchConversations').value;
+            currentPage = 0;
+            loadUnifiedConversations();
         }
 
-        function viewConversationDetails(userIdentifier) {
-            fetch(`/api/conversations/${userIdentifier}`)
+        function viewConversationDetails(sessionId) {
+            fetch(`/api/conversations/${sessionId}`)
                 .then(response => response.json())
                 .then(data => {
                     displayConversationModal(data.conversation, data.messages || []);
@@ -4439,7 +4581,7 @@ Remember: Your goal is to provide the best possible user experience by being hel
             setTimeout(() => {
                 loadWebhookConfigs();
                 loadWebhookMessages();
-                loadChatbotConversations(); // Load chatbot conversations
+                loadUnifiedConversations(); // Load unified conversations
             }, 500);
         });
     </script>

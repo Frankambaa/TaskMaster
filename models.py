@@ -6,61 +6,179 @@ import json
 # Database configuration
 db = SQLAlchemy()
 
-class UserConversation(db.Model):
-    """Model for storing user conversation history"""
-    __tablename__ = 'user_conversations'
+class UnifiedConversation(db.Model):
+    """Unified model for storing both chatbot and live chat conversations"""
+    __tablename__ = 'unified_conversations'
     
     id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(db.String(255), unique=True, nullable=False, index=True)  # Unique session identifier
     user_identifier = db.Column(db.String(255), nullable=False, index=True)  # user_id, email, or device_id
     username = db.Column(db.String(255), nullable=True)  # Optional username for display
     email = db.Column(db.String(255), nullable=True)  # Optional email
     device_id = db.Column(db.String(255), nullable=True)  # Optional device identifier
-    conversation_data = db.Column(db.Text, nullable=False)  # JSON-encoded conversation history
-    last_activity = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Agent information (for live chat)
+    agent_id = db.Column(db.String(255), nullable=True)  # Assigned agent identifier (null for chatbot)
+    agent_name = db.Column(db.String(255), nullable=True)  # Agent display name
+    
+    # Conversation type and status
+    conversation_type = db.Column(db.String(50), default='chatbot')  # 'chatbot' or 'live_chat'
+    status = db.Column(db.String(50), default='active')  # active, waiting, completed, transferred, closed
+    priority = db.Column(db.String(20), default='normal')  # low, normal, high, urgent
+    department = db.Column(db.String(100), nullable=True)  # sales, support, technical, etc.
+    
+    # Metadata
+    initial_message = db.Column(db.Text, nullable=True)  # First user message
+    tags = db.Column(db.Text, nullable=True)  # JSON array of tags
+    extra_metadata = db.Column(db.Text, nullable=True)  # Additional JSON metadata
+    
+    # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_activity = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    completed_at = db.Column(db.DateTime, nullable=True)
+    
+    # Relationship with messages
+    messages = db.relationship('UnifiedMessage', backref='conversation', lazy='dynamic', cascade='all, delete-orphan')
     
     def __repr__(self):
-        return f'<UserConversation {self.user_identifier}>'
+        return f'<UnifiedConversation {self.session_id} ({self.conversation_type})>'
     
-    def get_conversation_history(self):
-        """Return conversation history as list of messages"""
+    def get_tags(self):
+        """Return tags as list"""
         try:
-            return json.loads(self.conversation_data) if self.conversation_data else []
+            return json.loads(self.tags) if self.tags else []
         except json.JSONDecodeError:
             return []
     
-    def set_conversation_history(self, messages):
-        """Set conversation history from list of messages"""
-        self.conversation_data = json.dumps(messages)
-        self.last_activity = datetime.utcnow()
+    def set_tags(self, tag_list):
+        """Set tags from list"""
+        self.tags = json.dumps(tag_list)
     
-    def add_message(self, message_type, content):
-        """Add a single message to conversation history"""
-        history = self.get_conversation_history()
-        history.append({
-            'type': message_type,  # 'human' or 'ai'
-            'content': content,
-            'timestamp': datetime.utcnow().isoformat()
-        })
-        self.set_conversation_history(history)
+    def get_metadata(self):
+        """Return metadata as dict"""
+        try:
+            return json.loads(self.extra_metadata) if self.extra_metadata else {}
+        except json.JSONDecodeError:
+            return {}
+    
+    def set_metadata(self, meta_dict):
+        """Set metadata from dict"""
+        self.extra_metadata = json.dumps(meta_dict)
+    
+    def get_conversation_history(self):
+        """Return conversation history as list of messages for compatibility"""
+        messages = self.messages.order_by(UnifiedMessage.created_at.asc()).all()
+        return [
+            {
+                'type': 'human' if msg.sender_type == 'user' else 'ai',
+                'content': msg.message_content,
+                'timestamp': msg.created_at.isoformat(),
+                'sender_type': msg.sender_type,
+                'sender_name': msg.sender_name
+            }
+            for msg in messages
+        ]
+    
+    def add_message(self, sender_type, content, sender_id=None, sender_name=None, message_type='text'):
+        """Add a single message to conversation"""
+        from uuid import uuid4
+        
+        message = UnifiedMessage(
+            session_id=self.session_id,
+            message_id=f"msg_{uuid4().hex[:12]}",
+            sender_type=sender_type,
+            sender_id=sender_id,
+            sender_name=sender_name,
+            message_content=content,
+            message_type=message_type
+        )
+        db.session.add(message)
+        
+        # Update conversation timestamps
+        self.last_activity = datetime.utcnow()
+        self.updated_at = datetime.utcnow()
+        
+        return message
     
     def clear_conversation(self):
-        """Clear all conversation history"""
-        self.conversation_data = json.dumps([])
+        """Clear all conversation messages"""
+        self.messages.delete()
         self.last_activity = datetime.utcnow()
     
     def to_dict(self):
         """Convert to dictionary for JSON serialization"""
         return {
             'id': self.id,
+            'session_id': self.session_id,
             'user_identifier': self.user_identifier,
             'username': self.username,
             'email': self.email,
             'device_id': self.device_id,
-            'last_activity': self.last_activity.isoformat(),
+            'agent_id': self.agent_id,
+            'agent_name': self.agent_name,
+            'conversation_type': self.conversation_type,
+            'status': self.status,
+            'priority': self.priority,
+            'department': self.department,
+            'initial_message': self.initial_message,
+            'tags': self.get_tags(),
+            'extra_metadata': self.get_metadata(),
             'created_at': self.created_at.isoformat(),
-            'message_count': len(self.get_conversation_history())
+            'updated_at': self.updated_at.isoformat(),
+            'last_activity': self.last_activity.isoformat(),
+            'completed_at': self.completed_at.isoformat() if self.completed_at else None,
+            'message_count': self.messages.count()
         }
+
+class UnifiedMessage(db.Model):
+    """Unified model for storing individual messages in conversations"""
+    __tablename__ = 'unified_messages'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(db.String(255), db.ForeignKey('unified_conversations.session_id'), nullable=False, index=True)
+    message_id = db.Column(db.String(255), unique=True, nullable=False)  # Unique message identifier
+    sender_type = db.Column(db.String(20), nullable=False)  # user, agent, system, bot, assistant
+    sender_id = db.Column(db.String(255), nullable=True)  # Agent ID or user identifier
+    sender_name = db.Column(db.String(255), nullable=True)  # Display name
+    message_content = db.Column(db.Text, nullable=False)
+    message_type = db.Column(db.String(50), default='text')  # text, image, file, system_notification
+    message_metadata = db.Column(db.Text, nullable=True)  # JSON metadata (file info, etc.)
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<UnifiedMessage {self.message_id}>'
+    
+    def get_metadata(self):
+        """Return metadata as dict"""
+        try:
+            return json.loads(self.message_metadata) if self.message_metadata else {}
+        except json.JSONDecodeError:
+            return {}
+    
+    def set_metadata(self, meta_dict):
+        """Set metadata from dict"""
+        self.message_metadata = json.dumps(meta_dict)
+    
+    def to_dict(self):
+        """Convert to dictionary for JSON serialization"""
+        return {
+            'id': self.id,
+            'session_id': self.session_id,
+            'message_id': self.message_id,
+            'sender_type': self.sender_type,
+            'sender_id': self.sender_id,
+            'sender_name': self.sender_name,
+            'message_content': self.message_content,
+            'message_type': self.message_type,
+            'message_metadata': self.get_metadata(),
+            'is_read': self.is_read,
+            'created_at': self.created_at.isoformat()
+        }
+
+# Legacy alias for backward compatibility
+UserConversation = UnifiedConversation
 
 class ChatSettings(db.Model):
     """Model for storing chat widget configuration settings"""
@@ -430,109 +548,9 @@ class ApiTool(db.Model):
             'updated_at': self.updated_at.isoformat()
         }
 
-class LiveChatSession(db.Model):
-    """Model for managing live chat sessions between users and agents"""
-    __tablename__ = 'live_chat_sessions'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    session_id = db.Column(db.String(255), unique=True, nullable=False, index=True)
-    user_identifier = db.Column(db.String(255), nullable=False)  # user_id, email, or device_id
-    username = db.Column(db.String(255), nullable=True)
-    email = db.Column(db.String(255), nullable=True)
-    agent_id = db.Column(db.String(255), nullable=True)  # Assigned agent identifier
-    agent_name = db.Column(db.String(255), nullable=True)
-    status = db.Column(db.String(50), default='waiting')  # waiting, active, completed, transferred
-    priority = db.Column(db.String(20), default='normal')  # low, normal, high, urgent
-    department = db.Column(db.String(100), nullable=True)  # sales, support, technical, etc.
-    initial_message = db.Column(db.Text, nullable=True)  # User's initial message
-    tags = db.Column(db.Text, nullable=True)  # JSON array of tags
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    completed_at = db.Column(db.DateTime, nullable=True)
-    
-    # Relationship with messages
-    messages = db.relationship('LiveChatMessage', backref='session', lazy='dynamic', cascade='all, delete-orphan')
-    
-    def __repr__(self):
-        return f'<LiveChatSession {self.session_id}>'
-    
-    def get_tags(self):
-        """Return tags as list"""
-        try:
-            return json.loads(self.tags) if self.tags else []
-        except json.JSONDecodeError:
-            return []
-    
-    def set_tags(self, tag_list):
-        """Set tags from list"""
-        self.tags = json.dumps(tag_list)
-    
-    def to_dict(self):
-        """Convert to dictionary for JSON serialization"""
-        return {
-            'id': self.id,
-            'session_id': self.session_id,
-            'user_identifier': self.user_identifier,
-            'username': self.username,
-            'email': self.email,
-            'agent_id': self.agent_id,
-            'agent_name': self.agent_name,
-            'status': self.status,
-            'priority': self.priority,
-            'department': self.department,
-            'initial_message': self.initial_message,
-            'tags': self.get_tags(),
-            'created_at': self.created_at.isoformat(),
-            'updated_at': self.updated_at.isoformat(),
-            'completed_at': self.completed_at.isoformat() if self.completed_at else None,
-            'message_count': self.messages.count()
-        }
-
-class LiveChatMessage(db.Model):
-    """Model for storing individual messages in live chat sessions"""
-    __tablename__ = 'live_chat_messages'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    session_id = db.Column(db.String(255), db.ForeignKey('live_chat_sessions.session_id'), nullable=False, index=True)
-    message_id = db.Column(db.String(255), unique=True, nullable=False)  # Unique message identifier
-    sender_type = db.Column(db.String(20), nullable=False)  # user, agent, system, bot
-    sender_id = db.Column(db.String(255), nullable=True)  # Agent ID or user identifier
-    sender_name = db.Column(db.String(255), nullable=True)  # Display name
-    message_content = db.Column(db.Text, nullable=False)
-    message_type = db.Column(db.String(50), default='text')  # text, image, file, system_notification
-    message_metadata = db.Column(db.Text, nullable=True)  # JSON metadata (file info, etc.)
-    is_read = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    def __repr__(self):
-        return f'<LiveChatMessage {self.message_id}>'
-    
-    def get_metadata(self):
-        """Return metadata as dict"""
-        try:
-            return json.loads(self.message_metadata) if self.message_metadata else {}
-        except json.JSONDecodeError:
-            return {}
-    
-    def set_metadata(self, meta_dict):
-        """Set metadata from dict"""
-        self.message_metadata = json.dumps(meta_dict)
-    
-    def to_dict(self):
-        """Convert to dictionary for JSON serialization"""
-        return {
-            'id': self.id,
-            'session_id': self.session_id,
-            'message_id': self.message_id,
-            'sender_type': self.sender_type,
-            'sender_id': self.sender_id,
-            'sender_name': self.sender_name,
-            'message_content': self.message_content,
-            'message_type': self.message_type,
-            'metadata': self.get_metadata(),
-            'is_read': self.is_read,
-            'created_at': self.created_at.isoformat()
-        }
+# Legacy aliases for backward compatibility
+LiveChatSession = UnifiedConversation
+LiveChatMessage = UnifiedMessage
 
 class LiveChatAgent(db.Model):
     """Model for managing live chat agents"""

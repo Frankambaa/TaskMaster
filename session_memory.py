@@ -12,7 +12,7 @@ from langchain_openai import ChatOpenAI
 from langchain.memory import ConversationBufferWindowMemory
 from langchain.schema import BaseChatMessageHistory
 from langchain_core.chat_history import BaseChatMessageHistory
-from models import UserConversation, db
+from models import UnifiedConversation, db
 
 
 class PersistentChatMessageHistory(BaseChatMessageHistory):
@@ -29,7 +29,10 @@ class PersistentChatMessageHistory(BaseChatMessageHistory):
     def _load_from_database(self) -> None:
         """Load conversation history from database."""
         try:
-            user_conversation = UserConversation.query.filter_by(user_identifier=self.user_identifier).first()
+            user_conversation = UnifiedConversation.query.filter_by(
+                user_identifier=self.user_identifier,
+                conversation_type='chatbot'
+            ).first()
             if user_conversation:
                 history = user_conversation.get_conversation_history()
                 self.messages = []
@@ -45,14 +48,19 @@ class PersistentChatMessageHistory(BaseChatMessageHistory):
     def _save_to_database(self) -> None:
         """Save conversation history to database."""
         try:
-            user_conversation = UserConversation.query.filter_by(user_identifier=self.user_identifier).first()
+            user_conversation = UnifiedConversation.query.filter_by(
+                user_identifier=self.user_identifier,
+                conversation_type='chatbot'
+            ).first()
             if not user_conversation:
-                user_conversation = UserConversation(
+                from uuid import uuid4
+                user_conversation = UnifiedConversation(
+                    session_id=f"chatbot_{uuid4().hex[:12]}",
                     user_identifier=self.user_identifier,
                     username=self.username,
                     email=self.email,
                     device_id=self.device_id,
-                    conversation_data='[]'
+                    conversation_type='chatbot'
                 )
                 db.session.add(user_conversation)
             
@@ -64,7 +72,14 @@ class PersistentChatMessageHistory(BaseChatMessageHistory):
                 elif isinstance(msg, AIMessage):
                     history.append({'type': 'ai', 'content': msg.content})
             
-            user_conversation.set_conversation_history(history)
+            # Clear existing messages and add new ones
+            user_conversation.messages.delete()
+            for msg in history:
+                user_conversation.add_message(
+                    sender_type='user' if msg['type'] == 'human' else 'assistant',
+                    content=msg['content'],
+                    sender_name='User' if msg['type'] == 'human' else 'Assistant'
+                )
             # Update user info if provided
             if self.username:
                 user_conversation.username = self.username
@@ -87,7 +102,10 @@ class PersistentChatMessageHistory(BaseChatMessageHistory):
         """Clear all messages from the session and database."""
         self.messages.clear()
         try:
-            user_conversation = UserConversation.query.filter_by(user_identifier=self.user_identifier).first()
+            user_conversation = UnifiedConversation.query.filter_by(
+                user_identifier=self.user_identifier,
+                conversation_type='chatbot'
+            ).first()
             if user_conversation:
                 user_conversation.clear_conversation()
                 db.session.commit()
