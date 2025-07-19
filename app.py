@@ -8,7 +8,7 @@ from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
 from vectorizer import DocumentVectorizer
 from rag_chain import RAGChain
-from models import db, ApiRule, ApiTool, UserConversation, SystemPrompt, RagFeedback, ChatSettings
+from models import db, ApiRule, ApiTool, UserConversation, SystemPrompt, RagFeedback, ChatSettings, ResponseTemplate
 from session_memory import session_manager
 import json
 import subprocess

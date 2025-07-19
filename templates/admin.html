@@ -2252,9 +2252,136 @@ Remember: Your goal is to provide the best possible user experience by being hel
 
 
 
+        // Problematic Responses Management Functions
+        function loadProblematicResponses() {
+            const filter = document.getElementById('problemFilter') ? document.getElementById('problemFilter').value : '';
+            let url = '/feedback?feedback_type=thumbs_down&limit=50';
+            
+            if (filter && filter !== 'thumbs_down') {
+                url += `&response_category=${filter}`;
+            }
+            
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    displayProblematicResponses(data.feedback || []);
+                })
+                .catch(error => {
+                    console.error('Error loading problematic responses:', error);
+                    document.getElementById('problematicResponsesList').innerHTML = 
+                        '<div class="text-center text-danger py-4">Error loading problematic responses.</div>';
+                });
+        }
+
+        function displayProblematicResponses(responses) {
+            const container = document.getElementById('problematicResponsesList');
+            if (!responses || responses.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted py-4">No problematic responses found.</div>';
+                return;
+            }
+            
+            let html = '';
+            responses.forEach(response => {
+                const categoryBadge = response.response_category ? 
+                    `<span class="badge bg-warning">${response.response_category}</span>` : 
+                    '<span class="badge bg-secondary">Unclassified</span>';
+                
+                const priorityBadge = response.training_priority ? 
+                    `<span class="badge bg-${getPriorityColor(response.training_priority)}">${response.training_priority}</span>` : 
+                    '<span class="badge bg-secondary">Normal</span>';
+                
+                const timestamp = new Date(response.feedback_timestamp).toLocaleString();
+                
+                html += `
+                    <div class="card mb-3 border-danger">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div class="d-flex gap-2 align-items-center">
+                                    <span class="text-danger">👎</span>
+                                    ${categoryBadge}
+                                    ${priorityBadge}
+                                    <small class="text-muted">${timestamp}</small>
+                                </div>
+                                <div class="btn-group-sm">
+                                    <button class="btn btn-sm btn-outline-info" onclick="analyzeFeedback(${response.id})" 
+                                            title="Analyze Response">
+                                        <i class="fas fa-chart-line"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-success" onclick="createTemplate(${response.id})" 
+                                            title="Create Template">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-2">
+                                <strong>User Question:</strong>
+                                <div class="text-muted">${response.user_question}</div>
+                            </div>
+                            
+                            <div class="mb-2">
+                                <strong>Bot Response:</strong>
+                                <div class="text-muted">${response.bot_response.length > 200 ? 
+                                    response.bot_response.substring(0, 200) + '...' : 
+                                    response.bot_response}</div>
+                            </div>
+                            
+                            ${response.improvement_suggestions ? `
+                            <div class="mb-2">
+                                <strong>Improvement Suggestions:</strong>
+                                <div class="text-success small">${response.improvement_suggestions}</div>
+                            </div>
+                            ` : ''}
+                            
+                            ${response.admin_notes ? `
+                            <div class="mb-2">
+                                <strong>Admin Notes:</strong>
+                                <div class="text-info small">${response.admin_notes}</div>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        function getPriorityColor(priority) {
+            switch(priority) {
+                case 'critical': return 'danger';
+                case 'high': return 'warning';
+                case 'normal': return 'primary';
+                case 'low': return 'secondary';
+                default: return 'secondary';
+            }
+        }
+
+        function createTemplate(feedbackId) {
+            // Pre-fill the add template modal with data from this feedback
+            fetch('/feedback')
+                .then(response => response.json())
+                .then(data => {
+                    const feedback = data.feedback.find(f => f.id === feedbackId);
+                    if (feedback) {
+                        document.getElementById('addTemplateName').value = `Fix: ${feedback.user_question.substring(0, 30)}...`;
+                        document.getElementById('addTemplateDescription').value = `Improved response for: ${feedback.user_question}`;
+                        document.getElementById('addTemplateTriggers').value = feedback.user_question;
+                        
+                        // Suggest improved response based on improvement suggestions
+                        if (feedback.improvement_suggestions) {
+                            document.getElementById('addTemplateText').value = feedback.improvement_suggestions;
+                        }
+                        
+                        new bootstrap.Modal(document.getElementById('addResponseTemplateModal')).show();
+                    }
+                })
+                .catch(error => console.error('Error creating template:', error));
+        }
+
         // Response Template Management Functions
         function loadResponseTemplates() {
-            fetch('/api/response-templates')
+            fetch('/response_templates')
                 .then(response => response.json())
                 .then(data => {
                     displayResponseTemplates(data.templates || []);
@@ -2494,11 +2621,22 @@ Remember: Your goal is to provide the best possible user experience by being hel
             // Initialize response templates
             loadResponseTemplates();
             
+            // Initialize problematic responses
+            loadProblematicResponses();
+            
             // Add feedback filter event listener for the new consolidated interface
             const feedbackTypeFilter = document.getElementById('feedbackTypeFilter');
             if (feedbackTypeFilter) {
                 feedbackTypeFilter.addEventListener('change', function() {
                     loadFeedback(true); // Reset and reload with filter
+                });
+            }
+            
+            // Add problem filter event listener
+            const problemFilter = document.getElementById('problemFilter');
+            if (problemFilter) {
+                problemFilter.addEventListener('change', function() {
+                    loadProblematicResponses(); // Reload with filter
                 });
             }
         });
