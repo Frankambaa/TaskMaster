@@ -1438,11 +1438,14 @@
         },
 
         stopVoice: function() {
+            console.log('Stopping voice playback');
             if (currentAudio) {
                 currentAudio.pause();
+                currentAudio.currentTime = 0; // Reset to beginning
                 currentAudio = null;
                 isPlayingVoice = false;
                 this.updateVoiceControls();
+                console.log('Voice playback stopped successfully');
             }
         },
 
@@ -1581,12 +1584,34 @@
                 
                 console.log('Speech recognition result:', finalTranscript || interimTranscript);
                 
+                // Check for stop commands in interim results too for faster response
+                if (interimTranscript.toLowerCase().includes('stop') || interimTranscript.toLowerCase().includes('pause')) {
+                    console.log('Stop detected in interim results, stopping voice immediately');
+                    this.stopVoice();
+                }
+                
                 // If we have final results, process them
                 if (finalTranscript.trim()) {
                     const command = finalTranscript.trim().toLowerCase();
+                    console.log('Voice command detected:', command);
                     
-                    // Handle voice commands
-                    if (command === 'stop' || command === 'pause' || command === 'wait') {
+                    // Handle voice commands - more flexible matching
+                    const isStopCommand = command.includes('stop') || command.includes('pause') || command.includes('wait') ||
+                                        command === 'stop' || command === 'pause' || command === 'wait' ||
+                                        command.includes('please stop') || command.includes('stop it') ||
+                                        command.includes('stop talking') || command.includes('enough');
+                    
+                    console.log('Command analysis:', {
+                        command: command,
+                        isStopCommand: isStopCommand,
+                        includesStop: command.includes('stop'),
+                        includesPause: command.includes('pause')
+                    });
+                    
+                    if (isStopCommand) {
+                        console.log('🛑 STOP COMMAND DETECTED:', command);
+                        alert('STOP COMMAND DETECTED: ' + command); // Debugging alert
+                        
                         // Stop any ongoing voice playback
                         this.stopVoice();
                         
@@ -1598,15 +1623,17 @@
                         }
                         
                         // Add acknowledgment and continue listening
+                        console.log('Stop command executed, pausing voice output');
                         this.addMessage("⏸️ Stopped. I'm listening for your next question.", 'bot', false, false);
                         
                         // Stop current recognition and restart immediately for next question
                         recognition.stop();
                         setTimeout(() => {
                             if (config.continuousVoice && !window.speechRecognitionPaused) {
+                                console.log('Restarting speech recognition after stop command');
                                 this.startSpeechRecognition();
                             }
-                        }, 500);
+                        }, 1000);
                         return;
                     }
                     
