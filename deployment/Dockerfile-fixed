@@ -1,0 +1,46 @@
+FROM python:3.11-slim
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV FLASK_ENV=production
+
+# Set work directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    curl \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements and install dependencies first (better caching)
+COPY deployment/requirements-simple.txt requirements.txt
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application files individually to avoid checksum issues
+COPY app.py .
+COPY main.py .
+COPY models.py .
+COPY rag_chain.py .
+COPY vectorizer.py .
+COPY session_memory.py .
+
+# Copy directories
+COPY static/ ./static/
+COPY templates/ ./templates/
+
+# Create necessary directories
+RUN mkdir -p uploads faiss_index logs static/widget_icons static/logos
+
+# Set proper permissions
+RUN chmod -R 755 /app
+
+# Expose port
+EXPOSE 5000
+
+# Simple startup command - no custom scripts to avoid permission issues
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "--timeout", "120", "--access-logfile", "-", "--error-logfile", "-", "main:app"]
