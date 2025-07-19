@@ -2168,6 +2168,18 @@ def cleanup_voice_file(filename):
         logging.error(f"Error cleaning up voice file: {e}")
         return jsonify({'error': 'Internal server error'}), 500
 
+# ElevenLabs Voice Agent Routes
+@app.route('/api/elevenlabs/voice', methods=['POST'])
+def elevenlabs_voice_chat():
+    """ElevenLabs voice chat endpoint"""
+    from elevenlabs_agent import handle_elevenlabs_voice_request
+    return handle_elevenlabs_voice_request()
+
+@app.route('/api/elevenlabs/voices', methods=['GET'])
+def elevenlabs_voices():
+    """Get available ElevenLabs voices"""
+    from elevenlabs_agent import get_available_voices
+    return get_available_voices()
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

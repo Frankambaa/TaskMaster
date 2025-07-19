@@ -422,6 +422,39 @@
                     animation: call-pulse 2s infinite;
                 }
 
+                .chat-widget-elevenlabs-btn {
+                    background: none;
+                    border: none;
+                    color: white;
+                    font-size: 16px;
+                    cursor: pointer;
+                    width: 24px;
+                    height: 24px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: 50%;
+                    transition: all 0.2s ease;
+                    opacity: 0.8;
+                }
+
+                .chat-widget-elevenlabs-btn:hover {
+                    background: rgba(255, 255, 255, 0.1);
+                    opacity: 1;
+                }
+
+                .chat-widget-elevenlabs-btn.active {
+                    background: rgba(156, 39, 176, 0.3);
+                    opacity: 1;
+                    animation: elevenlabs-pulse 2s infinite;
+                }
+
+                @keyframes elevenlabs-pulse {
+                    0% { box-shadow: 0 0 0 0 rgba(156, 39, 176, 0.4); }
+                    70% { box-shadow: 0 0 0 10px rgba(156, 39, 176, 0); }
+                    100% { box-shadow: 0 0 0 0 rgba(156, 39, 176, 0); }
+                }
+
                 @keyframes call-pulse {
                     0%, 100% { opacity: 0.8; transform: scale(1); }
                     50% { opacity: 1; transform: scale(1.05); }
@@ -660,6 +693,7 @@
                 <span>${config.title}</span>
                 <div class="chat-widget-header-controls">
                     <button class="chat-widget-voice-btn" title="Toggle Voice">🎙️</button>
+                    <button class="chat-widget-elevenlabs-btn" title="ElevenLabs Voice Agent">🎤</button>
                     <button class="chat-widget-close">×</button>
                 </div>
             `;
@@ -772,6 +806,14 @@
                 
                 // Initialize voice controls appearance
                 this.updateVoiceControls();
+            }
+
+            // ElevenLabs button
+            const elevenlabsBtn = chatWindow.querySelector('.chat-widget-elevenlabs-btn');
+            if (elevenlabsBtn) {
+                elevenlabsBtn.addEventListener('click', () => {
+                    this.toggleElevenLabsVoice();
+                });
             }
 
             // Clear button
@@ -1457,6 +1499,359 @@
             }
             
             this.updateVoiceControls();
+        },
+
+        // ElevenLabs Voice Integration
+        toggleElevenLabsVoice: function() {
+            if (config.elevenlabsActive) {
+                this.disconnectElevenLabsMode();
+            } else {
+                this.startElevenLabsVoiceMode();
+            }
+        },
+
+        startElevenLabsVoiceMode: function() {
+            // Start ElevenLabs voice conversation mode
+            config.elevenlabsActive = true;
+            config.continuousVoice = false; // Disable regular voice mode
+            config.autoPlayVoice = false;   // Disable regular auto-play
+            window.voiceManuallyDisconnected = false;
+            window.speechRecognitionPaused = false;
+            
+            console.log('Starting ElevenLabs voice mode');
+            
+            // Update UI to show ElevenLabs is active
+            this.updateElevenLabsControls();
+            
+            // Add voice mode indicator message
+            this.addMessage("🎤 ElevenLabs Voice Agent connected. Listening actively...", 'bot', false, false);
+            
+            // Provide welcome voice message and start speech recognition
+            const welcomeMessage = "Hello! Welcome to ElevenLabs voice mode. I'm your AI assistant with premium voice quality. How can I help you today? You can speak naturally or say 'stop' to pause me anytime.";
+            
+            // Speak welcome message first, then start listening
+            this.synthesizeElevenLabsVoice(welcomeMessage).then(() => {
+                // After welcome message, start speech recognition with delay
+                setTimeout(() => {
+                    if (config.elevenlabsActive && !window.speechRecognitionPaused) {
+                        this.startElevenLabsSpeechRecognition();
+                    }
+                }, 2000);
+            }).catch(error => {
+                console.error('ElevenLabs welcome message failed:', error);
+                this.addMessage("Voice synthesis failed. Please check your ElevenLabs API key.", 'bot', false, false);
+            });
+        },
+
+        disconnectElevenLabsMode: function() {
+            console.log('Disconnecting ElevenLabs voice mode');
+            
+            config.elevenlabsActive = false;
+            window.voiceManuallyDisconnected = true;
+            
+            // Stop any ongoing speech recognition
+            if (window.currentSpeechRecognition) {
+                window.currentSpeechRecognition.stop();
+                window.currentSpeechRecognition = null;
+            }
+            
+            // Stop any ongoing voice playback
+            this.stopVoice();
+            
+            // Update UI
+            this.updateElevenLabsControls();
+            
+            // Add disconnection message
+            this.addMessage("📴 ElevenLabs Voice Agent disconnected.", 'bot', false, false);
+        },
+
+        updateElevenLabsControls: function() {
+            const elevenlabsBtn = document.querySelector('.chat-widget-elevenlabs-btn');
+            if (elevenlabsBtn) {
+                if (config.elevenlabsActive) {
+                    elevenlabsBtn.classList.add('active');
+                    elevenlabsBtn.title = 'Disconnect ElevenLabs Voice';
+                    elevenlabsBtn.innerHTML = '🔊'; // Change icon when active
+                } else {
+                    elevenlabsBtn.classList.remove('active');
+                    elevenlabsBtn.title = 'ElevenLabs Voice Agent';
+                    elevenlabsBtn.innerHTML = '🎤'; // Default icon
+                }
+            }
+        },
+
+        synthesizeElevenLabsVoice: function(text) {
+            return new Promise((resolve, reject) => {
+                console.log('Synthesizing with ElevenLabs:', text);
+                
+                fetch(`${config.apiUrl}/api/elevenlabs/voice`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Widget-Origin': window.location.origin
+                    },
+                    body: JSON.stringify({
+                        message: text,
+                        session_id: sessionId,
+                        user_id: config.user_id,
+                        username: config.username,
+                        email: config.email,
+                        device_id: config.device_id
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.audio) {
+                        // Convert base64 audio to blob and play
+                        const audioBlob = this.base64ToBlob(data.audio, 'audio/mpeg');
+                        this.playAudioBlob(audioBlob).then(resolve).catch(reject);
+                    } else {
+                        reject(new Error(data.error || 'ElevenLabs synthesis failed'));
+                    }
+                })
+                .catch(error => {
+                    console.error('ElevenLabs API error:', error);
+                    reject(error);
+                });
+            });
+        },
+
+        base64ToBlob: function(base64, mimeType) {
+            const byteCharacters = atob(base64);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            return new Blob([byteArray], { type: mimeType });
+        },
+
+        startElevenLabsSpeechRecognition: function() {
+            // Use the same speech recognition logic but with ElevenLabs processing
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                this.addMessage("Speech recognition not supported in this browser", 'bot', false, false);
+                return;
+            }
+            
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const recognition = new SpeechRecognition();
+            
+            // Store global reference for stopping
+            window.currentSpeechRecognition = recognition;
+            
+            recognition.continuous = false;
+            recognition.interimResults = true;
+            recognition.lang = 'en-IN'; // Indian English
+            recognition.maxAlternatives = 1;
+            
+            recognition.onstart = () => {
+                console.log('ElevenLabs speech recognition started');
+                const elevenlabsBtn = document.querySelector('.chat-widget-elevenlabs-btn');
+                if (elevenlabsBtn) {
+                    elevenlabsBtn.classList.add('active');
+                }
+                
+                // Show visual feedback
+                this.addMessage("🎤 Listening... Speak naturally or say 'stop' to pause", 'bot', false, false);
+            };
+
+            recognition.onresult = (event) => {
+                let finalTranscript = '';
+                let interimTranscript = '';
+                
+                // Process all results
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        finalTranscript += transcript;
+                    } else {
+                        interimTranscript += transcript;
+                    }
+                }
+                
+                console.log('ElevenLabs speech recognition result:', finalTranscript || interimTranscript);
+                
+                // Check for stop commands in interim results too for faster response
+                if (interimTranscript.toLowerCase().includes('stop') || interimTranscript.toLowerCase().includes('pause')) {
+                    console.log('Stop detected in interim results, stopping voice immediately');
+                    this.stopVoice();
+                }
+                
+                // If we have final results, process them
+                if (finalTranscript.trim()) {
+                    const command = finalTranscript.trim().toLowerCase();
+                    console.log('ElevenLabs voice command detected:', command);
+                    
+                    // Handle voice commands
+                    const isStopCommand = command.includes('stop') || command.includes('pause') || command.includes('wait') ||
+                                        command === 'stop' || command === 'pause' || command === 'wait' ||
+                                        command.includes('please stop') || command.includes('stop it') ||
+                                        command.includes('stop talking') || command.includes('enough');
+                    
+                    if (isStopCommand) {
+                        console.log('🛑 ELEVENLABS STOP COMMAND DETECTED:', command);
+                        
+                        // Stop any ongoing voice playback
+                        this.stopVoice();
+                        
+                        // Remove listening message
+                        const messages = messagesContainer.querySelectorAll('.chat-widget-message');
+                        const lastMessage = messages[messages.length - 1];
+                        if (lastMessage && lastMessage.textContent.includes('🎤 Listening...')) {
+                            lastMessage.remove();
+                        }
+                        
+                        // Add acknowledgment and continue listening
+                        console.log('ElevenLabs stop command executed, pausing voice output');
+                        this.addMessage("⏸️ Stopped. I'm listening for your next question.", 'bot', false, false);
+                        
+                        // Stop current recognition and restart immediately for next question
+                        recognition.stop();
+                        setTimeout(() => {
+                            if (config.elevenlabsActive && !window.speechRecognitionPaused) {
+                                console.log('Restarting ElevenLabs speech recognition after stop command');
+                                this.startElevenLabsSpeechRecognition();
+                            }
+                        }, 1000);
+                        return;
+                    }
+                    
+                    // Stop any ongoing voice playback when user speaks
+                    this.stopVoice();
+                    
+                    // Remove listening message
+                    const messages = messagesContainer.querySelectorAll('.chat-widget-message');
+                    const lastMessage = messages[messages.length - 1];
+                    if (lastMessage && lastMessage.textContent.includes('🎤 Listening...')) {
+                        lastMessage.remove();
+                    }
+                    
+                    // Add user message and send it (via ElevenLabs)
+                    this.addMessage(finalTranscript.trim(), 'user');
+                    
+                    // Send the recognized speech as a message through ElevenLabs
+                    this.sendElevenLabsMessage(finalTranscript.trim());
+                    
+                    // Stop current recognition to restart after response
+                    recognition.stop();
+                }
+            };
+
+            recognition.onerror = (event) => {
+                console.error('ElevenLabs speech recognition error:', event.error);
+                const elevenlabsBtn = document.querySelector('.chat-widget-elevenlabs-btn');
+                if (elevenlabsBtn) {
+                    elevenlabsBtn.classList.remove('listening');
+                }
+                this.updateElevenLabsControls();
+                
+                // Remove listening message if present
+                const messages = messagesContainer.querySelectorAll('.chat-widget-message');
+                const lastMessage = messages[messages.length - 1];
+                if (lastMessage && lastMessage.textContent.includes('🎤 Listening...')) {
+                    lastMessage.remove();
+                }
+                
+                // Don't show error message for aborted recognition (normal during voice interruption)
+                if (event.error !== 'aborted' && config.elevenlabsActive) {
+                    this.addMessage("🎤 Continue speaking... I'm listening", 'bot', false, false);
+                }
+            };
+
+            recognition.onend = () => {
+                console.log('ElevenLabs speech recognition ended');
+                
+                // Clear the global reference
+                window.currentSpeechRecognition = null;
+                
+                // Restart recognition if still in ElevenLabs voice mode (unless manually stopped or paused)
+                if (config.elevenlabsActive && !window.voiceManuallyDisconnected && !window.speechRecognitionPaused) {
+                    setTimeout(() => {
+                        this.startElevenLabsSpeechRecognition();
+                    }, 500); // Shorter delay for more responsive listening
+                }
+            };
+
+            try {
+                recognition.start();
+            } catch (error) {
+                console.error('Failed to start ElevenLabs speech recognition:', error);
+                this.addMessage("Failed to start speech recognition", 'bot', false, false);
+            }
+        },
+
+        sendElevenLabsMessage: function(message) {
+            console.log('Sending ElevenLabs message:', message);
+            
+            // Use ElevenLabs API for voice conversation
+            fetch(`${config.apiUrl}/api/elevenlabs/voice`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Widget-Origin': window.location.origin
+                },
+                body: JSON.stringify({
+                    message: message,
+                    session_id: sessionId,
+                    user_id: config.user_id,
+                    username: config.username,
+                    email: config.email,
+                    device_id: config.device_id
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Add text response first
+                    this.addMessage(data.response, 'bot');
+                    
+                    // Play ElevenLabs audio if available
+                    if (data.audio) {
+                        const audioBlob = this.base64ToBlob(data.audio, 'audio/mpeg');
+                        this.playAudioBlob(audioBlob).then(() => {
+                            // After audio completes, restart listening with delay
+                            setTimeout(() => {
+                                if (config.elevenlabsActive && !window.speechRecognitionPaused) {
+                                    this.startElevenLabsSpeechRecognition();
+                                }
+                            }, 2000); // 2 second delay for natural conversation flow
+                        }).catch(error => {
+                            console.error('Audio playback failed:', error);
+                            // Still restart listening even if audio fails
+                            setTimeout(() => {
+                                if (config.elevenlabsActive && !window.speechRecognitionPaused) {
+                                    this.startElevenLabsSpeechRecognition();
+                                }
+                            }, 1000);
+                        });
+                    } else {
+                        // No audio, just restart listening
+                        setTimeout(() => {
+                            if (config.elevenlabsActive && !window.speechRecognitionPaused) {
+                                this.startElevenLabsSpeechRecognition();
+                            }
+                        }, 1000);
+                    }
+                } else {
+                    this.addMessage('ElevenLabs Error: ' + (data.error || 'Unknown error'), 'bot');
+                    // Restart listening even after error
+                    setTimeout(() => {
+                        if (config.elevenlabsActive && !window.speechRecognitionPaused) {
+                            this.startElevenLabsSpeechRecognition();
+                        }
+                    }, 1000);
+                }
+            })
+            .catch(error => {
+                console.error('ElevenLabs API error:', error);
+                this.addMessage('Network error: ' + error.message, 'bot');
+                // Restart listening even after error
+                setTimeout(() => {
+                    if (config.elevenlabsActive && !window.speechRecognitionPaused) {
+                        this.startElevenLabsSpeechRecognition();
+                    }
+                }, 1000);
+            });
         },
 
         startContinuousVoiceMode: function() {

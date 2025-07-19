@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ElevenLabs Voice Agent Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .feature-list {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .feature-list h3 {
+            margin-top: 0;
+            color: #FFD700;
+        }
+        .feature-list li {
+            margin: 8px 0;
+            padding-left: 10px;
+        }
+        .button-demo {
+            text-align: center;
+            margin: 30px 0;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+        .demo-button {
+            background: linear-gradient(45deg, #9c27b0, #e91e63);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 25px;
+            cursor: pointer;
+            margin: 10px;
+            transition: transform 0.2s;
+        }
+        .demo-button:hover {
+            transform: scale(1.05);
+        }
+        .instructions {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .note {
+            background: rgba(255, 193, 7, 0.2);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #FFC107;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎤 ElevenLabs Voice Agent Test</h1>
+        
+        <div class="feature-list">
+            <h3>✨ ElevenLabs Voice Features</h3>
+            <ul>
+                <li>🎭 Premium voice quality with ElevenLabs AI</li>
+                <li>🗣️ Natural conversation flow with Indian English support</li>
+                <li>🔊 High-quality audio synthesis</li>
+                <li>🎯 Same RAG knowledge base as main chatbot</li>
+                <li>🛠️ AI tool integration (credits, job status, etc.)</li>
+                <li>⏸️ Voice commands: "stop", "pause", "wait"</li>
+                <li>🔁 Continuous listening and response cycle</li>
+                <li>📱 Separate from regular voice system</li>
+            </ul>
+        </div>
+
+        <div class="button-demo">
+            <h3>🎤 ElevenLabs Button (Purple Icon)</h3>
+            <button class="demo-button">🎤 ElevenLabs Voice Agent</button>
+            <p>Click this button in the chat widget to start ElevenLabs voice mode</p>
+        </div>
+
+        <div class="instructions">
+            <h3>📋 How to Use ElevenLabs Voice Agent</h3>
+            <ol>
+                <li><strong>Open Chat Widget:</strong> Click the chat button in bottom corner</li>
+                <li><strong>Start ElevenLabs:</strong> Click the 🎤 button (not the 🎙️ button)</li>
+                <li><strong>Listen to Welcome:</strong> AI will greet you with premium voice</li>
+                <li><strong>Speak Naturally:</strong> Ask questions or make requests</li>
+                <li><strong>Use Voice Commands:</strong> Say "stop" to pause responses</li>
+                <li><strong>Continuous Chat:</strong> System listens automatically after each response</li>
+                <li><strong>Disconnect:</strong> Click 🎤 button again to stop</li>
+            </ol>
+        </div>
+
+        <div class="note">
+            <strong>🔑 API Key Required:</strong> ElevenLabs integration requires ELEVENLABS_API_KEY environment variable to be set. Without it, you'll see an error message.
+        </div>
+
+        <div class="feature-list">
+            <h3>🔄 Voice Processing Flow</h3>
+            <ul>
+                <li>🎤 Browser speech recognition captures your voice</li>
+                <li>📝 Text is sent to RAG/AI tool system (same as typing)</li>
+                <li>🧠 AI processes through knowledge base or API tools</li>
+                <li>🎵 Response is synthesized with ElevenLabs premium voice</li>
+                <li>🔊 High-quality audio plays automatically</li>
+                <li>🔁 System continues listening for next question</li>
+            </ul>
+        </div>
+
+        <div class="instructions">
+            <h3>🎛️ Voice Controls</h3>
+            <ul>
+                <li><strong>🎙️ Regular Voice:</strong> Uses gTTS/Kokoro with call-style interface</li>
+                <li><strong>🎤 ElevenLabs Voice:</strong> Premium AI voice with purple interface</li>
+                <li><strong>Stop Commands:</strong> Both systems respond to "stop", "pause", "wait"</li>
+                <li><strong>Independent Systems:</strong> Can switch between modes safely</li>
+            </ul>
+        </div>
+
+        <div class="note">
+            <strong>💡 Tip:</strong> Use ElevenLabs mode for the highest quality voice experience. The regular voice mode (🎙️) is still available for comparison or as a fallback option.
+        </div>
+    </div>
+
+    <!-- Load the chat widget -->
+    <script src="/static/chatwidget.js"></script>
+    <script>
+        // Initialize ChatWidget with ElevenLabs testing configuration
+        ChatWidget.init({
+            apiUrl: window.location.origin,
+            title: 'ElevenLabs Voice Test',
+            welcomeMessage: 'Hello! Test both voice systems: 🎙️ (regular) and 🎤 (ElevenLabs premium)',
+            position: 'bottom-right',
+            widgetSize: 'medium',
+            user_id: 'elevenlabs_test_user',
+            username: 'Voice Tester',
+            email: 'test@example.com',
+            device_id: 'elevenlabs_test_device'
+        });
+    </script>
+</body>
+</html>
