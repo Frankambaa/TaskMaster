@@ -283,14 +283,29 @@ def ask():
         else:
             logging.info(f"Processing question for session: {session_id}")
         
-        # Enhanced live chat transfer keywords with semantic understanding
+        # Enhanced live chat transfer detection with comprehensive patterns
         live_chat_keywords = [
             'live chat', 'chat with agent', 'talk to agent', 'human agent', 'speak to human', 'connect to agent',
             'i want to talk', 'speak with someone', 'customer service', 'support agent', 'real person',
             'human help', 'agent help', 'call center', 'representative', 'operator', 'staff member',
-            'transfer me', 'escalate', 'human support', 'live support', 'personal assistance'
+            'transfer me', 'escalate', 'human support', 'live support', 'personal assistance',
+            'can i talk to', 'could you transfer', 'transfer to agent', 'connect me to', 'talk to someone',
+            'speak to agent', 'contact agent', 'reach agent', 'get agent', 'agent please'
         ]
-        is_live_chat_request = any(keyword in question.lower() for keyword in live_chat_keywords)
+        
+        # Additional pattern matching for natural language requests
+        question_lower = question.lower()
+        live_chat_patterns = [
+            'talk to' in question_lower and 'agent' in question_lower,
+            'transfer' in question_lower and ('agent' in question_lower or 'live' in question_lower),
+            'connect' in question_lower and ('agent' in question_lower or 'human' in question_lower),
+            'speak' in question_lower and ('agent' in question_lower or 'someone' in question_lower),
+            'chat with' in question_lower and ('agent' in question_lower or 'human' in question_lower),
+            'can i' in question_lower and 'talk' in question_lower and ('agent' in question_lower or 'someone' in question_lower),
+            'could you' in question_lower and ('transfer' in question_lower or 'connect' in question_lower)
+        ]
+        
+        is_live_chat_request = any(keyword in question.lower() for keyword in live_chat_keywords) or any(live_chat_patterns)
         
         # Check if webhook is active
         active_webhook = WebhookConfig.query.filter_by(is_active=True).first()

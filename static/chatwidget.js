@@ -2328,15 +2328,30 @@
         const message = inputField.value.trim();
         if (!message) return;
 
-        // Enhanced live chat transfer detection with semantic understanding
+        // Enhanced live chat transfer detection with comprehensive patterns
         const liveChatKeywords = [
             'live chat', 'chat with agent', 'talk to agent', 'human agent', 'speak to human', 'connect to agent',
             'i want to talk', 'speak with someone', 'customer service', 'support agent', 'real person',
             'human help', 'agent help', 'call center', 'representative', 'operator', 'staff member',
-            'transfer me', 'escalate', 'human support', 'live support', 'personal assistance'
+            'transfer me', 'escalate', 'human support', 'live support', 'personal assistance',
+            'can i talk to', 'could you transfer', 'transfer to agent', 'connect me to', 'talk to someone',
+            'speak to agent', 'contact agent', 'reach agent', 'get agent', 'agent please'
         ];
+        
         const messageText = message.toLowerCase();
-        const requestsLiveChat = liveChatKeywords.some(keyword => messageText.includes(keyword));
+        
+        // Pattern matching for natural language requests
+        const liveChatPatterns = [
+            messageText.includes('talk to') && messageText.includes('agent'),
+            messageText.includes('transfer') && (messageText.includes('agent') || messageText.includes('live')),
+            messageText.includes('connect') && (messageText.includes('agent') || messageText.includes('human')),
+            messageText.includes('speak') && (messageText.includes('agent') || messageText.includes('someone')),
+            messageText.includes('chat with') && (messageText.includes('agent') || messageText.includes('human')),
+            messageText.includes('can i') && messageText.includes('talk') && (messageText.includes('agent') || messageText.includes('someone')),
+            messageText.includes('could you') && (messageText.includes('transfer') || messageText.includes('connect'))
+        ];
+        
+        const requestsLiveChat = liveChatKeywords.some(keyword => messageText.includes(keyword)) || liveChatPatterns.some(pattern => pattern);
 
         if (requestsLiveChat && !isLiveChatActive) {
             // Add user message first
