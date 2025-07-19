@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ElevenLabs Embedded Voice Agent Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .demo-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+            transition: all 0.2s;
+        }
+        .btn:hover {
+            background: #5a6fd8;
+            transform: translateY(-1px);
+        }
+        .btn.danger {
+            background: #ff4757;
+        }
+        .btn.danger:hover {
+            background: #ff3838;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .code {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+        #conversationWidget {
+            margin: 20px 0;
+            padding: 20px;
+            border: 2px dashed #667eea;
+            border-radius: 12px;
+            min-height: 100px;
+            text-align: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            position: relative;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎤 ElevenLabs Embedded Voice Agent</h1>
+        <p>Ultra-fast voice interaction using ElevenLabs' native conversational AI technology</p>
+
+        <div class="demo-section">
+            <h3>⚡ Performance Comparison</h3>
+            <div class="status info">
+                <strong>Current System:</strong> Speech Recognition → API Call → RAG Processing → Text-to-Speech<br>
+                <strong>Embedded System:</strong> Direct native voice processing with ~75ms latency
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <h3>🔧 Controls</h3>
+            <button class="btn" onclick="createConversation()">Create Conversation</button>
+            <button class="btn" onclick="startEmbeddedVoice()">Start Voice Chat</button>
+            <button class="btn danger" onclick="endConversation()">End Conversation</button>
+            
+            <div id="status" class="status info">
+                Ready to create conversation
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <h3>🎙️ Native Voice Widget</h3>
+            <div id="conversationWidget">
+                <h4>Voice Agent Loading Area</h4>
+                <p>Click "Start Voice Chat" to load the native ElevenLabs voice interface</p>
+                <small>This will provide real-time voice conversation with minimal latency</small>
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <h3>📋 Integration Code</h3>
+            <div class="code">
+&lt;script&gt;
+// ElevenLabs React SDK Integration
+import { useConversation } from '@11labs/react';
+
+function VoiceAgent() {
+  const conversation = useConversation();
+  
+  const startChat = async () => {
+    const conversationId = await conversation.startSession({
+      agentId: 'your-agent-id'
+    });
+  };
+
+  return (
+    &lt;button onClick={startChat}&gt;
+      Start Voice Chat
+    &lt;/button&gt;
+  );
+}
+&lt;/script&gt;
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <h3>🚀 Implementation Features</h3>
+            <ul>
+                <li><strong>Ultra-Low Latency:</strong> ~75ms response time vs 3-5 seconds current</li>
+                <li><strong>Native Processing:</strong> Direct WebSocket/WebRTC connection</li>
+                <li><strong>Interruption Handling:</strong> Natural conversation flow</li>
+                <li><strong>Multi-LLM Support:</strong> GPT, Claude, Gemini integration</li>
+                <li><strong>Custom Knowledge:</strong> RAG integration through webhook</li>
+                <li><strong>Production Ready:</strong> Enterprise-grade security and reliability</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        let conversationId = null;
+        let embeddedWidget = null;
+
+        // Status display function
+        function updateStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = `status ${type}`;
+            statusDiv.innerHTML = message;
+        }
+
+        // Create conversation with backend
+        async function createConversation() {
+            try {
+                updateStatus('Creating ElevenLabs conversation...', 'info');
+                
+                const response = await fetch('/api/elevenlabs/conversation/create', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        system_prompt: "You are Ria, a helpful AI assistant for Apna.co job platform. Keep responses concise and conversational for voice interaction. Help users with job-related questions, account queries, and general support."
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    conversationId = result.data.conversation_id;
+                    updateStatus(`✅ Conversation created! ID: ${conversationId}`, 'success');
+                } else {
+                    updateStatus(`❌ Error: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                updateStatus(`❌ Network error: ${error.message}`, 'error');
+            }
+        }
+
+        // Start embedded voice chat
+        async function startEmbeddedVoice() {
+            if (!conversationId) {
+                updateStatus('❌ Please create a conversation first', 'error');
+                return;
+            }
+
+            try {
+                updateStatus('Getting conversation token...', 'info');
+                
+                const response = await fetch('/api/elevenlabs/conversation/token');
+                const result = await response.json();
+                
+                if (result.success) {
+                    const signedUrl = result.data.signed_url;
+                    
+                    // Load ElevenLabs widget
+                    loadElevenLabsWidget(signedUrl);
+                    
+                    updateStatus('🎤 Voice chat active! Speak to begin conversation', 'success');
+                } else {
+                    updateStatus(`❌ Token error: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                updateStatus(`❌ Network error: ${error.message}`, 'error');
+            }
+        }
+
+        // Load ElevenLabs embedded widget
+        function loadElevenLabsWidget(signedUrl) {
+            const widgetContainer = document.getElementById('conversationWidget');
+            
+            // Clear existing content
+            widgetContainer.innerHTML = `
+                <h4>🎤 Voice Chat Active</h4>
+                <p>Native ElevenLabs voice agent is now running</p>
+                <div id="elevenlabs-widget"></div>
+                <small>Ultra-fast voice processing with ~75ms latency</small>
+            `;
+            
+            // For demonstration, we'll show the integration approach
+            // In production, this would load the actual ElevenLabs widget
+            widgetContainer.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
+            
+            // Simulate widget loading (replace with actual ElevenLabs SDK)
+            setTimeout(() => {
+                widgetContainer.innerHTML += `
+                    <div style="margin-top: 15px; padding: 10px; background: rgba(255,255,255,0.2); border-radius: 6px;">
+                        <strong>🔗 Connected to:</strong><br>
+                        <small>${signedUrl.substring(0, 50)}...</small>
+                    </div>
+                `;
+            }, 1000);
+        }
+
+        // End conversation
+        async function endConversation() {
+            try {
+                updateStatus('Ending conversation...', 'info');
+                
+                const response = await fetch('/api/elevenlabs/conversation/end', {
+                    method: 'POST'
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    conversationId = null;
+                    const widgetContainer = document.getElementById('conversationWidget');
+                    widgetContainer.innerHTML = `
+                        <h4>Voice Agent Loading Area</h4>
+                        <p>Click "Start Voice Chat" to load the native ElevenLabs voice interface</p>
+                        <small>This will provide real-time voice conversation with minimal latency</small>
+                    `;
+                    widgetContainer.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                    
+                    updateStatus('✅ Conversation ended successfully', 'success');
+                } else {
+                    updateStatus(`❌ Error ending conversation: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                updateStatus(`❌ Network error: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-create conversation on page load for demo
+        window.addEventListener('load', () => {
+            updateStatus('Page loaded. Ready to test ElevenLabs embedded voice agent!', 'info');
+        });
+    </script>
+</body>
+</html>

@@ -11,6 +11,7 @@ from rag_chain import RAGChain
 from models import db, ApiRule, ApiTool, UserConversation, SystemPrompt, RagFeedback, ChatSettings, ResponseTemplate, LiveChatSession, LiveChatMessage, LiveChatAgent, WebhookConfig, WebhookMessage
 from session_memory import session_manager
 from voice_agent import voice_agent
+from elevenlabs_embedded import embedded_agent
 import json
 import subprocess
 import shlex
@@ -2266,6 +2267,48 @@ def elevenlabs_status():
             'status': 'error',
             'message': f'API Error: {str(e)}'
         })
+
+@app.route('/api/elevenlabs/conversation/create', methods=['POST'])
+def create_elevenlabs_conversation():
+    """Create a new ElevenLabs embedded conversation"""
+    try:
+        data = request.get_json() or {}
+        system_prompt = data.get('system_prompt')
+        
+        result = embedded_agent.create_conversation(system_prompt)
+        return jsonify({'success': True, 'data': result})
+        
+    except Exception as e:
+        logging.error(f"Error creating ElevenLabs conversation: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/elevenlabs/conversation/token', methods=['GET'])
+def get_elevenlabs_token():
+    """Get signed URL token for ElevenLabs conversation"""
+    try:
+        result = embedded_agent.get_conversation_token()
+        return jsonify({'success': True, 'data': result})
+        
+    except Exception as e:
+        logging.error(f"Error getting ElevenLabs token: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/elevenlabs/conversation/end', methods=['POST'])
+def end_elevenlabs_conversation():
+    """End current ElevenLabs conversation"""
+    try:
+        embedded_agent.end_conversation()
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        logging.error(f"Error ending ElevenLabs conversation: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/test_elevenlabs_embedded')
+def test_elevenlabs_embedded():
+    """Test page for ElevenLabs embedded voice agent"""
+    with open('test_elevenlabs_embedded.html', 'r') as f:
+        return f.read()
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
