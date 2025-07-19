@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-chatbot_db}
+      POSTGRES_USER: ${POSTGRES_USER:-chatbot_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secure_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-chatbot_user}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  app:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile-simple
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-chatbot_user}:${POSTGRES_PASSWORD:-secure_password}@postgres:5432/${POSTGRES_DB:-chatbot_db}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      FLASK_ENV: production
+      SECRET_KEY: ${SECRET_KEY:-fallback_secret_key}
+    volumes:
+      - app_uploads:/app/uploads
+      - app_faiss:/app/faiss_index
+      - app_logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  postgres_data:
+  app_uploads:
+  app_faiss:
+  app_logs:
