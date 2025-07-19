@@ -379,6 +379,48 @@
                     justify-content: center;
                 }
 
+                .chat-widget-header-controls {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+
+                .chat-widget-voice-btn {
+                    background: none;
+                    border: none;
+                    color: white;
+                    font-size: 16px;
+                    cursor: pointer;
+                    width: 24px;
+                    height: 24px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: 50%;
+                    transition: all 0.2s ease;
+                    opacity: 0.8;
+                }
+
+                .chat-widget-voice-btn:hover {
+                    background: rgba(255, 255, 255, 0.1);
+                    opacity: 1;
+                }
+
+                .chat-widget-voice-btn.active {
+                    background: rgba(76, 175, 80, 0.3);
+                    opacity: 1;
+                }
+
+                .chat-widget-voice-btn.playing {
+                    background: rgba(255, 193, 7, 0.3);
+                    animation: voice-pulse 1.5s infinite;
+                }
+
+                @keyframes voice-pulse {
+                    0%, 100% { opacity: 0.8; transform: scale(1); }
+                    50% { opacity: 1; transform: scale(1.1); }
+                }
+
                 .chat-widget-messages {
                     flex: 1;
                     overflow-y: auto;
@@ -595,7 +637,10 @@
             header.className = 'chat-widget-header';
             header.innerHTML = `
                 <span>${config.title}</span>
-                <button class="chat-widget-close">×</button>
+                <div class="chat-widget-header-controls">
+                    ${config.voiceEnabled ? '<button class="chat-widget-voice-btn" title="Toggle Voice">🎙️</button>' : ''}
+                    <button class="chat-widget-close">×</button>
+                </div>
             `;
 
             // Create session info
@@ -687,6 +732,23 @@
             chatWindow.querySelector('.chat-widget-close').addEventListener('click', () => {
                 this.closeWidget();
             });
+
+            // Voice button (if enabled)
+            const voiceBtn = chatWindow.querySelector('.chat-widget-voice-btn');
+            if (voiceBtn && config.voiceEnabled) {
+                voiceBtn.addEventListener('click', () => {
+                    // If currently playing, stop the audio
+                    if (isPlayingVoice) {
+                        this.stopVoice();
+                    } else {
+                        // Otherwise toggle voice enabled/disabled
+                        this.toggleVoice();
+                    }
+                });
+                
+                // Initialize voice controls appearance
+                this.updateVoiceControls();
+            }
 
             // Clear button
             chatWindow.querySelector('.chat-widget-clear-btn').addEventListener('click', () => {
@@ -1318,17 +1380,34 @@
             }
         },
 
-        updateVoiceControls: function() {
-            // Update voice control UI if present
-            const voiceToggle = document.querySelector('.voice-toggle');
-            const voiceStop = document.querySelector('.voice-stop');
+        toggleVoice: function() {
+            config.voiceEnabled = !config.voiceEnabled;
             
-            if (voiceToggle) {
-                voiceToggle.style.opacity = config.voiceEnabled ? '1' : '0.5';
+            if (!config.voiceEnabled && currentAudio) {
+                this.stopVoice();
             }
             
-            if (voiceStop) {
-                voiceStop.style.display = isPlayingVoice ? 'block' : 'none';
+            this.updateVoiceControls();
+        },
+
+        updateVoiceControls: function() {
+            // Update voice control UI if present
+            const voiceBtn = document.querySelector('.chat-widget-voice-btn');
+            
+            if (voiceBtn) {
+                if (isPlayingVoice) {
+                    voiceBtn.className = 'chat-widget-voice-btn playing';
+                    voiceBtn.innerHTML = '🔊';
+                    voiceBtn.title = 'Stop Voice';
+                } else if (config.voiceEnabled) {
+                    voiceBtn.className = 'chat-widget-voice-btn active';
+                    voiceBtn.innerHTML = '🎙️';
+                    voiceBtn.title = 'Voice Enabled (Click to disable)';
+                } else {
+                    voiceBtn.className = 'chat-widget-voice-btn';
+                    voiceBtn.innerHTML = '🔇';
+                    voiceBtn.title = 'Voice Disabled (Click to enable)';
+                }
             }
         },
 
