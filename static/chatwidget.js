@@ -1768,162 +1768,144 @@
 
 
 
-    // Add live chat methods to ChatWidget
-    ChatWidget.prototype.initializeLiveChat = function() {
-        this.isLiveChatActive = false;
-        this.liveChatSessionId = null;
-        this.processedMessages = new Set();
-        this.liveChatPollingInterval = null;
-    };
+    // Add live chat properties and methods to ChatWidget
+    let isLiveChatActive = false;
+    let liveChatSessionId = null;
+    let processedMessages = new Set();
+    let liveChatPollingInterval = null;
 
-    // Start polling for live chat messages
-    ChatWidget.prototype.startLiveChatPolling = function() {
-        const self = this;
-        if (this.liveChatPollingInterval) {
-            clearInterval(this.liveChatPollingInterval);
-        }
+    // Live chat methods
+    const liveChatMethods = {
+        initializeLiveChat: function() {
+            isLiveChatActive = false;
+            liveChatSessionId = null;
+            processedMessages = new Set();
+            liveChatPollingInterval = null;
+        },
 
-        this.liveChatPollingInterval = setInterval(() => {
-            if (self.isLiveChatActive && self.liveChatSessionId) {
-                self.pollLiveChatMessages();
+        startLiveChatPolling: function() {
+            if (liveChatPollingInterval) {
+                clearInterval(liveChatPollingInterval);
             }
-        }, 3000);
-    };
 
-    // Poll for new live chat messages
-    ChatWidget.prototype.pollLiveChatMessages = function() {
-        const self = this;
-        fetch(`${this.config.apiUrl}/api/live_chat/sessions/${this.liveChatSessionId}/messages`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success && data.messages) {
-                data.messages.forEach(message => {
-                    if (message.sender_type === 'agent' && !self.processedMessages.has(message.message_id)) {
-                        self.addMessage(message.message_content, 'bot');
-                        self.processedMessages.add(message.message_id);
-                        
-                        const inputField = document.querySelector('.chat-widget-input');
-                        if (inputField) {
-                            inputField.placeholder = `Connected to ${message.sender_name || 'Agent'}. Type your message...`;
-                        }
-                    }
-                });
-            }
-        })
-        .catch(error => {
-            console.error('Error polling live chat messages:', error);
-        });
-    };
-
-    // Send message to live chat
-    ChatWidget.prototype.sendLiveChatMessage = function(message) {
-        const self = this;
-        if (!this.isLiveChatActive || !this.liveChatSessionId) {
-            return Promise.reject('Live chat not active');
-        }
-
-        const messageData = {
-            sender_type: 'user',
-            sender_id: this.config.user_id || this.config.email || this.config.device_id || 'anonymous',
-            sender_name: this.config.username || 'User',
-            message_content: message,
-            message_type: 'text'
-        };
-
-        return fetch(`${this.config.apiUrl}/api/live_chat/sessions/${this.liveChatSessionId}/send_message`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Widget-Origin': window.location.origin
-            },
-            body: JSON.stringify(messageData)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                console.log('Live chat message sent successfully');
-            } else {
-                console.error('Error sending live chat message:', data.error);
-            }
-            return data;
-        });
-    };
-
-    // Transfer to live agent function
-    ChatWidget.prototype.transferToAgent = function(reason) {
-        const transferData = {
-            user_identifier: this.config.user_id || this.config.email || this.config.device_id || 'anonymous',
-            username: this.config.username,
-            email: this.config.email,
-            initial_message: reason || 'User requested live agent assistance',
-            department: this.config.department || 'support',
-            priority: this.config.priority || 'normal'
-        };
-
-        const self = this;
-        return fetch(`${this.config.apiUrl}/api/live_chat/transfer_to_agent`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Widget-Origin': window.location.origin
-            },
-            body: JSON.stringify(transferData)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                self.isLiveChatActive = true;
-                self.liveChatSessionId = data.session_id;
-                
-                // Add system message about transfer
-                self.addMessage(data.message, 'bot');
-                
-                // Start polling for agent messages
-                self.startLiveChatPolling();
-                
-                // Update input placeholder
-                const inputField = document.querySelector('.chat-widget-input');
-                if (inputField) {
-                    inputField.placeholder = 'Waiting for agent... Type your message here';
+            liveChatPollingInterval = setInterval(() => {
+                if (isLiveChatActive && liveChatSessionId) {
+                    liveChatMethods.pollLiveChatMessages();
                 }
-                
-                console.log('Successfully transferred to live agent');
-            } else {
-                console.error('Error transferring to agent:', data.error);
-                self.addMessage('Sorry, live chat is currently unavailable. Please try again later.', 'bot');
-            }
-            return data;
-        })
-        .catch(error => {
-            console.error('Error transferring to agent:', error);
-            self.addMessage('Sorry, there was an error connecting to live chat. Please try again later.', 'bot');
-            return { success: false, error: error.message };
-        });
-    };
+            }, 3000);
+        },
 
-    // Override sendMessage for live chat
-    const originalSendMessage = ChatWidget.prototype.sendMessage;
-    ChatWidget.prototype.sendMessage = function() {
-        const inputField = document.querySelector('.chat-widget-input');
-        const message = inputField ? inputField.value.trim() : '';
-        if (!message) return;
+        pollLiveChatMessages: function() {
+            if (!liveChatSessionId) return;
 
-        this.addMessage(message, 'user');
-        if (inputField) inputField.value = '';
-
-        if (this.isLiveChatActive) {
-            this.sendLiveChatMessage(message).catch(error => {
-                console.error('Error sending live chat message:', error);
-                this.addMessage('Sorry, there was an error sending your message. Please try again.', 'bot');
+            fetch(`${config.apiUrl}/api/live_chat/sessions/${liveChatSessionId}/messages`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.messages) {
+                    data.messages.forEach(message => {
+                        if (message.sender_type === 'agent' && !processedMessages.has(message.message_id)) {
+                            ChatWidget.addMessage(message.message_content, 'bot');
+                            processedMessages.add(message.message_id);
+                            
+                            const inputField = document.querySelector('.chat-widget-input');
+                            if (inputField) {
+                                inputField.placeholder = `Connected to ${message.sender_name || 'Agent'}. Type your message...`;
+                            }
+                        }
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error polling live chat messages:', error);
             });
-        } else {
-            originalSendMessage.call(this);
+        },
+
+        sendLiveChatMessage: function(message) {
+            if (!isLiveChatActive || !liveChatSessionId) {
+                return Promise.reject('Live chat not active');
+            }
+
+            const messageData = {
+                sender_type: 'user',
+                sender_id: config.user_id || config.email || config.device_id || 'anonymous',
+                sender_name: config.username || 'User',
+                message_content: message,
+                message_type: 'text'
+            };
+
+            return fetch(`${config.apiUrl}/api/live_chat/sessions/${liveChatSessionId}/send_message`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Widget-Origin': window.location.origin
+                },
+                body: JSON.stringify(messageData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('Live chat message sent successfully');
+                } else {
+                    console.error('Error sending live chat message:', data.error);
+                }
+                return data;
+            });
+        },
+
+        transferToAgent: function(reason) {
+            const transferData = {
+                user_identifier: config.user_id || config.email || config.device_id || 'anonymous',
+                username: config.username,
+                email: config.email,
+                initial_message: reason || 'User requested live agent assistance',
+                department: config.department || 'support',
+                priority: config.priority || 'normal'
+            };
+
+            return fetch(`${config.apiUrl}/api/live_chat/transfer_to_agent`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Widget-Origin': window.location.origin
+                },
+                body: JSON.stringify(transferData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    isLiveChatActive = true;
+                    liveChatSessionId = data.session_id;
+                    
+                    // Add system message about transfer
+                    ChatWidget.addMessage(data.message, 'bot');
+                    
+                    // Start polling for agent messages
+                    liveChatMethods.startLiveChatPolling();
+                    
+                    // Update input placeholder
+                    const inputField = document.querySelector('.chat-widget-input');
+                    if (inputField) {
+                        inputField.placeholder = 'Waiting for agent... Type your message here';
+                    }
+                    
+                    console.log('Successfully transferred to live agent');
+                } else {
+                    console.error('Error transferring to agent:', data.error);
+                    ChatWidget.addMessage('Sorry, live chat is currently unavailable. Please try again later.', 'bot');
+                }
+                return data;
+            })
+            .catch(error => {
+                console.error('Error transferring to agent:', error);
+                ChatWidget.addMessage('Sorry, there was an error connecting to live chat. Please try again later.', 'bot');
+                return { success: false, error: error.message };
+            });
         }
     };
 
     // Add transfer button after bot responses
-    ChatWidget.prototype.addTransferButton = function() {
-        if (!this.config.enableLiveChat || this.isLiveChatActive) {
+    const addTransferButton = function() {
+        if (!config.enableLiveChat || isLiveChatActive) {
             return;
         }
 
@@ -1941,7 +1923,6 @@
         transferContainer.className = 'transfer-button-container';
         transferContainer.style.cssText = 'text-align: center; margin: 10px 0; padding: 10px;';
         
-        const self = this;
         transferContainer.innerHTML = `
             <p style="margin: 5px 0; color: #666; font-size: 13px;">Need more help?</p>
             <button class="transfer-button" 
@@ -1953,29 +1934,53 @@
         // Add click event listener
         const transferButton = transferContainer.querySelector('.transfer-button');
         transferButton.addEventListener('click', function() {
-            self.transferToAgent('User requested live assistance');
+            liveChatMethods.transferToAgent('User requested live assistance');
         });
 
         messagesContainer.appendChild(transferContainer);
-        this.scrollToBottom();
+        ChatWidget.scrollToBottom();
     };
 
-    // Initialize live chat on widget creation
-    const originalInit = ChatWidget.init;
-    ChatWidget.init = function(config) {
-        const widget = originalInit.call(this, config);
-        if (widget && widget.initializeLiveChat) {
-            widget.initializeLiveChat();
-            // Store global reference
-            window.ChatWidgetInstance = widget;
-            // Make transfer function globally accessible
-            window.transferToAgent = function(reason) {
-                if (widget && widget.transferToAgent) {
-                    widget.transferToAgent(reason);
-                }
-            };
+    // Override the original sendMessage method to handle live chat
+    const originalSendMessage = ChatWidget.sendMessage;
+    ChatWidget.sendMessage = function() {
+        const inputField = document.querySelector('.chat-widget-input');
+        const message = inputField ? inputField.value.trim() : '';
+        if (!message) return;
+
+        ChatWidget.addMessage(message, 'user');
+        if (inputField) inputField.value = '';
+
+        if (isLiveChatActive) {
+            liveChatMethods.sendLiveChatMessage(message).catch(error => {
+                console.error('Error sending live chat message:', error);
+                ChatWidget.addMessage('Sorry, there was an error sending your message. Please try again.', 'bot');
+            });
+        } else {
+            originalSendMessage.call(this);
         }
-        return widget;
+    };
+
+    // Add live chat capabilities after bot responses
+    const originalAddMessage = ChatWidget.addMessage;
+    ChatWidget.addMessage = function(message, sender) {
+        originalAddMessage.call(this, message, sender);
+        
+        if (sender === 'bot' && !isLiveChatActive) {
+            addTransferButton();
+        }
+    };
+
+    // Initialize live chat when widget is created
+    const originalInitializeWidget = ChatWidget.initializeWidget;
+    ChatWidget.initializeWidget = function() {
+        originalInitializeWidget.call(this);
+        liveChatMethods.initializeLiveChat();
+        
+        // Make transfer function globally accessible
+        window.transferToAgent = function(reason) {
+            liveChatMethods.transferToAgent(reason);
+        };
     };
 
     // Global object
