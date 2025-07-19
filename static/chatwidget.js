@@ -416,6 +416,16 @@
                     animation: voice-pulse 1.5s infinite;
                 }
 
+                .chat-widget-voice-btn.listening {
+                    background: rgba(244, 67, 54, 0.3);
+                    animation: listening-pulse 1s infinite;
+                }
+
+                @keyframes listening-pulse {
+                    0%, 100% { opacity: 0.8; transform: scale(1); }
+                    50% { opacity: 1; transform: scale(1.15); }
+                }
+
                 @keyframes voice-pulse {
                     0%, 100% { opacity: 0.8; transform: scale(1); }
                     50% { opacity: 1; transform: scale(1.1); }
@@ -740,9 +750,13 @@
                     // If currently playing, stop the audio
                     if (isPlayingVoice) {
                         this.stopVoice();
+                    } else if (config.voiceEnabled) {
+                        // Start voice interaction mode
+                        this.startVoiceMode();
                     } else {
-                        // Otherwise toggle voice enabled/disabled
+                        // Enable voice and start voice mode
                         this.toggleVoice();
+                        this.startVoiceMode();
                     }
                 });
                 
@@ -1388,6 +1402,180 @@
             }
             
             this.updateVoiceControls();
+        },
+
+        startVoiceMode: function() {
+            // Provide welcome voice message and start speech recognition
+            const welcomeMessage = "Hello! Voice mode is now active. Please speak your question, and I'll respond with voice.";
+            
+            // Speak welcome message first
+            this.synthesizeVoice(welcomeMessage).then(() => {
+                // After welcome message, start speech recognition
+                this.startSpeechRecognition();
+            });
+            
+            // Enable auto-play for future responses
+            config.autoPlayVoice = true;
+            
+            // Update button state
+            this.updateVoiceControls();
+        },
+
+        startSpeechRecognition: function() {
+            // Check if speech recognition is supported
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                this.addMessage("Sorry, speech recognition is not supported in your browser. Please type your message instead.", 'bot');
+                return;
+            }
+
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const recognition = new SpeechRecognition();
+            
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+
+            recognition.onstart = () => {
+                console.log('Speech recognition started');
+                // Update voice button to show listening state
+                const voiceBtn = document.querySelector('.chat-widget-voice-btn');
+                if (voiceBtn) {
+                    voiceBtn.innerHTML = '🎤';
+                    voiceBtn.title = 'Listening... Speak now';
+                    voiceBtn.classList.add('listening');
+                }
+                
+                // Show visual feedback
+                this.addMessage("🎤 Listening... Please speak your question", 'bot', false, false);
+            };
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                console.log('Speech recognition result:', transcript);
+                
+                // Remove listening message
+                const messages = messagesContainer.querySelectorAll('.chat-widget-message');
+                const lastMessage = messages[messages.length - 1];
+                if (lastMessage && lastMessage.textContent.includes('🎤 Listening...')) {
+                    lastMessage.remove();
+                }
+                
+                // Add user message and send it
+                this.addMessage(transcript, 'user');
+                
+                // Send the recognized speech as a message
+                this.sendUserMessage(transcript);
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                const voiceBtn = document.querySelector('.chat-widget-voice-btn');
+                if (voiceBtn) {
+                    voiceBtn.classList.remove('listening');
+                }
+                this.updateVoiceControls();
+                
+                // Remove listening message if present
+                const messages = messagesContainer.querySelectorAll('.chat-widget-message');
+                const lastMessage = messages[messages.length - 1];
+                if (lastMessage && lastMessage.textContent.includes('🎤 Listening...')) {
+                    lastMessage.remove();
+                }
+                
+                this.addMessage("Sorry, I couldn't understand your speech. Please try again or type your message.", 'bot');
+            };
+
+            recognition.onend = () => {
+                console.log('Speech recognition ended');
+                const voiceBtn = document.querySelector('.chat-widget-voice-btn');
+                if (voiceBtn) {
+                    voiceBtn.classList.remove('listening');
+                }
+                this.updateVoiceControls();
+            };
+
+            // Start recognition
+            try {
+                recognition.start();
+            } catch (error) {
+                console.error('Failed to start speech recognition:', error);
+                this.addMessage("Speech recognition failed to start. Please type your message instead.", 'bot');
+            }
+        },
+
+        sendUserMessage: function(message) {
+            // Send message to the backend (similar to sendMessage but with custom text)
+            if (!message || message.trim() === '') {
+                return;
+            }
+
+            // Build request payload
+            const payload = {
+                message: message,
+                user_id: config.user_id,
+                username: config.username,
+                email: config.email,
+                device_id: config.device_id
+            };
+
+            // Send request
+            fetch(`${config.apiUrl}/ask`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Widget-Origin': window.location.origin
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                this.handleBotResponse(data);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                this.addMessage('Sorry, there was an error processing your message. Please try again.', 'bot');
+            });
+        },
+
+        handleBotResponse: function(data) {
+            // Handle bot response from API
+            if (data && data.answer) {
+                // Track RAG responses for feedback timing
+                const responseData = { ...data, user_question: data.user_question || '' };
+                if (this.isRAGResponse(responseData)) {
+                    this.trackRAGResponse();
+                }
+                
+                // Add bot message with typing effect
+                this.addMessage(data.answer, 'bot', false, true, true, responseData);
+                
+                // Update session info if available
+                if (data.user_info) {
+                    this.updateSessionInfo(data.user_info);
+                }
+                
+                // Auto-play voice response if enabled
+                if (config.autoPlayVoice && config.voiceEnabled) {
+                    // Wait a moment for the typing to start, then synthesize voice
+                    setTimeout(() => {
+                        this.synthesizeVoice(data.answer).then(() => {
+                            // After voice finishes, optionally start speech recognition again for continuous conversation
+                            if (config.voiceEnabled) {
+                                setTimeout(() => {
+                                    this.startSpeechRecognition();
+                                }, 1000); // Wait 1 second after voice finishes
+                            }
+                        });
+                    }, 500); // Small delay to let typing animation start
+                }
+            } else {
+                this.addMessage('Sorry, I received an invalid response. Please try again.', 'bot');
+            }
         },
 
         updateVoiceControls: function() {

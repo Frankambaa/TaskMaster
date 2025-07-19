@@ -51,13 +51,18 @@
             <p>This page will test if the voice icon appears in the chat header</p>
         </div>
         
-        <button class="test-btn" id="initWidget">Initialize Widget with Voice</button>
-        <button class="test-btn" id="toggleWidget">Toggle Chat Window</button>
+        <button class="test-btn" id="initWidget">Initialize Voice Widget</button>
+        <button class="test-btn" id="toggleWidget">Open Chat Window</button>
+        <button class="test-btn" id="testVoice">Test Voice Mode</button>
         <button class="test-btn" id="destroyWidget">Destroy Widget</button>
         
         <div id="status" class="status">
-            Click "Initialize Widget with Voice" to test the voice icon functionality.
-            The 🎙️ icon should appear next to the × close button in the chat header.
+            <strong>Voice Testing Instructions:</strong><br>
+            1. Click "Initialize Voice Widget" to create the widget with voice enabled<br>
+            2. Click "Open Chat Window" to see the chat interface<br>
+            3. Look for the 🎙️ icon next to the × close button<br>
+            4. Click the 🎙️ icon to start voice mode - it will speak a welcome message and start listening<br>
+            5. Speak your question when you see the 🎤 listening icon
         </div>
     </div>
 
@@ -108,9 +113,32 @@
             const toggleButton = document.querySelector('.chat-widget-toggle');
             if (toggleButton) {
                 toggleButton.click();
-                document.getElementById('status').innerHTML = '<strong>Chat Window Toggled!</strong><br>Check the header for the 🎙️ voice icon.';
+                document.getElementById('status').innerHTML = '<strong>✅ Chat Window Opened!</strong><br>Look for the 🎙️ voice icon in the chat header next to the × close button.';
             } else {
-                document.getElementById('status').innerHTML = '<strong>Error:</strong> Toggle button not found.';
+                document.getElementById('status').innerHTML = '<strong>❌ Error:</strong> Toggle button not found.';
+            }
+        });
+
+        document.getElementById('testVoice').addEventListener('click', function() {
+            if (!widgetInitialized) {
+                alert('Please initialize the widget first');
+                return;
+            }
+            
+            // Find and click the voice button
+            const voiceButton = document.querySelector('.chat-widget-voice-btn');
+            if (voiceButton) {
+                voiceButton.click();
+                document.getElementById('status').innerHTML = `
+                    <strong>🎙️ Voice Mode Activated!</strong><br>
+                    The voice assistant should now:<br>
+                    1. Speak a welcome message<br>
+                    2. Show a 🎤 listening icon<br>
+                    3. Wait for your speech input<br>
+                    4. Respond with voice automatically
+                `;
+            } else {
+                document.getElementById('status').innerHTML = '<strong>❌ Error:</strong> Voice button not found. Make sure chat window is open.';
             }
         });
         
