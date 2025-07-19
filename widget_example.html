@@ -226,6 +226,18 @@
                         </select>
                     </div>
                     
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="voiceEnabled" checked> Enable Voice Synthesis
+                        </label>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="autoPlayVoice" checked> Auto-play Voice Responses
+                        </label>
+                    </div>
+                    
                     <button type="button" id="initWidget" class="btn">Initialize Widget</button>
                     <button type="button" id="updateWidget" class="btn btn-secondary">Update Widget</button>
                     <button type="button" id="destroyWidget" class="btn btn-secondary">Destroy Widget</button>
@@ -247,7 +259,10 @@ ChatWidget.init({
     username: 'John Doe',
     email: 'john@example.com',
     device_id: 'web_app',
-    position: 'bottom-right'
+    position: 'bottom-right',
+    voiceEnabled: true,
+    autoPlayVoice: true,
+    selectedVoice: 'indian_female'
 });
                     </div>
                 </div>
@@ -335,6 +350,9 @@ ChatWidget.updateConfig({
                 <li><code>theme</code> - 'light' or 'dark'</li>
                 <li><code>title</code> - Widget title in header</li>
                 <li><code>welcomeMessage</code> - Initial greeting message</li>
+                <li><code>voiceEnabled</code> - Enable/disable voice synthesis (default: false)</li>
+                <li><code>autoPlayVoice</code> - Auto-play bot voice responses (default: false)</li>
+                <li><code>selectedVoice</code> - Voice selection: 'indian_female', 'american_female', 'american_male'</li>
             </ul>
         </div>
 
@@ -363,8 +381,11 @@ ChatWidget.updateConfig({
                 device_id: document.getElementById('deviceId').value || null,
                 position: document.getElementById('position').value,
                 theme: document.getElementById('theme').value,
-                title: 'Chat Assistant',
-                welcomeMessage: 'Hi! How can I help you today?'
+                title: '🎤 Voice Chat Assistant',
+                welcomeMessage: 'Hi! I can respond with voice. Click the 🎙️ icon in the header to control voice settings.',
+                voiceEnabled: document.getElementById('voiceEnabled').checked,
+                autoPlayVoice: document.getElementById('autoPlayVoice').checked,
+                selectedVoice: 'indian_female'
             };
             
             ChatWidget.init(config);
