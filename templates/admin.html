@@ -809,78 +809,11 @@
             <div class="col-12">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <span><i class="fas fa-graduation-cap"></i> Response Training & Analysis</span>
+                        <span><i class="fas fa-comments"></i> User Feedback & Response Training</span>
                         <div>
                             <button class="btn btn-success btn-sm me-2" data-bs-toggle="modal" data-bs-target="#addResponseTemplateModal">
                                 <i class="fas fa-plus"></i> Add Template
                             </button>
-                            <button class="btn btn-outline-primary btn-sm" onclick="refreshResponseTraining()">
-                                <i class="fas fa-refresh"></i> Refresh
-                            </button>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <div class="alert alert-warning">
-                            <i class="fas fa-lightbulb"></i> <strong>Response Training:</strong> Analyze poor responses like "can you make api call" and create better response templates. Use this to train the bot for common problematic questions.
-                        </div>
-                        
-                        <!-- Navigation Tabs -->
-                        <ul class="nav nav-tabs" id="trainingTabs" role="tablist">
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link active" id="problematic-tab" data-bs-toggle="tab" data-bs-target="#problematic" type="button" role="tab">
-                                    <i class="fas fa-exclamation-triangle text-warning"></i> Problematic Responses
-                                </button>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="templates-tab" data-bs-toggle="tab" data-bs-target="#templates" type="button" role="tab">
-                                    <i class="fas fa-file-alt"></i> Response Templates
-                                </button>
-                            </li>
-                        </ul>
-                        
-                        <div class="tab-content" id="trainingTabsContent">
-                            <!-- Problematic Responses Tab -->
-                            <div class="tab-pane fade show active" id="problematic" role="tabpanel">
-                                <div class="mt-3">
-                                    <div class="d-flex justify-content-between align-items-center mb-3">
-                                        <h6>Responses Needing Improvement</h6>
-                                        <select class="form-select form-select-sm" style="width: 200px;" id="problemFilter">
-                                            <option value="">All Issues</option>
-                                            <option value="thumbs_down">👎 Negative Feedback</option>
-                                            <option value="vague">Vague Responses</option>
-                                            <option value="too_technical">Too Technical</option>
-                                            <option value="incorrect">Incorrect Answers</option>
-                                            <option value="incomplete">Incomplete Answers</option>
-                                        </select>
-                                    </div>
-                                    
-                                    <div id="problematicResponsesList">
-                                        <!-- Problematic responses will be loaded here -->
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Response Templates Tab -->
-                            <div class="tab-pane fade" id="templates" role="tabpanel">
-                                <div class="mt-3">
-                                    <div id="responseTemplatesList">
-                                        <!-- Response templates will be loaded here -->
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Feedback Management Section -->
-        <div class="row">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <span><i class="fas fa-comments"></i> RAG Feedback Management</span>
-                        <div>
                             <button class="btn btn-outline-primary btn-sm" onclick="refreshFeedbackStats()">
                                 <i class="fas fa-refresh"></i> Refresh
                             </button>
@@ -888,7 +821,7 @@
                     </div>
                     <div class="card-body">
                         <div class="alert alert-info">
-                            <i class="fas fa-info-circle"></i> <strong>RAG Feedback:</strong> Collect and analyze user feedback specifically for RAG (knowledge base) responses to improve the system. Feedback is only collected for responses that use the document knowledge base, not for basic greetings or API tool calls.
+                            <i class="fas fa-info-circle"></i> <strong>How it works:</strong> Users give thumbs up/down feedback on responses. Analyze poor responses and create better templates to automatically improve similar questions in the future.
                         </div>
                         
                         <!-- Feedback Stats -->
@@ -926,33 +859,81 @@
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Recent Feedback -->
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5>Recent Feedback</h5>
-                            <div>
-                                <select class="form-select form-select-sm d-inline-block" style="width: auto;" id="feedbackFilter">
-                                    <option value="">All Feedback</option>
-                                    <option value="thumbs_up">👍 Helpful Only</option>
-                                    <option value="thumbs_down">👎 Needs Work Only</option>
-                                </select>
+                        
+                        <!-- Navigation Tabs -->
+                        <ul class="nav nav-tabs" id="trainingTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="feedback-tab" data-bs-toggle="tab" data-bs-target="#feedback" type="button" role="tab">
+                                    <i class="fas fa-comments"></i> All Feedback
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="problematic-tab" data-bs-toggle="tab" data-bs-target="#problematic" type="button" role="tab">
+                                    <i class="fas fa-exclamation-triangle text-warning"></i> Poor Responses
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="templates-tab" data-bs-toggle="tab" data-bs-target="#templates" type="button" role="tab">
+                                    <i class="fas fa-file-alt"></i> Templates
+                                </button>
+                            </li>
+                        </ul>
+                        
+                        <div class="tab-content" id="trainingTabsContent">
+                            <!-- All Feedback Tab -->
+                            <div class="tab-pane fade show active" id="feedback" role="tabpanel">
+                                <div class="mt-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h6>Recent User Feedback</h6>
+                                        <select class="form-select form-select-sm" style="width: 150px;" id="feedbackTypeFilter">
+                                            <option value="">All Ratings</option>
+                                            <option value="thumbs_up">👍 Helpful</option>
+                                            <option value="thumbs_down">👎 Needs Work</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div id="feedbackList">
+                                        <!-- All feedback will be loaded here -->
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        
-                        <div id="feedbackList">
-                            <!-- Feedback items will be loaded here -->
-                        </div>
-                        
-                        <!-- Load More Button -->
-                        <div class="text-center mt-3">
-                            <button class="btn btn-outline-secondary" id="loadMoreFeedback" onclick="loadMoreFeedback()" style="display: none;">
-                                Load More Feedback
-                            </button>
+                            
+                            <!-- Problematic Responses Tab -->
+                            <div class="tab-pane fade" id="problematic" role="tabpanel">
+                                <div class="mt-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h6>Responses Needing Improvement</h6>
+                                        <select class="form-select form-select-sm" style="width: 200px;" id="problemFilter">
+                                            <option value="">All Issues</option>
+                                            <option value="thumbs_down">👎 Negative Feedback</option>
+                                            <option value="vague">Vague Responses</option>
+                                            <option value="too_technical">Too Technical</option>
+                                            <option value="incorrect">Incorrect Answers</option>
+                                            <option value="incomplete">Incomplete Answers</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div id="problematicResponsesList">
+                                        <!-- Problematic responses will be loaded here -->
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Response Templates Tab -->
+                            <div class="tab-pane fade" id="templates" role="tabpanel">
+                                <div class="mt-3">
+                                    <div id="responseTemplatesList">
+                                        <!-- Response templates will be loaded here -->
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+
+
 
         <!-- Instructions -->
         <div class="row">

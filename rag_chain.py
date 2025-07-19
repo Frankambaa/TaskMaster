@@ -228,8 +228,18 @@ class RAGChain:
             return response.choices[0].message.content.strip()
             
         except Exception as e:
+            error_msg = str(e).lower()
             logging.error(f"Error generating answer: {str(e)}")
-            return "I'm sorry, I encountered an error while processing your question. Please try again."
+            
+            # Handle specific OpenAI API errors
+            if "quota" in error_msg or "rate limit" in error_msg:
+                return "I'm currently experiencing high demand. Please try asking your question again in a moment, or contact support if this continues."
+            elif "api key" in error_msg or "authentication" in error_msg:
+                return "There's an issue with my configuration. Please contact support for assistance."
+            elif "model" in error_msg:
+                return "I'm having trouble accessing my language model. Please try again shortly."
+            else:
+                return "I'm sorry, I encountered an error while processing your question. Please try again."
     
     def generate_answer_with_memory(self, question: str, relevant_chunks: List[Dict[str, Any]], session_id: str = None, user_identifier: str = None, username: str = None, email: str = None, device_id: str = None) -> str:
         """Generate answer using LangChain with session memory (persistent or temporary)"""
@@ -275,8 +285,18 @@ class RAGChain:
             return answer
             
         except Exception as e:
+            error_msg = str(e).lower()
             logging.error(f"Error generating answer with memory: {str(e)}")
-            return "I'm sorry, I encountered an error while processing your question. Please try again."
+            
+            # Handle specific OpenAI API errors with helpful user-friendly messages
+            if "quota" in error_msg or "rate limit" in error_msg:
+                return "I'm currently experiencing high demand. Please try asking your question again in a moment, or contact support if this continues."
+            elif "api key" in error_msg or "authentication" in error_msg:
+                return "There's an issue with my configuration. Please contact support for assistance."
+            elif "model" in error_msg:
+                return "I'm having trouble accessing my language model. Please try again shortly."
+            else:
+                return "I'm sorry, I encountered an error while processing your question. Please try again."
     
     def get_answer(self, question: str, index_folder: str, session_id: str = None, user_identifier: str = None, username: str = None, email: str = None, device_id: str = None) -> str:
         """Get answer for a question with optional session memory (persistent or temporary)"""

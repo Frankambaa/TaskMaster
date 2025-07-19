@@ -96,7 +96,15 @@ class AIToolExecutor:
             return False, None, None, None
             
         except Exception as e:
+            error_msg = str(e).lower()
             self.logger.error(f"Error in AI tool selection: {e}")
+            
+            # Handle specific OpenAI API errors - provide helpful feedback to user
+            if "quota" in error_msg or "rate limit" in error_msg:
+                return False, None, None, "I'm currently experiencing high demand. Please try asking your question again in a moment."
+            elif "api key" in error_msg or "authentication" in error_msg:
+                return False, None, None, "There's an issue with my configuration. Please contact support for assistance."
+            
             return False, None, None, None
     
     def check_for_clarification_needed(self, question: str, tools: List[Dict]) -> Optional[str]:
