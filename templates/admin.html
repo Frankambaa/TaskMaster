@@ -316,6 +316,53 @@
             </div>
         </div>
 
+        <!-- Chatbot Conversations Section -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-comments"></i> Chatbot Conversations
+                        <div class="float-end">
+                            <button class="btn btn-sm btn-outline-secondary" onclick="refreshConversations()">
+                                <i class="fas fa-sync"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="userFilter" class="form-label">Filter by User:</label>
+                                <select class="form-select" id="userFilter" onchange="filterConversations()">
+                                    <option value="">All Users</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="dateFilter" class="form-label">Date Range:</label>
+                                <select class="form-select" id="dateFilter" onchange="filterConversations()">
+                                    <option value="">All Time</option>
+                                    <option value="today">Today</option>
+                                    <option value="week">This Week</option>
+                                    <option value="month">This Month</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="searchConversations" class="form-label">Search Messages:</label>
+                                <input type="text" class="form-control" id="searchConversations" 
+                                       placeholder="Search conversation content..." onkeyup="searchConversations()">
+                            </div>
+                        </div>
+                        
+                        <div id="conversationsContainer">
+                            <div class="text-center">
+                                <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+                                <p class="mt-2 text-muted">Loading conversations...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Widget Integration Section -->
         <div class="row">
             <div class="col-12">
@@ -4147,12 +4194,211 @@ Remember: Your goal is to provide the best possible user experience by being hel
             });
         }
 
+        // Chatbot Conversations Management Functions
+        function refreshConversations() {
+            loadChatbotConversations();
+        }
+
+        function loadChatbotConversations() {
+            const container = document.getElementById('conversationsContainer');
+            container.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin fa-2x text-muted"></i><p class="mt-2 text-muted">Loading conversations...</p></div>';
+            
+            fetch('/api/conversations')
+                .then(response => response.json())
+                .then(data => {
+                    displayConversations(data.conversations || []);
+                    populateUserFilter(data.conversations || []);
+                })
+                .catch(error => {
+                    console.error('Error loading conversations:', error);
+                    container.innerHTML = '<div class="alert alert-danger">Error loading conversations. Please try again.</div>';
+                });
+        }
+
+        function displayConversations(conversations) {
+            const container = document.getElementById('conversationsContainer');
+            
+            if (!conversations || conversations.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted py-4"><i class="fas fa-comment-slash fa-3x mb-3"></i><p>No conversations found.</p></div>';
+                return;
+            }
+
+            let html = '';
+            conversations.forEach(conv => {
+                const lastActivity = new Date(conv.last_activity).toLocaleString();
+                const messageCount = conv.message_count || 0;
+                
+                html += `
+                    <div class="card mb-3">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong><i class="fas fa-user"></i> ${conv.username || conv.user_identifier}</strong>
+                                <small class="text-muted">(${conv.user_identifier})</small>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-primary">${messageCount} messages</span>
+                                <small class="text-muted d-block">${lastActivity}</small>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Email:</strong> ${conv.email || 'N/A'}</p>
+                                    <p class="mb-1"><strong>Device:</strong> ${conv.device_id || 'N/A'}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>First Seen:</strong> ${new Date(conv.created_at).toLocaleString()}</p>
+                                    <p class="mb-1"><strong>Last Activity:</strong> ${lastActivity}</p>
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <button class="btn btn-sm btn-outline-primary" onclick="viewConversationDetails('${conv.user_identifier}')">
+                                    <i class="fas fa-eye"></i> View Messages
+                                </button>
+                                <button class="btn btn-sm btn-outline-info" onclick="exportConversation('${conv.user_identifier}')">
+                                    <i class="fas fa-download"></i> Export
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        function populateUserFilter(conversations) {
+            const userFilter = document.getElementById('userFilter');
+            const currentValue = userFilter.value;
+            
+            // Clear existing options except "All Users"
+            userFilter.innerHTML = '<option value="">All Users</option>';
+            
+            // Get unique users
+            const users = [...new Set(conversations.map(conv => conv.user_identifier))];
+            users.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user;
+                option.textContent = user;
+                userFilter.appendChild(option);
+            });
+            
+            // Restore previous selection
+            userFilter.value = currentValue;
+        }
+
+        function filterConversations() {
+            // This would filter the displayed conversations based on filters
+            loadChatbotConversations(); // For now, reload with filters
+        }
+
+        function searchConversations() {
+            // This would search through conversation content
+            const searchTerm = document.getElementById('searchConversations').value;
+            // Implementation for search functionality
+        }
+
+        function viewConversationDetails(userIdentifier) {
+            fetch(`/api/conversations/${userIdentifier}`)
+                .then(response => response.json())
+                .then(data => {
+                    displayConversationModal(data.conversation, data.messages || []);
+                })
+                .catch(error => {
+                    console.error('Error loading conversation details:', error);
+                    showAlert('Error loading conversation details', 'danger');
+                });
+        }
+
+        function displayConversationModal(conversation, messages) {
+            const modalContent = `
+                <div class="modal fade" id="conversationModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">
+                                    <i class="fas fa-comments"></i> Conversation: ${conversation.username || conversation.user_identifier}
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <p><strong>User ID:</strong> ${conversation.user_identifier}</p>
+                                            <p><strong>Email:</strong> ${conversation.email || 'N/A'}</p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <p><strong>Device:</strong> ${conversation.device_id || 'N/A'}</p>
+                                            <p><strong>Messages:</strong> ${messages.length}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <hr>
+                                <div class="conversation-messages" style="max-height: 400px; overflow-y: auto;">
+                                    ${messages.map(msg => `
+                                        <div class="message mb-3 p-3 ${msg.type === 'human' ? 'bg-light' : 'bg-primary bg-opacity-10'} rounded">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <strong class="${msg.type === 'human' ? 'text-primary' : 'text-success'}">
+                                                    ${msg.type === 'human' ? '👤 User' : '🤖 Bot'}
+                                                </strong>
+                                                <small class="text-muted">${new Date().toLocaleString()}</small>
+                                            </div>
+                                            <div>${msg.content}</div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                <button type="button" class="btn btn-primary" onclick="exportConversation('${conversation.user_identifier}')">
+                                    <i class="fas fa-download"></i> Export
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remove existing modal if any
+            const existingModal = document.getElementById('conversationModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            // Add modal to body
+            document.body.insertAdjacentHTML('beforeend', modalContent);
+            
+            // Show modal
+            new bootstrap.Modal(document.getElementById('conversationModal')).show();
+        }
+
+        function exportConversation(userIdentifier) {
+            fetch(`/api/conversations/${userIdentifier}/export`)
+                .then(response => response.blob())
+                .then(blob => {
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `conversation_${userIdentifier}_${new Date().toISOString().split('T')[0]}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                })
+                .catch(error => {
+                    console.error('Error exporting conversation:', error);
+                    showAlert('Error exporting conversation', 'danger');
+                });
+        }
+
         // Load webhook data when page is loaded
         document.addEventListener('DOMContentLoaded', function() {
             // Auto-load webhook configurations and messages on page load
             setTimeout(() => {
                 loadWebhookConfigs();
                 loadWebhookMessages();
+                loadChatbotConversations(); // Load chatbot conversations
             }, 500);
         });
     </script>

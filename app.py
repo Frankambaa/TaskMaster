@@ -2462,5 +2462,99 @@ def test_elevenlabs_embedded():
     with open('test_elevenlabs_embedded.html', 'r') as f:
         return f.read()
 
+# Chatbot Conversations API Routes
+@app.route('/api/conversations', methods=['GET'])
+def get_conversations():
+    """Get all chatbot conversations"""
+    try:
+        conversations = UserConversation.query.order_by(UserConversation.last_activity.desc()).all()
+        
+        conversation_data = []
+        for conv in conversations:
+            history = conv.get_conversation_history()
+            conversation_data.append({
+                'user_identifier': conv.user_identifier,
+                'username': conv.username,
+                'email': conv.email,
+                'device_id': conv.device_id,
+                'created_at': conv.created_at.isoformat(),
+                'last_activity': conv.last_activity.isoformat(),
+                'message_count': len(history)
+            })
+        
+        return jsonify({
+            'conversations': conversation_data,
+            'status': 'success'
+        })
+        
+    except Exception as e:
+        logging.error(f"Error fetching conversations: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/conversations/<user_identifier>', methods=['GET'])
+def get_conversation_details(user_identifier):
+    """Get detailed conversation for a specific user"""
+    try:
+        conversation = UserConversation.query.filter_by(user_identifier=user_identifier).first()
+        
+        if not conversation:
+            return jsonify({'error': 'Conversation not found'}), 404
+        
+        history = conversation.get_conversation_history()
+        
+        return jsonify({
+            'conversation': {
+                'user_identifier': conversation.user_identifier,
+                'username': conversation.username,
+                'email': conversation.email,
+                'device_id': conversation.device_id,
+                'created_at': conversation.created_at.isoformat(),
+                'last_activity': conversation.last_activity.isoformat()
+            },
+            'messages': history,
+            'status': 'success'
+        })
+        
+    except Exception as e:
+        logging.error(f"Error fetching conversation details: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/conversations/<user_identifier>/export', methods=['GET'])
+def export_conversation(user_identifier):
+    """Export conversation as JSON file"""
+    try:
+        conversation = UserConversation.query.filter_by(user_identifier=user_identifier).first()
+        
+        if not conversation:
+            return jsonify({'error': 'Conversation not found'}), 404
+        
+        history = conversation.get_conversation_history()
+        
+        export_data = {
+            'user_info': {
+                'user_identifier': conversation.user_identifier,
+                'username': conversation.username,
+                'email': conversation.email,
+                'device_id': conversation.device_id,
+                'created_at': conversation.created_at.isoformat(),
+                'last_activity': conversation.last_activity.isoformat()
+            },
+            'messages': history,
+            'export_date': datetime.utcnow().isoformat(),
+            'total_messages': len(history)
+        }
+        
+        # Create response with JSON data
+        response = make_response(json.dumps(export_data, indent=2))
+        response.headers['Content-Type'] = 'application/json'
+        response.headers['Content-Disposition'] = f'attachment; filename=conversation_{user_identifier}_{datetime.utcnow().strftime("%Y%m%d")}.json'
+        
+        return response
+        
+    except Exception as e:
+        logging.error(f"Error exporting conversation: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
