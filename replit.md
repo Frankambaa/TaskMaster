@@ -270,6 +270,12 @@ deployment/       # Production deployment files
 - July 19, 2025: Integrated dynamic system prompt loading into AI tool executor for customizable chatbot behavior
 - July 19, 2025: Updated default system prompt to be comprehensive chatbot behavior guide rather than just API tool rules
 - July 19, 2025: Admin can now create multiple prompts, set one as active, and control overall chatbot personality and responses
+- July 19, 2025: **URL LINKING FEATURE**: Implemented automatic URL to clickable link conversion in chatbot responses
+- July 19, 2025: Enhanced chatwidget.js with regex pattern to detect URLs and convert them to HTML anchor tags with secure attributes
+- July 19, 2025: Updated system prompt to encourage including URLs when relevant (like https://employer.apna.co)
+- July 19, 2025: **SYSTEM PROMPT VALIDATION**: Comprehensive testing confirms system prompt controls all aspects of chatbot behavior
+- July 19, 2025: Verified system prompt usage in 3 locations: ai_tool_executor.py (tool selection), rag_chain.py (RAG responses, memory responses)
+- July 19, 2025: Confirmed guardrails working: sensitive topics blocked, off-platform questions filtered, instruction vs API distinction mostly working
 
 ## User Preferences
 
