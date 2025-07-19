@@ -1903,43 +1903,7 @@
         }
     };
 
-    // Add transfer button after bot responses
-    const addTransferButton = function() {
-        if (!config.enableLiveChat || isLiveChatActive) {
-            return;
-        }
 
-        const messagesContainer = document.querySelector('.chat-widget-messages');
-        if (!messagesContainer || messagesContainer.querySelector('.transfer-button-container')) {
-            return; // Already exists or container not found
-        }
-
-        const userMessages = messagesContainer.querySelectorAll('.chat-widget-message.user').length;
-        if (userMessages < 2) {
-            return; // Show only after a few interactions
-        }
-
-        const transferContainer = document.createElement('div');
-        transferContainer.className = 'transfer-button-container';
-        transferContainer.style.cssText = 'text-align: center; margin: 10px 0; padding: 10px;';
-        
-        transferContainer.innerHTML = `
-            <p style="margin: 5px 0; color: #666; font-size: 13px;">Need more help?</p>
-            <button class="transfer-button" 
-                    style="background: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 13px;">
-                <i class="fas fa-user-tie"></i> Talk to Agent
-            </button>
-        `;
-
-        // Add click event listener
-        const transferButton = transferContainer.querySelector('.transfer-button');
-        transferButton.addEventListener('click', function() {
-            liveChatMethods.transferToAgent('User requested live assistance');
-        });
-
-        messagesContainer.appendChild(transferContainer);
-        ChatWidget.scrollToBottom();
-    };
 
     // Override the original sendMessage method to handle live chat
     const originalSendMessage = ChatWidget.sendMessage;
@@ -1951,23 +1915,24 @@
         ChatWidget.addMessage(message, 'user');
         if (inputField) inputField.value = '';
 
+        // Check if user wants to transfer to live chat
+        const liveChatKeywords = ['live chat', 'chat with agent', 'talk to agent', 'human agent', 'speak to human', 'connect to agent'];
+        const messageText = message.toLowerCase();
+        const requestsLiveChat = liveChatKeywords.some(keyword => messageText.includes(keyword));
+
+        if (requestsLiveChat && !isLiveChatActive) {
+            liveChatMethods.transferToAgent(`User requested: ${message}`);
+            return;
+        }
+
         if (isLiveChatActive) {
             liveChatMethods.sendLiveChatMessage(message).catch(error => {
                 console.error('Error sending live chat message:', error);
                 ChatWidget.addMessage('Sorry, there was an error sending your message. Please try again.', 'bot');
             });
         } else {
+            // Use original AI/RAG functionality
             originalSendMessage.call(this);
-        }
-    };
-
-    // Add live chat capabilities after bot responses
-    const originalAddMessage = ChatWidget.addMessage;
-    ChatWidget.addMessage = function(message, sender) {
-        originalAddMessage.call(this, message, sender);
-        
-        if (sender === 'bot' && !isLiveChatActive) {
-            addTransferButton();
         }
     };
 

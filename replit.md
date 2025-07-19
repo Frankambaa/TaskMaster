@@ -315,6 +315,11 @@ deployment/       # Production deployment files
 - July 19, 2025: Created localStorage tracking system to identify first-time vs returning users for appropriate greeting display
 - July 19, 2025: Enhanced admin panel with time-based greeting documentation and test page for demonstration
 - July 19, 2025: Combined time-based greetings with personalized welcome messages for optimal user experience
+- July 19, 2025: **KEYWORD-TRIGGERED LIVE CHAT**: Implemented intelligent live chat transfer only when users explicitly request it
+- July 19, 2025: Added keyword detection for phrases like "live chat", "chat with agent", "talk to agent", "human agent"
+- July 19, 2025: Preserved original AI/RAG functionality - live chat only activates on specific user requests
+- July 19, 2025: Fixed ChatWidget JavaScript errors and integrated live chat without affecting existing bot responses
+- July 19, 2025: Created comprehensive admin panel live chat management section with session monitoring and agent portal access
 
 ## Known Issues
 
