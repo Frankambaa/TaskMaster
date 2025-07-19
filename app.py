@@ -2181,5 +2181,68 @@ def elevenlabs_voices():
     from elevenlabs_agent import get_available_voices
     return get_available_voices()
 
+@app.route('/update_elevenlabs_key', methods=['POST'])
+def update_elevenlabs_key():
+    """Update ElevenLabs API key in environment"""
+    try:
+        api_key = request.form.get('elevenlabs_key', '').strip()
+        
+        if not api_key:
+            flash('API key cannot be empty', 'error')
+            return redirect(url_for('admin'))
+        
+        # Save to environment
+        import os
+        os.environ['ELEVENLABS_API_KEY'] = api_key
+        
+        # Test the API key by trying to get voices
+        try:
+            from elevenlabs_agent import ElevenLabsVoiceAgent
+            agent = ElevenLabsVoiceAgent()
+            voices = agent.get_available_voices()
+            flash('ElevenLabs API key updated and validated successfully!', 'success')
+        except Exception as e:
+            flash(f'API key saved but validation failed: {str(e)}', 'warning')
+        
+        return redirect(url_for('admin'))
+        
+    except Exception as e:
+        logger.error(f"Error updating ElevenLabs key: {e}")
+        flash(f'Error updating API key: {str(e)}', 'error')
+        return redirect(url_for('admin'))
+
+@app.route('/api/elevenlabs/status')
+def elevenlabs_status():
+    """Check ElevenLabs API status"""
+    try:
+        import os
+        api_key = os.environ.get('ELEVENLABS_API_KEY')
+        
+        if not api_key:
+            return jsonify({
+                'success': True,
+                'status': 'no_key',
+                'message': 'No API key configured'
+            })
+        
+        # Test the API key
+        from elevenlabs_agent import ElevenLabsVoiceAgent
+        agent = ElevenLabsVoiceAgent()
+        voices = agent.get_available_voices()
+        
+        return jsonify({
+            'success': True,
+            'status': 'active',
+            'message': f'Connected - {len(voices)} voices available',
+            'voice_count': len(voices)
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': True,
+            'status': 'error',
+            'message': f'API Error: {str(e)}'
+        })
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
