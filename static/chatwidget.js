@@ -843,7 +843,7 @@
             this.scrollToBottom();
         },
 
-        addMessage: function(text, sender, isError = false, enableTyping = false, storeInHistory = true) {
+        addMessage: function(text, sender, isError = false, enableTyping = false, storeInHistory = true, responseData = null) {
             const messageDiv = document.createElement('div');
             messageDiv.className = `chat-widget-message ${sender}`;
             
@@ -876,15 +876,21 @@
             
             // Enable typing effect for bot messages
             if (enableTyping && sender === 'bot') {
-                this.typeMessage(bubble, text);
+                this.typeMessage(bubble, text, 0, responseData);
             } else {
                 bubble.innerHTML = this.formatMessage(text, sender === 'user');
+                
+                // Add feedback buttons for RAG responses (only for new bot messages)
+                if (sender === 'bot' && storeInHistory && responseData && this.isRAGResponse(responseData)) {
+                    this.addFeedbackButtons(messageDiv, text, responseData);
+                }
+                
                 // Scroll to bottom
                 this.scrollToBottom();
             }
         },
 
-        typeMessage: function(element, text, index = 0) {
+        typeMessage: function(element, text, index = 0, responseData = null) {
             const formattedText = this.formatMessage(text, false); // false = not user input
             
             // Simple character-by-character typing for better compatibility
@@ -910,12 +916,18 @@
                 
                 // Continue typing
                 setTimeout(() => {
-                    this.typeMessage(element, text, index + 1);
+                    this.typeMessage(element, text, index + 1, responseData);
                 }, 25); // Adjust speed here (lower = faster)
             } else {
                 // Typing complete - apply full formatting without truncation
                 element.innerHTML = formattedText;
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                
+                // Add feedback buttons for RAG responses after typing is complete
+                if (responseData && this.isRAGResponse(responseData)) {
+                    const messageDiv = element.closest('.chat-widget-message');
+                    this.addFeedbackButtons(messageDiv, text, responseData);
+                }
             }
         },
 
@@ -996,7 +1008,11 @@
                 // Send to API
                 this.sendToAPI(sanitizedMessage).then(response => {
                     this.hideTyping(typingDiv);
-                    this.addMessage(response.answer, 'bot', false, true); // Enable typing effect
+                    // Pass the full response data and the user question for feedback
+                    this.addMessage(response.answer, 'bot', false, true, true, {
+                        ...response, 
+                        user_question: sanitizedMessage
+                    }); // Enable typing effect with response data
                     this.updateSessionInfo(response.user_info);
                 }).catch(error => {
                     this.hideTyping(typingDiv);
@@ -1307,6 +1323,213 @@
         updateConfig: function(newConfig) {
             config = { ...config, ...newConfig };
             this.loadSessionInfo();
+        },
+
+        // ===========================
+        // FEEDBACK FUNCTIONALITY
+        // ===========================
+        
+        isRAGResponse: function(responseData) {
+            // Check if this is a RAG response based on response_type
+            return responseData && responseData.response_type && 
+                   (responseData.response_type.includes('rag') || 
+                    responseData.response_type === 'rag_with_ai_tools' ||
+                    responseData.response_type === 'rag_with_memory');
+        },
+
+        addFeedbackButtons: function(messageDiv, botResponse, responseData) {
+            // Only add feedback buttons once
+            if (messageDiv.querySelector('.feedback-container')) {
+                return;
+            }
+
+            const feedbackContainer = document.createElement('div');
+            feedbackContainer.className = 'feedback-container';
+            feedbackContainer.style.cssText = `
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-top: 8px;
+                padding: 4px 0;
+                font-size: 12px;
+                color: #666;
+            `;
+
+            // Thumbs up button
+            const thumbsUpBtn = document.createElement('button');
+            thumbsUpBtn.className = 'feedback-btn thumbs-up';
+            thumbsUpBtn.innerHTML = '👍';
+            thumbsUpBtn.title = 'This answer was helpful';
+            thumbsUpBtn.style.cssText = `
+                background: none;
+                border: 1px solid #e0e0e0;
+                border-radius: 50%;
+                width: 28px;
+                height: 28px;
+                cursor: pointer;
+                font-size: 14px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.2s;
+            `;
+
+            // Thumbs down button
+            const thumbsDownBtn = document.createElement('button');
+            thumbsDownBtn.className = 'feedback-btn thumbs-down';
+            thumbsDownBtn.innerHTML = '👎';
+            thumbsDownBtn.title = 'This answer needs improvement';
+            thumbsDownBtn.style.cssText = thumbsUpBtn.style.cssText;
+
+            // Feedback text
+            const feedbackText = document.createElement('span');
+            feedbackText.textContent = 'Was this helpful?';
+            feedbackText.style.marginRight = '4px';
+
+            feedbackContainer.appendChild(feedbackText);
+            feedbackContainer.appendChild(thumbsUpBtn);
+            feedbackContainer.appendChild(thumbsDownBtn);
+            messageDiv.appendChild(feedbackContainer);
+
+            // Event listeners
+            thumbsUpBtn.addEventListener('click', () => {
+                this.submitFeedback('thumbs_up', botResponse, responseData, feedbackContainer);
+            });
+
+            thumbsDownBtn.addEventListener('click', () => {
+                this.submitFeedback('thumbs_down', botResponse, responseData, feedbackContainer);
+            });
+
+            // Hover effects
+            [thumbsUpBtn, thumbsDownBtn].forEach(btn => {
+                btn.addEventListener('mouseenter', () => {
+                    btn.style.backgroundColor = '#f5f5f5';
+                    btn.style.borderColor = '#ccc';
+                });
+                btn.addEventListener('mouseleave', () => {
+                    btn.style.backgroundColor = 'transparent';
+                    btn.style.borderColor = '#e0e0e0';
+                });
+            });
+        },
+
+        submitFeedback: function(feedbackType, botResponse, responseData, feedbackContainer) {
+            const feedbackData = {
+                session_id: sessionId,
+                user_id: config.user_id,
+                username: config.username,
+                email: config.email,
+                user_question: responseData.user_question,
+                bot_response: botResponse,
+                response_type: responseData.response_type || 'rag',
+                feedback_type: feedbackType,
+                feedback_comment: '', // Could be extended to include user comments
+                retrieved_chunks: responseData.retrieved_chunks || null
+            };
+
+            // Show feedback being submitted
+            feedbackContainer.innerHTML = '<span style="color: #666; font-size: 12px;">Submitting feedback...</span>';
+
+            fetch(`${config.apiUrl}/feedback`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Widget-Origin': window.location.origin
+                },
+                body: JSON.stringify(feedbackData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Show thank you message and close chat option
+                    this.showThankYouFlow(feedbackContainer, feedbackType);
+                } else {
+                    // Show error
+                    feedbackContainer.innerHTML = '<span style="color: #d32f2f; font-size: 12px;">Failed to submit feedback</span>';
+                }
+            })
+            .catch(error => {
+                console.error('Error submitting feedback:', error);
+                feedbackContainer.innerHTML = '<span style="color: #d32f2f; font-size: 12px;">Error submitting feedback</span>';
+            });
+        },
+
+        showThankYouFlow: function(feedbackContainer, feedbackType) {
+            // Replace feedback buttons with thank you message and close option
+            feedbackContainer.innerHTML = '';
+            feedbackContainer.style.cssText = `
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                margin-top: 8px;
+                padding: 8px 12px;
+                background: #f8f9fa;
+                border-radius: 8px;
+                border: 1px solid #e9ecef;
+            `;
+
+            // Thank you message
+            const thankYouText = document.createElement('div');
+            thankYouText.style.cssText = `
+                font-size: 12px;
+                color: #28a745;
+                font-weight: 500;
+                margin-bottom: 4px;
+            `;
+            thankYouText.innerHTML = feedbackType === 'thumbs_up' ? 
+                '✓ Thank you! Your feedback helps us improve.' : 
+                '✓ Thank you for your feedback. We\'ll work on improving this.';
+
+            // Close chat option
+            const closeOption = document.createElement('div');
+            closeOption.style.cssText = `
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-size: 11px;
+                color: #666;
+            `;
+
+            const closeBtn = document.createElement('button');
+            closeBtn.textContent = 'Close Chat';
+            closeBtn.style.cssText = `
+                background: #007bff;
+                color: white;
+                border: none;
+                padding: 4px 8px;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 11px;
+                transition: background 0.2s;
+            `;
+
+            closeBtn.addEventListener('click', () => {
+                this.toggle(); // Close the chat widget
+            });
+
+            closeBtn.addEventListener('mouseenter', () => {
+                closeBtn.style.backgroundColor = '#0056b3';
+            });
+            closeBtn.addEventListener('mouseleave', () => {
+                closeBtn.style.backgroundColor = '#007bff';
+            });
+
+            const continueText = document.createElement('span');
+            continueText.textContent = 'or continue chatting';
+
+            closeOption.appendChild(closeBtn);
+            closeOption.appendChild(continueText);
+
+            feedbackContainer.appendChild(thankYouText);
+            feedbackContainer.appendChild(closeOption);
+
+            // Auto-hide after 15 seconds
+            setTimeout(() => {
+                if (feedbackContainer.parentNode) {
+                    feedbackContainer.style.opacity = '0.5';
+                    feedbackContainer.style.pointerEvents = 'none';
+                }
+            }, 15000);
         }
     };
 

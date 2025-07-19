@@ -723,6 +723,86 @@
             </div>
         </div>
 
+        <!-- Feedback Management Section -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-comments"></i> RAG Feedback Management</span>
+                        <div>
+                            <button class="btn btn-outline-primary btn-sm" onclick="refreshFeedbackStats()">
+                                <i class="fas fa-refresh"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> <strong>RAG Feedback:</strong> Collect and analyze user feedback specifically for RAG (knowledge base) responses to improve the system. Feedback is only collected for responses that use the document knowledge base, not for basic greetings or API tool calls.
+                        </div>
+                        
+                        <!-- Feedback Stats -->
+                        <div class="row mb-4">
+                            <div class="col-md-3">
+                                <div class="card text-center" style="background: #e8f5e8;">
+                                    <div class="card-body">
+                                        <h3 class="text-success" id="thumbsUpCount">-</h3>
+                                        <p class="mb-0">👍 Helpful</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center" style="background: #ffe8e8;">
+                                    <div class="card-body">
+                                        <h3 class="text-danger" id="thumbsDownCount">-</h3>
+                                        <p class="mb-0">👎 Needs Work</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center" style="background: #e8f4fd;">
+                                    <div class="card-body">
+                                        <h3 class="text-primary" id="satisfactionRate">-</h3>
+                                        <p class="mb-0">Satisfaction Rate</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center" style="background: #f0f0f0;">
+                                    <div class="card-body">
+                                        <h3 class="text-secondary" id="totalFeedback">-</h3>
+                                        <p class="mb-0">Total Feedback</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Recent Feedback -->
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5>Recent Feedback</h5>
+                            <div>
+                                <select class="form-select form-select-sm d-inline-block" style="width: auto;" id="feedbackFilter">
+                                    <option value="">All Feedback</option>
+                                    <option value="thumbs_up">👍 Helpful Only</option>
+                                    <option value="thumbs_down">👎 Needs Work Only</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div id="feedbackList">
+                            <!-- Feedback items will be loaded here -->
+                        </div>
+                        
+                        <!-- Load More Button -->
+                        <div class="text-center mt-3">
+                            <button class="btn btn-outline-secondary" id="loadMoreFeedback" onclick="loadMoreFeedback()" style="display: none;">
+                                Load More Feedback
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Instructions -->
         <div class="row">
             <div class="col-12">
@@ -1807,7 +1887,210 @@ Remember: Your goal is to provide the best possible user experience by being hel
         document.addEventListener('DOMContentLoaded', function() {
             console.log('DOM loaded, initializing icon upload...');
             initializeIconUpload();
+            
+            // Initialize feedback management
+            loadFeedbackStats();
+            loadFeedback(true);
+            
+            // Add feedback filter event listener
+            const feedbackFilter = document.getElementById('feedbackFilter');
+            if (feedbackFilter) {
+                feedbackFilter.addEventListener('change', function() {
+                    loadFeedback(true); // Reset and reload with filter
+                });
+            }
         });
+
+        // ===========================
+        // FEEDBACK MANAGEMENT FUNCTIONS
+        // ===========================
+        
+        let currentFeedbackOffset = 0;
+        const feedbackLimit = 20;
+        
+        function refreshFeedbackStats() {
+            loadFeedbackStats();
+            loadFeedback(true); // true = reset list
+        }
+        
+        function loadFeedbackStats() {
+            fetch('/feedback/stats')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        document.getElementById('thumbsUpCount').textContent = data.stats.thumbs_up;
+                        document.getElementById('thumbsDownCount').textContent = data.stats.thumbs_down;
+                        document.getElementById('satisfactionRate').textContent = data.stats.satisfaction_rate + '%';
+                        document.getElementById('totalFeedback').textContent = data.stats.total_feedback;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading feedback stats:', error);
+                });
+        }
+        
+        function loadFeedback(reset = false) {
+            if (reset) {
+                currentFeedbackOffset = 0;
+            }
+            
+            const filterType = document.getElementById('feedbackFilter').value;
+            let url = `/feedback?limit=${feedbackLimit}&offset=${currentFeedbackOffset}`;
+            
+            if (filterType) {
+                url += `&feedback_type=${filterType}`;
+            }
+            
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        const feedbackList = document.getElementById('feedbackList');
+                        
+                        if (reset) {
+                            feedbackList.innerHTML = '';
+                        }
+                        
+                        if (data.feedback.length === 0 && reset) {
+                            feedbackList.innerHTML = '<div class="text-center text-muted py-4">No feedback records found.</div>';
+                            document.getElementById('loadMoreFeedback').style.display = 'none';
+                            return;
+                        }
+                        
+                        data.feedback.forEach(feedback => {
+                            const feedbackItem = createFeedbackItem(feedback);
+                            feedbackList.appendChild(feedbackItem);
+                        });
+                        
+                        // Show/hide load more button
+                        const loadMoreBtn = document.getElementById('loadMoreFeedback');
+                        if (data.feedback.length === feedbackLimit) {
+                            loadMoreBtn.style.display = 'inline-block';
+                        } else {
+                            loadMoreBtn.style.display = 'none';
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading feedback:', error);
+                    if (reset) {
+                        document.getElementById('feedbackList').innerHTML = 
+                            '<div class="text-center text-danger py-4">Error loading feedback records.</div>';
+                    }
+                });
+        }
+        
+        function createFeedbackItem(feedback) {
+            const item = document.createElement('div');
+            item.className = 'card mb-3';
+            
+            const feedbackIcon = feedback.feedback_type === 'thumbs_up' ? '👍' : '👎';
+            const feedbackClass = feedback.feedback_type === 'thumbs_up' ? 'text-success' : 'text-danger';
+            const timestamp = new Date(feedback.feedback_timestamp).toLocaleString();
+            
+            // Truncate long text for display
+            const truncatedQuestion = feedback.user_question.length > 100 ? 
+                feedback.user_question.substring(0, 100) + '...' : feedback.user_question;
+            const truncatedResponse = feedback.bot_response.length > 200 ? 
+                feedback.bot_response.substring(0, 200) + '...' : feedback.bot_response;
+            
+            item.innerHTML = `
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <span class="badge bg-primary">${feedback.response_type}</span>
+                                <span class="${feedbackClass}" style="font-size: 1.2em;">${feedbackIcon}</span>
+                                <small class="text-muted">${timestamp}</small>
+                            </div>
+                            
+                            <div class="mb-2">
+                                <strong>User:</strong> <em>${truncatedQuestion}</em>
+                            </div>
+                            
+                            <div class="mb-2">
+                                <strong>Bot Response:</strong> ${truncatedResponse}
+                            </div>
+                            
+                            ${feedback.username || feedback.user_id ? `
+                            <div class="mb-2">
+                                <small class="text-muted">
+                                    User: ${feedback.username || feedback.user_id || 'Anonymous'}
+                                    ${feedback.email ? `(${feedback.email})` : ''}
+                                </small>
+                            </div>
+                            ` : ''}
+                            
+                            ${feedback.feedback_comment ? `
+                            <div class="mb-2">
+                                <strong>Comment:</strong> ${feedback.feedback_comment}
+                            </div>
+                            ` : ''}
+                        </div>
+                        
+                        <div class="btn-group-vertical ms-3">
+                            <button class="btn btn-sm btn-outline-secondary" onclick="viewFullFeedback(${feedback.id})"
+                                    title="View Full Details">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            ${feedback.used_for_training ? 
+                                '<span class="badge bg-success mt-1">Used for Training</span>' : 
+                                `<button class="btn btn-sm btn-outline-primary mt-1" 
+                                         onclick="markForTraining(${feedback.id})" 
+                                         title="Mark for Training">
+                                    <i class="fas fa-graduation-cap"></i>
+                                </button>`
+                            }
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            return item;
+        }
+        
+        function loadMoreFeedback() {
+            currentFeedbackOffset += feedbackLimit;
+            loadFeedback(false);
+        }
+        
+        function markForTraining(feedbackId) {
+            fetch(`/feedback/${feedbackId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    used_for_training: true,
+                    training_notes: 'Marked for training from admin panel'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    showAlert('Feedback marked for training!', 'success');
+                    loadFeedback(true); // Refresh the list
+                } else {
+                    showAlert('Error marking feedback for training', 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error marking for training:', error);
+                showAlert('Error marking feedback for training', 'danger');
+            });
+        }
+        
+        function viewFullFeedback(feedbackId) {
+            // This could open a modal with full feedback details
+            // For now, just show an alert with basic info
+            fetch(`/feedback?limit=1&offset=0`)
+                .then(response => response.json())
+                .then(data => {
+                    const feedback = data.feedback.find(f => f.id === feedbackId);
+                    if (feedback) {
+                        alert(`Full Feedback Details:\n\nQuestion: ${feedback.user_question}\n\nResponse: ${feedback.bot_response}\n\nType: ${feedback.response_type}\n\nFeedback: ${feedback.feedback_type}\n\nTime: ${new Date(feedback.feedback_timestamp).toLocaleString()}`);
+                    }
+                })
+                .catch(error => console.error('Error viewing feedback:', error));
+        }
     </script>
 </body>
 </html>

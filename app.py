@@ -8,7 +8,7 @@ from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
 from vectorizer import DocumentVectorizer
 from rag_chain import RAGChain
-from models import db, ApiRule, ApiTool, UserConversation, SystemPrompt
+from models import db, ApiRule, ApiTool, UserConversation, SystemPrompt, RagFeedback
 from session_memory import session_manager
 import json
 import subprocess
@@ -1011,6 +1011,184 @@ def delete_widget_icon():
     except Exception as e:
         logging.error(f"Error deleting widget icon: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+# ===========================
+# RAG FEEDBACK ENDPOINTS
+# ===========================
+
+@app.route('/feedback', methods=['POST'])
+def submit_feedback():
+    """Submit feedback for a RAG response"""
+    try:
+        data = request.json
+        
+        # Extract feedback data
+        session_id = data.get('session_id', str(uuid.uuid4()))
+        user_id = data.get('user_id')
+        username = data.get('username')
+        email = data.get('email')
+        user_question = data.get('user_question', '')
+        bot_response = data.get('bot_response', '')
+        response_type = data.get('response_type', 'rag')
+        feedback_type = data.get('feedback_type')  # 'thumbs_up' or 'thumbs_down'
+        feedback_comment = data.get('feedback_comment', '')
+        retrieved_chunks = data.get('retrieved_chunks')  # JSON string
+        
+        # Validate required fields
+        if not all([user_question, bot_response, feedback_type]):
+            return jsonify({
+                'status': 'error',
+                'message': 'Missing required fields: user_question, bot_response, feedback_type'
+            }), 400
+        
+        if feedback_type not in ['thumbs_up', 'thumbs_down']:
+            return jsonify({
+                'status': 'error',
+                'message': 'feedback_type must be "thumbs_up" or "thumbs_down"'
+            }), 400
+        
+        # Create feedback record
+        feedback = RagFeedback(
+            session_id=session_id,
+            user_id=user_id,
+            username=username,
+            email=email,
+            user_question=user_question,
+            bot_response=bot_response,
+            response_type=response_type,
+            feedback_type=feedback_type,
+            feedback_comment=feedback_comment,
+            retrieved_chunks=retrieved_chunks
+        )
+        
+        # Save to database
+        db.session.add(feedback)
+        db.session.commit()
+        
+        logging.info(f"Feedback saved: {feedback_type} for session {session_id}")
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Thank you for your feedback! It will help us improve the system.',
+            'feedback_id': feedback.id
+        })
+        
+    except Exception as e:
+        logging.error(f"Error saving feedback: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': 'Error saving feedback. Please try again.'
+        }), 500
+
+@app.route('/feedback', methods=['GET'])
+def get_feedback():
+    """Get all feedback records (admin endpoint)"""
+    try:
+        # Get query parameters
+        limit = request.args.get('limit', 50, type=int)
+        offset = request.args.get('offset', 0, type=int)
+        feedback_type = request.args.get('feedback_type')  # Filter by feedback type
+        used_for_training = request.args.get('used_for_training')  # Filter by training status
+        
+        # Build query
+        query = RagFeedback.query.order_by(RagFeedback.feedback_timestamp.desc())
+        
+        if feedback_type:
+            query = query.filter(RagFeedback.feedback_type == feedback_type)
+        
+        if used_for_training is not None:
+            query = query.filter(RagFeedback.used_for_training == (used_for_training.lower() == 'true'))
+        
+        # Apply pagination
+        total_count = query.count()
+        feedback_records = query.offset(offset).limit(limit).all()
+        
+        return jsonify({
+            'status': 'success',
+            'feedback': [record.to_dict() for record in feedback_records],
+            'total_count': total_count,
+            'limit': limit,
+            'offset': offset
+        })
+        
+    except Exception as e:
+        logging.error(f"Error getting feedback: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': 'Error retrieving feedback records'
+        }), 500
+
+@app.route('/feedback/<int:feedback_id>', methods=['PUT'])
+def update_feedback(feedback_id):
+    """Update feedback record (mark as used for training, add notes)"""
+    try:
+        data = request.json
+        feedback = RagFeedback.query.get(feedback_id)
+        
+        if not feedback:
+            return jsonify({
+                'status': 'error',
+                'message': 'Feedback record not found'
+            }), 404
+        
+        # Update fields
+        if 'used_for_training' in data:
+            feedback.used_for_training = data['used_for_training']
+        
+        if 'training_notes' in data:
+            feedback.training_notes = data['training_notes']
+        
+        db.session.commit()
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Feedback record updated successfully',
+            'feedback': feedback.to_dict()
+        })
+        
+    except Exception as e:
+        logging.error(f"Error updating feedback: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': 'Error updating feedback record'
+        }), 500
+
+@app.route('/feedback/stats', methods=['GET'])
+def get_feedback_stats():
+    """Get feedback statistics for analytics"""
+    try:
+        total_feedback = RagFeedback.query.count()
+        thumbs_up = RagFeedback.query.filter(RagFeedback.feedback_type == 'thumbs_up').count()
+        thumbs_down = RagFeedback.query.filter(RagFeedback.feedback_type == 'thumbs_down').count()
+        used_for_training = RagFeedback.query.filter(RagFeedback.used_for_training == True).count()
+        
+        # Calculate satisfaction rate
+        satisfaction_rate = (thumbs_up / total_feedback * 100) if total_feedback > 0 else 0
+        
+        # Get feedback by response type
+        response_types = db.session.query(
+            RagFeedback.response_type,
+            db.func.count(RagFeedback.id).label('count')
+        ).group_by(RagFeedback.response_type).all()
+        
+        return jsonify({
+            'status': 'success',
+            'stats': {
+                'total_feedback': total_feedback,
+                'thumbs_up': thumbs_up,
+                'thumbs_down': thumbs_down,
+                'satisfaction_rate': round(satisfaction_rate, 2),
+                'used_for_training': used_for_training,
+                'response_types': {rt[0]: rt[1] for rt in response_types}
+            }
+        })
+        
+    except Exception as e:
+        logging.error(f"Error getting feedback stats: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': 'Error retrieving feedback statistics'
+        }), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
