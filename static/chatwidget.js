@@ -1894,6 +1894,189 @@
             this.scrollToBottom();
         },
 
+        updateVoiceControls: function() {
+            const voiceBtn = document.querySelector('.chat-widget-voice-btn');
+            const elevenLabsBtn = document.querySelector('.chat-widget-elevenlabs-btn');
+            
+            if (voiceBtn) {
+                if (config.continuousVoice) {
+                    voiceBtn.innerHTML = '📞'; // Phone icon when in call mode
+                    voiceBtn.title = 'Disconnect voice call';
+                    voiceBtn.style.backgroundColor = '#ef4444'; // Red background when active
+                } else if (isPlayingVoice) {
+                    voiceBtn.innerHTML = '🔊'; // Speaker icon when playing
+                    voiceBtn.title = 'Stop voice';
+                    voiceBtn.style.backgroundColor = '#f59e0b'; // Orange background when playing
+                } else {
+                    voiceBtn.innerHTML = '🎙️'; // Microphone icon when idle
+                    voiceBtn.title = 'Start voice mode';
+                    voiceBtn.style.backgroundColor = ''; // Default background
+                }
+            }
+            
+            if (elevenLabsBtn) {
+                if (config.elevenlabsEmbeddedActive) {
+                    elevenLabsBtn.innerHTML = '⚡'; // Lightning bolt when active
+                    elevenLabsBtn.title = 'Disconnect ElevenLabs voice agent';
+                    elevenLabsBtn.style.backgroundColor = '#ef4444'; // Red background when active
+                } else {
+                    elevenLabsBtn.innerHTML = '⚡'; // Lightning bolt when idle
+                    elevenLabsBtn.title = 'Start ElevenLabs voice agent';
+                    elevenLabsBtn.style.backgroundColor = ''; // Default background
+                }
+            }
+        },
+
+        updateElevenLabsEmbeddedControls: function() {
+            // Alias for updateVoiceControls to handle ElevenLabs specific updates
+            this.updateVoiceControls();
+        },
+
+        startContinuousVoiceMode: function() {
+            console.log('Starting continuous voice mode');
+            config.continuousVoice = true;
+            this.updateVoiceControls();
+            this.addMessage("📞 Voice call started! I'm listening. Speak naturally and I'll respond. Say 'stop' to end the call.", 'bot', false);
+            
+            // Start speech recognition
+            setTimeout(() => {
+                this.startSpeechRecognition();
+            }, 1000);
+        },
+
+        disconnectVoiceMode: function() {
+            console.log('Disconnecting voice mode');
+            config.continuousVoice = false;
+            
+            // Stop current speech recognition
+            if (window.currentSpeechRecognition) {
+                window.currentSpeechRecognition.stop();
+                window.currentSpeechRecognition = null;
+            }
+            
+            // Stop current audio
+            this.stopVoice();
+            
+            this.updateVoiceControls();
+            this.addMessage("📞 Voice call ended. You can continue chatting with text or start a new voice call.", 'bot', false);
+        },
+
+        stopVoice: function() {
+            console.log('Stopping voice');
+            
+            // Stop current audio playback
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
+                currentAudio = null;
+            }
+            
+            // Stop ElevenLabs audio
+            if (window.elevenLabsCurrentAudio) {
+                window.elevenLabsCurrentAudio.pause();
+                window.elevenLabsCurrentAudio.currentTime = 0;
+                window.elevenLabsCurrentAudio = null;
+            }
+            
+            isPlayingVoice = false;
+            window.speechRecognitionPaused = false;
+            this.updateVoiceControls();
+        },
+
+        startSpeechRecognition: function() {
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                console.warn('Speech recognition not supported');
+                return;
+            }
+
+            // Don't start if already active or paused
+            if (window.currentSpeechRecognition || window.speechRecognitionPaused) {
+                return;
+            }
+
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const recognition = new SpeechRecognition();
+            
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'en-IN'; // Indian English
+
+            let finalTranscript = '';
+            let silenceTimer = null;
+
+            recognition.onstart = () => {
+                console.log('Speech recognition started');
+                window.currentSpeechRecognition = recognition;
+            };
+
+            recognition.onresult = (event) => {
+                let interimTranscript = '';
+                finalTranscript = '';
+                
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        finalTranscript += transcript;
+                    } else {
+                        interimTranscript += transcript;
+                    }
+                }
+                
+                // Handle voice commands
+                const command = (finalTranscript + interimTranscript).trim().toLowerCase();
+                
+                // Check for stop commands
+                if (command.includes('stop') || command.includes('pause') || command.includes('end call')) {
+                    recognition.stop();
+                    this.disconnectVoiceMode();
+                    return;
+                }
+                
+                // Process final transcript
+                if (finalTranscript.trim()) {
+                    console.log('Voice input:', finalTranscript);
+                    
+                    // Send the voice input as a message
+                    const inputField = document.querySelector('.chat-widget-input');
+                    if (inputField) {
+                        inputField.value = finalTranscript.trim();
+                        this.sendMessage();
+                    }
+                }
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                window.currentSpeechRecognition = null;
+                
+                // Restart recognition for certain errors
+                if (config.continuousVoice && event.error !== 'aborted') {
+                    setTimeout(() => {
+                        this.startSpeechRecognition();
+                    }, 2000);
+                }
+            };
+
+            recognition.onend = () => {
+                console.log('Speech recognition ended');
+                window.currentSpeechRecognition = null;
+                
+                // Restart recognition if still in continuous mode
+                if (config.continuousVoice && !window.speechRecognitionPaused) {
+                    setTimeout(() => {
+                        this.startSpeechRecognition();
+                    }, 1000);
+                }
+            };
+
+            recognition.start();
+        },
+
+        addBotMessage: function(message) {
+            // Alias for addMessage with bot sender
+            this.addMessage(message, 'bot', false);
+        },
+
         // All legacy ElevenLabs API functions removed - now using embedded agent
 
     };
