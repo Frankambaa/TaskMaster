@@ -303,7 +303,7 @@ class RAGChain:
         logging.info(f"🚀 PROCESSING QUESTION: '{question}'")
         logging.info(f"📋 USER: {user_identifier or 'anonymous'} | SESSION: {session_id}")
         
-        # **STEP 1: Check Response Templates First (Keyword/Pattern Matching)**
+        # **STEP 1: Check Response Templates First (Improved Keyword/Pattern Matching)**
         template_response = self.check_response_templates(question)
         if template_response:
             logging.info(f"✅ RESPONSE TYPE: TEMPLATE_MATCH - Template matched")
@@ -372,31 +372,59 @@ class RAGChain:
         return answer
     
     def check_response_templates(self, question: str) -> str:
-        """Check if question matches any response templates (keyword/pattern based)"""
+        """Check if question matches any response templates (improved keyword/pattern based)"""
         try:
             from models import ResponseTemplate
             import json
+            import re
             
             # Get all active templates ordered by priority
             templates = ResponseTemplate.query.filter_by(is_active=True).order_by(ResponseTemplate.priority.desc()).all()
             
-            question_lower = question.lower()
+            question_lower = question.lower().strip()
             
             for template in templates:
-                # Check trigger keywords
+                # Check trigger keywords with improved matching
                 try:
                     keywords = json.loads(template.trigger_keywords) if template.trigger_keywords else []
                     
-                    # Check if any keyword matches
+                    # Check if any keyword matches with improved logic
                     for keyword in keywords:
-                        if keyword.lower() in question_lower:
-                            # Increment usage count
-                            template.usage_count = (template.usage_count or 0) + 1
-                            from models import db
-                            db.session.commit()
-                            
-                            logging.info(f"🎯 Template Match: '{template.name}' triggered by keyword '{keyword}'")
-                            return template.template_text
+                        keyword_lower = keyword.lower().strip()
+                        
+                        # IMPROVED MATCHING LOGIC:
+                        # 1. For very short keywords (1-2 words), require exact match or word boundary
+                        # 2. For longer keywords, allow substring matching
+                        # 3. Avoid matching common question starters like "can you", "how to", etc.
+                        
+                        if len(keyword_lower.split()) <= 2:
+                            # Short keywords: require word boundaries to avoid false positives
+                            pattern = r'\b' + re.escape(keyword_lower) + r'\b'
+                            if re.search(pattern, question_lower):
+                                # Skip common question starters that shouldn't trigger templates
+                                common_starters = ['can you', 'how to', 'how do', 'what is', 'tell me', 'explain']
+                                if any(starter in question_lower for starter in common_starters):
+                                    # Only match if the question is VERY simple (less than 6 words)
+                                    if len(question_lower.split()) >= 6:
+                                        continue
+                                
+                                # Increment usage count
+                                template.usage_count = (template.usage_count or 0) + 1
+                                from models import db
+                                db.session.commit()
+                                
+                                logging.info(f"🎯 Template Match: '{template.name}' triggered by keyword '{keyword}'")
+                                return template.template_text
+                        else:
+                            # Longer keywords: allow substring matching
+                            if keyword_lower in question_lower:
+                                # Increment usage count
+                                template.usage_count = (template.usage_count or 0) + 1
+                                from models import db
+                                db.session.commit()
+                                
+                                logging.info(f"🎯 Template Match: '{template.name}' triggered by keyword '{keyword}'")
+                                return template.template_text
                             
                 except (json.JSONDecodeError, TypeError):
                     continue

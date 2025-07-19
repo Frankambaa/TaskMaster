@@ -328,6 +328,11 @@ deployment/       # Production deployment files
 - July 19, 2025: Messages from third-party platforms process through same AI/RAG system as chatwidget
 - July 19, 2025: Live chat transfer works seamlessly through webhook integration for external platforms
 - July 19, 2025: Created comprehensive integration guide and test suite for webhook functionality
+- July 19, 2025: **CRITICAL RAG CLASSIFICATION FIX**: Fixed critical bug where RAG questions were incorrectly classified as template responses
+- July 19, 2025: Improved template matching logic to avoid false positives on question starters like "can you", "how to", "what is"
+- July 19, 2025: Fixed webhook admin dashboard visibility - converted from hidden tabs to visible sections
+- July 19, 2025: RAG knowledge base questions now correctly process through semantic search instead of keyword templates
+- July 19, 2025: RAG knowledge base questions now correctly process through semantic search instead of keyword templates
 
 ## Known Issues
 
