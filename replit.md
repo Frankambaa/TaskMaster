@@ -265,6 +265,11 @@ deployment/       # Production deployment files
 - July 19, 2025: **GIT AUTOMATION**: Added complete Git automation to deployment scripts for TaskMaster repository
 - July 19, 2025: Configured deployment to automatically pull from https://github.com/Frankambaa/TaskMaster.git
 - July 19, 2025: Created one-command deployment script that handles Git clone, Docker build, and service startup
+- July 19, 2025: **SYSTEM PROMPT MANAGEMENT**: Implemented comprehensive system prompt management in admin panel
+- July 19, 2025: Added SystemPrompt database model with CRUD operations and active prompt tracking
+- July 19, 2025: Integrated dynamic system prompt loading into AI tool executor for customizable chatbot behavior
+- July 19, 2025: Updated default system prompt to be comprehensive chatbot behavior guide rather than just API tool rules
+- July 19, 2025: Admin can now create multiple prompts, set one as active, and control overall chatbot personality and responses
 
 ## User Preferences
 
