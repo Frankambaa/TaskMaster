@@ -1,9 +1,32 @@
 #!/bin/bash
 
-# Quick deploy with fixed requirements
+# Quick deploy with Git automation and fixed requirements
 set -e
 
-echo "🔧 Quick deploy with fixed dependencies..."
+echo "🔧 Quick deploy with Git automation..."
+
+# Configuration - Update these with your repository details
+GIT_REPO_URL="https://github.com/yourusername/your-repo.git"  # Replace with your actual repo URL
+GIT_BRANCH="main"  # or "master" depending on your default branch
+PROJECT_DIR="/home/ubuntu/ragbot"
+
+# Pull latest code from Git
+echo "📥 Pulling latest code from Git..."
+if [ -d "$PROJECT_DIR/.git" ]; then
+    echo "Repository exists, pulling latest changes..."
+    cd $PROJECT_DIR
+    git fetch origin
+    git reset --hard origin/$GIT_BRANCH
+    git pull origin $GIT_BRANCH
+else
+    echo "Cloning repository for the first time..."
+    rm -rf $PROJECT_DIR
+    git clone -b $GIT_BRANCH $GIT_REPO_URL $PROJECT_DIR
+    cd $PROJECT_DIR
+fi
+
+echo "✅ Code updated from Git"
+cd $PROJECT_DIR/deployment_clean
 
 # Clean everything
 docker-compose down --volumes --remove-orphans 2>/dev/null || true

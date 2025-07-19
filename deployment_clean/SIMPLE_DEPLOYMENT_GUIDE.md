@@ -20,21 +20,32 @@ sudo usermod -aG docker ubuntu
 sudo systemctl start docker
 ```
 
-## Step 4: Upload Your Code
-From your local machine:
-```bash
-# Upload complete project
-scp -i your-key.pem -r . ubuntu@your-server-ip:/home/ubuntu/ragbot/
-```
-
-## Step 5: Deploy (Single Command)
+## Step 4: Setup Git Deployment (One-time)
 ```bash
 ssh -i your-key.pem ubuntu@your-server-ip
 cd /home/ubuntu/ragbot/deployment_clean
+
+# Configure your Git repository
+./setup-git-deploy.sh
+# Enter your Git repo URL when prompted
+```
+
+## Step 5: Deploy (Single Command - Auto pulls from Git)
+```bash
+ssh -i your-key.pem ubuntu@your-server-ip
+cd /home/ubuntu/ragbot/deployment_clean
+
+# This automatically pulls latest code from Git and deploys
 ./quick-deploy.sh
 ```
 
-## Step 6: Access Your Application
+## Step 6: Quick Updates (After initial setup)
+```bash
+# For quick code updates without full rebuild
+./git-deploy-only.sh
+```
+
+## Step 7: Access Your Application
 - Main site: `http://your-server-ip`
 - Admin panel: `http://your-server-ip/admin`
 - Chatbot: `http://your-server-ip/chatbot`
