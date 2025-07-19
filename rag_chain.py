@@ -11,6 +11,7 @@ from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from session_memory import session_manager
 from ai_tool_executor import AIToolExecutor
+from models import SystemPrompt
 
 class RAGChain:
     def __init__(self):
@@ -34,17 +35,9 @@ class RAGChain:
             api_key=api_key
         )
         
-        # Create conversation prompt template
+        # Create conversation prompt template with dynamic system prompt
         self.conversation_prompt = ChatPromptTemplate.from_messages([
-            ("system", """You are a helpful AI assistant with access to a knowledge base. 
-            Use the provided context and conversation history to answer questions accurately.
-            If you don't know something, say so clearly.
-            
-            Context from knowledge base:
-            {context}
-            
-            Previous conversation:
-            {conversation_history}"""),
+            ("system", "{system_prompt}\n\nContext from knowledge base:\n{context}\n\nPrevious conversation:\n{conversation_history}"),
             MessagesPlaceholder(variable_name="messages"),
         ])
         
@@ -201,7 +194,7 @@ class RAGChain:
             return []
     
     def generate_answer(self, question: str, relevant_chunks: List[Dict[str, Any]]) -> str:
-        """Generate answer using OpenAI chat model"""
+        """Generate answer using OpenAI chat model with dynamic system prompt"""
         if not relevant_chunks:
             return "I couldn't find any relevant information. Please try a different question."
         
@@ -211,15 +204,8 @@ class RAGChain:
             for chunk in relevant_chunks
         ])
         
-        # Create prompt
-        system_prompt = """You are a helpful assistant that answers questions based on the provided context. 
-        Follow these guidelines:
-        1. Provide short, clear, and direct answers
-        2. Use only the information from the provided context
-        3. If the context doesn't contain enough information to answer the question, politely say so
-        4. Do not make up or hallucinate information
-        5. Be concise and avoid lengthy explanations unless specifically asked
-        """
+        # Get the active system prompt from database
+        system_prompt_text = SystemPrompt.get_active_prompt()
         
         user_prompt = f"""Context:
         {context}
@@ -232,11 +218,11 @@ class RAGChain:
             response = self.openai_client.chat.completions.create(
                 model=self.chat_model,
                 messages=[
-                    {"role": "system", "content": system_prompt},
+                    {"role": "system", "content": system_prompt_text},
                     {"role": "user", "content": user_prompt}
                 ],
                 max_tokens=300,
-                temperature=0.1
+                temperature=0.7
             )
             
             return response.choices[0].message.content.strip()
@@ -262,11 +248,12 @@ class RAGChain:
             conversation_history = session_manager.get_memory_context(session_id, user_identifier)
         
         try:
-            # Create messages for LangChain
+            # Get the active system prompt from database
+            system_prompt_text = SystemPrompt.get_active_prompt()
+            
+            # Create messages for LangChain with the dynamic system prompt
             messages = [
-                SystemMessage(content=f"""You are a helpful AI assistant with access to a knowledge base. 
-                Use the provided context and conversation history to answer questions accurately.
-                If you don't know something, say so clearly.
+                SystemMessage(content=f"""{system_prompt_text}
                 
                 Context from knowledge base:
                 {context}
