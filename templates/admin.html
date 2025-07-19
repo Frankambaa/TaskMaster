@@ -4124,6 +4124,47 @@ Remember: Your goal is to provide the best possible user experience by being hel
             fetch('/api/webhook/config', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'deactivate', config_id: configId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    loadWebhookConfigs(); // Refresh
+                    showAlert('Webhook deactivated successfully!', 'success');
+                } else {
+                    showAlert('Error deactivating webhook: ' + data.error, 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error deactivating webhook:', error);
+                showAlert('Error deactivating webhook', 'danger');
+            });
+        }
+
+        function deleteWebhookConfig(configId) {
+            if (!confirm('Are you sure you want to delete this webhook configuration? This action cannot be undone.')) {
+                return;
+            }
+
+            fetch(`/api/webhook/config/${configId}`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    loadWebhookConfigs(); // Refresh
+                    showAlert('Webhook configuration deleted successfully!', 'success');
+                } else {
+                    showAlert('Error deleting webhook: ' + data.error, 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error deleting webhook:', error);
+                showAlert('Error deleting webhook configuration', 'danger');
+            });
+        }
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'deactivate_all' })
             })
             .then(response => response.json())

@@ -2034,45 +2034,110 @@ def webhook_config():
         try:
             data = request.get_json()
             
-            # Validate required fields
-            required_fields = ['name', 'provider']
-            missing_fields = [field for field in required_fields if field not in data]
-            if missing_fields:
-                return jsonify({
-                    'success': False,
-                    'error': f'Missing required fields: {missing_fields}'
-                }), 400
+            # Handle different actions
+            action = data.get('action')
             
-            # Deactivate other configs if this one is set as active
-            if data.get('is_active', False):
+            if action == 'activate':
+                config_id = data.get('config_id')
+                if not config_id:
+                    return jsonify({
+                        'success': False,
+                        'error': 'config_id is required for activation'
+                    }), 400
+                
+                # Deactivate all configs first
                 WebhookConfig.query.update({'is_active': False})
+                
+                # Activate the specified config
+                config = WebhookConfig.query.get(config_id)
+                if not config:
+                    return jsonify({
+                        'success': False,
+                        'error': 'Webhook configuration not found'
+                    }), 404
+                
+                config.is_active = True
+                db.session.commit()
+                
+                return jsonify({
+                    'success': True,
+                    'message': 'Webhook activated successfully'
+                })
             
-            # Create new webhook config
-            config = WebhookConfig(
-                name=data['name'],
-                provider=data['provider'],
-                webhook_url=data.get('outgoing_webhook_url', data.get('webhook_url', '')),
-                timeout_seconds=data.get('timeout_seconds', 30),
-                retry_count=data.get('retry_attempts', 3),
-                is_active=data.get('is_active', False),
-                event_types='["message"]'  # Default event types
-            )
+            elif action == 'deactivate':
+                config_id = data.get('config_id')
+                if config_id:
+                    # Deactivate specific config
+                    config = WebhookConfig.query.get(config_id)
+                    if not config:
+                        return jsonify({
+                            'success': False,
+                            'error': 'Webhook configuration not found'
+                        }), 404
+                    
+                    config.is_active = False
+                    db.session.commit()
+                else:
+                    # Deactivate all configs
+                    WebhookConfig.query.update({'is_active': False})
+                    db.session.commit()
+                
+                return jsonify({
+                    'success': True,
+                    'message': 'Webhook deactivated successfully'
+                })
             
-            # Set custom headers if provided
-            if 'custom_headers' in data:
-                config.set_headers(data['custom_headers'])
+            elif action == 'deactivate_all':
+                # Deactivate all configs
+                WebhookConfig.query.update({'is_active': False})
+                db.session.commit()
+                
+                return jsonify({
+                    'success': True,
+                    'message': 'All webhooks deactivated successfully'
+                })
             
-            # Set auth token if provided
-            if 'auth_token' in data:
-                config.set_auth_credentials({'token': data['auth_token']})
-            
-            db.session.add(config)
-            db.session.commit()
-            
-            return jsonify({
-                'success': True,
-                'config': config.to_dict()
-            })
+            else:
+                # Default behavior: Create new webhook config
+                # Validate required fields
+                required_fields = ['name', 'provider']
+                missing_fields = [field for field in required_fields if field not in data]
+                if missing_fields:
+                    return jsonify({
+                        'success': False,
+                        'error': f'Missing required fields: {missing_fields}'
+                    }), 400
+                
+                # Deactivate other configs if this one is set as active
+                if data.get('is_active', False):
+                    WebhookConfig.query.update({'is_active': False})
+                
+                # Create new webhook config
+                config = WebhookConfig(
+                    name=data['name'],
+                    provider=data['provider'],
+                    webhook_url=data.get('outgoing_webhook_url', data.get('webhook_url', '')),
+                    timeout_seconds=data.get('timeout_seconds', 30),
+                    retry_count=data.get('retry_attempts', 3),
+                    is_active=data.get('is_active', False),
+                    event_types='["message"]'  # Default event types
+                )
+                
+                # Set custom headers if provided
+                if 'custom_headers' in data:
+                    config.set_headers(data['custom_headers'])
+                
+                # Set auth token if provided
+                if 'auth_token' in data:
+                    config.set_auth_credentials({'token': data['auth_token']})
+                
+                db.session.add(config)
+                db.session.commit()
+                
+                return jsonify({
+                    'success': True,
+                    'config': config.to_dict()
+                })
             
         except Exception as e:
             logging.error(f"Error creating webhook config: {e}")
