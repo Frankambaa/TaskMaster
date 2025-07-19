@@ -2445,7 +2445,7 @@ Remember: Your goal is to provide the best possible user experience by being hel
             };
             
             try {
-                const response = await fetch('/api/response-templates', {
+                const response = await fetch('/response_templates', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(formData)
@@ -2485,7 +2485,7 @@ Remember: Your goal is to provide the best possible user experience by being hel
             };
             
             try {
-                const response = await fetch(`/api/response-templates/${templateId}`, {
+                const response = await fetch(`/response_templates/${templateId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(formData)
@@ -2505,7 +2505,7 @@ Remember: Your goal is to provide the best possible user experience by being hel
         });
 
         function editResponseTemplate(templateId) {
-            fetch('/api/response-templates')
+            fetch('/response_templates')
                 .then(response => response.json())
                 .then(data => {
                     const template = data.templates.find(t => t.id === templateId);
@@ -2529,7 +2529,7 @@ Remember: Your goal is to provide the best possible user experience by being hel
 
         function deleteResponseTemplate(templateId) {
             if (confirm('Are you sure you want to delete this response template?')) {
-                fetch(`/api/response-templates/${templateId}`, {
+                fetch(`/response_templates/${templateId}`, {
                     method: 'DELETE'
                 })
                 .then(response => response.json())
