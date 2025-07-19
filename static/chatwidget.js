@@ -2077,6 +2077,12 @@
             this.addMessage(message, 'bot', false);
         },
 
+        isRAGResponse: function(responseData) {
+            // Check if the response is from RAG knowledge base
+            if (!responseData) return false;
+            return responseData.response_type === 'RAG_KNOWLEDGE_BASE';
+        },
+
         // All legacy ElevenLabs API functions removed - now using embedded agent
 
     };
