@@ -363,7 +363,7 @@ def ask():
                             })
                 
                 # Create live chat session with conversation history
-                session = live_chat_manager.create_session(
+                live_session = live_chat_manager.create_session(
                     user_identifier=user_identifier or session_id,
                     username=username,
                     email=email,
@@ -374,10 +374,10 @@ def ask():
                 
                 # Import conversation history
                 if conversation_history:
-                    live_chat_manager.import_bot_conversation(session.session_id, conversation_history)
-                    logging.info(f"Imported {len(conversation_history)} messages to live chat session {session.session_id}")
+                    live_chat_manager.import_bot_conversation(live_session.session_id, conversation_history)
+                    logging.info(f"Imported {len(conversation_history)} messages to live chat session {live_session.session_id}")
                 
-                answer = f"I've transferred your chat to our live agent team. Session ID: {session.session_id}. An agent will be with you shortly and can see your previous conversation history."
+                answer = f"I've transferred your chat to our live agent team. Session ID: {live_session.session_id}. An agent will be with you shortly and can see your previous conversation history."
                 response_type = 'internal_live_chat_transfer'
                 
             except Exception as e:
