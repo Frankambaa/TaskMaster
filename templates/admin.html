@@ -944,7 +944,79 @@
             </div>
         </div>
 
-
+        <!-- System Logs Section -->
+        <div class="row">
+            <div class="col-md-12 mb-4">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="fas fa-list-alt"></i> System Logs
+                        </div>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-primary" onclick="refreshLogs()" title="Refresh Logs">
+                                <i class="fas fa-sync"></i>
+                            </button>
+                            <button class="btn btn-outline-secondary" onclick="clearLogsDisplay()" title="Clear Display">
+                                <i class="fas fa-eraser"></i>
+                            </button>
+                            <button class="btn btn-outline-info" onclick="downloadLogs()" title="Download Logs">
+                                <i class="fas fa-download"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> <strong>Response Type Tracking:</strong> Monitor how questions are processed through the 4-step pipeline: Templates → Small Talk → AI Tools → RAG Knowledge Base
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <select class="form-select form-select-sm" id="logLevelFilter">
+                                        <option value="">All Levels</option>
+                                        <option value="INFO">Info</option>
+                                        <option value="ERROR">Error</option>
+                                        <option value="DEBUG">Debug</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <select class="form-select form-select-sm" id="responseTypeFilter">
+                                        <option value="">All Response Types</option>
+                                        <option value="TEMPLATE_MATCH">Template Match</option>
+                                        <option value="SMALL_TALK">Small Talk</option>
+                                        <option value="AI_TOOL">AI Tool</option>
+                                        <option value="RAG_KNOWLEDGE_BASE">RAG Knowledge Base</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <input type="text" class="form-control form-control-sm" id="logSearchFilter" placeholder="Search logs...">
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="autoRefreshLogs" checked>
+                                        <label class="form-check-label small" for="autoRefreshLogs">Auto-refresh</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="systemLogs" style="height: 400px; overflow-y: auto; background-color: #1e1e1e; color: #d4d4d4; font-family: 'Courier New', monospace; font-size: 0.875rem; padding: 1rem; border-radius: 0.375rem;">
+                            <div class="text-center text-muted py-3">
+                                <i class="fas fa-spinner fa-spin"></i> Loading logs...
+                            </div>
+                        </div>
+                        
+                        <div class="mt-2 small text-muted">
+                            <strong>Legend:</strong>
+                            <span class="badge bg-success me-1">🚀 PROCESSING</span>
+                            <span class="badge bg-info me-1">✅ RESPONSE TYPE</span>
+                            <span class="badge bg-warning me-1">🔍 STEP</span>
+                            <span class="badge bg-danger me-1">❌ ERROR</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Instructions -->
         <div class="row">
@@ -2624,6 +2696,9 @@ Remember: Your goal is to provide the best possible user experience by being hel
             // Initialize problematic responses
             loadProblematicResponses();
             
+            // Initialize system logs
+            initializeSystemLogs();
+            
             // Add feedback filter event listener for the new consolidated interface
             const feedbackTypeFilter = document.getElementById('feedbackTypeFilter');
             if (feedbackTypeFilter) {
@@ -2917,6 +2992,198 @@ Remember: Your goal is to provide the best possible user experience by being hel
             // Load settings on page load
             loadChatSettings();
         });
+
+        // System Logs Functions
+        let autoRefreshInterval;
+        
+        function initializeSystemLogs() {
+            loadSystemLogs();
+            
+            // Set up auto-refresh
+            const autoRefreshCheckbox = document.getElementById('autoRefreshLogs');
+            if (autoRefreshCheckbox && autoRefreshCheckbox.checked) {
+                startAutoRefresh();
+            }
+            
+            // Add event listeners for filters
+            document.getElementById('logLevelFilter')?.addEventListener('change', loadSystemLogs);
+            document.getElementById('responseTypeFilter')?.addEventListener('change', loadSystemLogs);
+            document.getElementById('logSearchFilter')?.addEventListener('input', debounce(loadSystemLogs, 500));
+            document.getElementById('autoRefreshLogs')?.addEventListener('change', function() {
+                if (this.checked) {
+                    startAutoRefresh();
+                } else {
+                    stopAutoRefresh();
+                }
+            });
+        }
+        
+        function loadSystemLogs() {
+            const levelFilter = document.getElementById('logLevelFilter')?.value || '';
+            const responseTypeFilter = document.getElementById('responseTypeFilter')?.value || '';
+            const searchQuery = document.getElementById('logSearchFilter')?.value || '';
+            
+            const params = new URLSearchParams({
+                limit: '50',
+                level: levelFilter,
+                response_type: responseTypeFilter,
+                search: searchQuery
+            });
+            
+            fetch(`/logs?${params.toString()}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayLogs(data.logs);
+                    } else {
+                        console.error('Error loading logs:', data.error);
+                        document.getElementById('systemLogs').innerHTML = 
+                            `<div class="text-danger text-center py-3">
+                                <i class="fas fa-exclamation-triangle"></i> Error loading logs: ${data.error}
+                            </div>`;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching logs:', error);
+                    document.getElementById('systemLogs').innerHTML = 
+                        `<div class="text-danger text-center py-3">
+                            <i class="fas fa-exclamation-triangle"></i> Failed to fetch logs
+                        </div>`;
+                });
+        }
+        
+        function displayLogs(logs) {
+            const logsContainer = document.getElementById('systemLogs');
+            
+            if (!logs || logs.length === 0) {
+                logsContainer.innerHTML = 
+                    `<div class="text-muted text-center py-3">
+                        <i class="fas fa-info-circle"></i> No logs found matching the current filters
+                    </div>`;
+                return;
+            }
+            
+            const logHtml = logs.map(log => {
+                const levelColor = getLevelColor(log.level);
+                const responseTypeIcon = getResponseTypeIcon(log.response_type);
+                
+                return `
+                    <div class="log-entry mb-1" style="font-size: 0.875rem;">
+                        <span style="color: #888;">[${log.timestamp}]</span>
+                        <span style="color: ${levelColor}; font-weight: bold;">${log.level}</span>
+                        ${responseTypeIcon}
+                        <span style="color: #d4d4d4;">${escapeHtml(log.message)}</span>
+                    </div>
+                `;
+            }).join('');
+            
+            logsContainer.innerHTML = logHtml;
+            // Auto-scroll to bottom if not manually scrolled up
+            if (logsContainer.scrollTop >= logsContainer.scrollHeight - logsContainer.clientHeight - 50) {
+                logsContainer.scrollTop = logsContainer.scrollHeight;
+            }
+        }
+        
+        function getLevelColor(level) {
+            switch (level) {
+                case 'ERROR': return '#ff6b6b';
+                case 'WARNING': return '#feca57';
+                case 'INFO': return '#48cae4';
+                case 'DEBUG': return '#a8dadc';
+                default: return '#d4d4d4';
+            }
+        }
+        
+        function getResponseTypeIcon(responseType) {
+            switch (responseType) {
+                case 'TEMPLATE_MATCH': return '<span style="color: #4ade80;">🎯</span>';
+                case 'SMALL_TALK': return '<span style="color: #60a5fa;">💬</span>';
+                case 'AI_TOOL': return '<span style="color: #f59e0b;">🤖</span>';
+                case 'RAG_KNOWLEDGE_BASE': return '<span style="color: #8b5cf6;">🧠</span>';
+                default: return '<span style="color: #6b7280;">📋</span>';
+            }
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function refreshLogs() {
+            const refreshBtn = document.querySelector('[onclick="refreshLogs()"] i');
+            if (refreshBtn) {
+                refreshBtn.classList.add('fa-spin');
+                setTimeout(() => refreshBtn.classList.remove('fa-spin'), 1000);
+            }
+            loadSystemLogs();
+        }
+        
+        function clearLogsDisplay() {
+            document.getElementById('systemLogs').innerHTML = 
+                `<div class="text-muted text-center py-3">
+                    <i class="fas fa-info-circle"></i> Log display cleared
+                </div>`;
+        }
+        
+        function downloadLogs() {
+            const levelFilter = document.getElementById('logLevelFilter')?.value || '';
+            const responseTypeFilter = document.getElementById('responseTypeFilter')?.value || '';
+            const searchQuery = document.getElementById('logSearchFilter')?.value || '';
+            
+            const params = new URLSearchParams({
+                limit: '1000',
+                level: levelFilter,
+                response_type: responseTypeFilter,
+                search: searchQuery
+            });
+            
+            fetch(`/logs?${params.toString()}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const logText = data.logs.map(log => 
+                            `[${log.timestamp}] ${log.level} ${log.message}`
+                        ).join('\n');
+                        
+                        const blob = new Blob([logText], { type: 'text/plain' });
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `system-logs-${new Date().toISOString().slice(0, 10)}.txt`;
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error downloading logs:', error);
+                    alert('Failed to download logs');
+                });
+        }
+        
+        function startAutoRefresh() {
+            stopAutoRefresh(); // Clear any existing interval
+            autoRefreshInterval = setInterval(loadSystemLogs, 5000); // Refresh every 5 seconds
+        }
+        
+        function stopAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+            }
+        }
+        
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
     </script>
 </body>
 </html>
