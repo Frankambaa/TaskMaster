@@ -1632,10 +1632,12 @@
                     window.elevenLabsCurrentAudio = null;
                     
                     // Auto-restart listening after audio ends
-                    if (config.elevenlabsActive && !window.speechRecognitionPaused) {
+                    if (config.elevenlabsActive && !window.speechRecognitionPaused && !window.currentSpeechRecognition) {
                         setTimeout(() => {
-                            this.startElevenLabsSpeechRecognition();
-                        }, 1000);
+                            if (config.elevenlabsActive && !window.currentSpeechRecognition) {
+                                this.startElevenLabsSpeechRecognition();
+                            }
+                        }, 2000); // Longer delay after audio completion
                     }
                     
                     resolve();
@@ -1659,7 +1661,18 @@
         },
 
         startElevenLabsSpeechRecognition: function() {
-            // Use the same speech recognition logic but with ElevenLabs processing
+            // Prevent multiple simultaneous recognitions
+            if (window.currentSpeechRecognition) {
+                console.log('Speech recognition already active, skipping restart');
+                return;
+            }
+
+            // Don't start recognition during audio playback
+            if (window.elevenLabsCurrentAudio) {
+                console.log('Audio playing, delaying speech recognition');
+                return;
+            }
+            
             if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
                 this.addMessage("Speech recognition not supported in this browser", 'bot', false, false);
                 return;
@@ -1743,11 +1756,11 @@
                         // Stop current recognition and restart for next question
                         recognition.stop();
                         setTimeout(() => {
-                            if (config.elevenlabsActive && !window.speechRecognitionPaused) {
+                            if (config.elevenlabsActive && !window.speechRecognitionPaused && !window.currentSpeechRecognition) {
                                 console.log('Restarting ElevenLabs speech recognition after stop command');
                                 this.startElevenLabsSpeechRecognition();
                             }
-                        }, 500);
+                        }, 1000);
                         return;
                     }
                     
@@ -1770,21 +1783,25 @@
             };
 
             recognition.onerror = (event) => {
-                console.error('ElevenLabs speech recognition error:', event.error);
+                console.log('ElevenLabs speech recognition error:', event.error);
+                
+                // Clear the global reference on error
+                window.currentSpeechRecognition = null;
+                
                 const elevenlabsBtn = document.querySelector('.chat-widget-elevenlabs-btn');
                 if (elevenlabsBtn) {
                     elevenlabsBtn.classList.remove('listening');
                 }
                 this.updateElevenLabsControls();
                 
-                // Remove listening message if present
-                const messages = messagesContainer.querySelectorAll('.chat-widget-message');
-                const lastMessage = messages[messages.length - 1];
-                if (lastMessage && lastMessage.textContent.includes('🎤 Listening...')) {
-                    lastMessage.remove();
+                // Only restart on non-aborted errors to prevent loops
+                if (event.error !== 'aborted' && config.elevenlabsActive && !window.speechRecognitionPaused) {
+                    setTimeout(() => {
+                        if (config.elevenlabsActive && !window.currentSpeechRecognition && !window.elevenLabsCurrentAudio) {
+                            this.startElevenLabsSpeechRecognition();
+                        }
+                    }, 2000);
                 }
-                
-                // Don't show error messages - silent operation for better UX
             };
 
             recognition.onend = () => {
@@ -1793,11 +1810,15 @@
                 // Clear the global reference
                 window.currentSpeechRecognition = null;
                 
-                // Restart recognition if still in ElevenLabs voice mode (unless manually stopped or paused)
-                if (config.elevenlabsActive && !window.voiceManuallyDisconnected && !window.speechRecognitionPaused) {
+                // Only restart if still in ElevenLabs voice mode and not during audio playback
+                if (config.elevenlabsActive && !window.voiceManuallyDisconnected && 
+                    !window.speechRecognitionPaused && !window.elevenLabsCurrentAudio) {
                     setTimeout(() => {
-                        this.startElevenLabsSpeechRecognition();
-                    }, 500); // Shorter delay for more responsive listening
+                        // Double check before restarting to avoid loops
+                        if (config.elevenlabsActive && !window.currentSpeechRecognition) {
+                            this.startElevenLabsSpeechRecognition();
+                        }
+                    }, 1500); // Longer delay to prevent restart loops
                 }
             };
 

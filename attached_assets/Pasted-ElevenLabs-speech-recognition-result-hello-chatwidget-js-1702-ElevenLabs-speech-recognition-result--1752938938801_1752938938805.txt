@@ -1,0 +1,75 @@
+ElevenLabs speech recognition result: hello
+chatwidget.js:1702 ElevenLabs speech recognition result: hello what
+chatwidget.js:1702 ElevenLabs speech recognition result: hello what can
+chatwidget.js:1702 ElevenLabs speech recognition result: hello what can I
+chatwidget.js:1702 ElevenLabs speech recognition result: hello what can I help
+3chatwidget.js:1702 ElevenLabs speech recognition result: hello what can I help you
+chatwidget.js:1702 ElevenLabs speech recognition result: hello what can I help you with
+chatwidget.js:1458 Audio playback ended
+3chatwidget.js:1702 ElevenLabs speech recognition result: hello what can I help you with today
+chatwidget.js:1725 ElevenLabs voice command detected: hello what can i help you with today
+chatwidget.js:1813 Sending ElevenLabs message: hello what can I help you with today
+chatwidget.js:1791 ElevenLabs speech recognition ended
+chatwidget.js:1680 ElevenLabs speech recognition started
+chatwidget.js:1773 ElevenLabs speech recognition error: aborted
+overrideMethod @ hook.js:608
+recognition.onerror @ chatwidget.js:1773Understand this error
+chatwidget.js:1680 ElevenLabs speech recognition started
+chatwidget.js:1791 ElevenLabs speech recognition ended
+chatwidget.js:1773 ElevenLabs speech recognition error: aborted
+overrideMethod @ hook.js:608
+recognition.onerror @ chatwidget.js:1773Understand this error
+chatwidget.js:1791 ElevenLabs speech recognition ended
+chatwidget.js:1680 ElevenLabs speech recognition started
+chatwidget.js:1454 Audio loading started
+chatwidget.js:1472 Audio playback started successfully
+chatwidget.js:1773 ElevenLabs speech recognition error: aborted
+overrideMethod @ hook.js:608
+recognition.onerror @ chatwidget.js:1773Understand this error
+chatwidget.js:1680 ElevenLabs speech recognition started
+chatwidget.js:1791 ElevenLabs speech recognition ended
+chatwidget.js:1773 ElevenLabs speech recognition error: aborted
+overrideMethod @ hook.js:608
+recognition.onerror @ chatwidget.js:1773Understand this error
+chatwidget.js:1680 ElevenLabs speech recognition started
+chatwidget.js:1791 ElevenLabs speech recognition ended
+chatwidget.js:1773 ElevenLabs speech recognition error: aborted
+overrideMethod @ hook.js:608
+recognition.onerror @ chatwidget.js:1773Understand this error
+chatwidget.js:1680 ElevenLabs speech recognition started
+chatwidget.js:1791 ElevenLabs speech recognition ended
+chatwidget.js:1773 ElevenLabs speech recognition error: aborted
+overrideMethod @ hook.js:608
+recognition.onerror @ chatwidget.js:1773Understand this error
+chatwidget.js:1680 ElevenLabs speech recognition started
+chatwidget.js:1791 ElevenLabs speech recognition ended
+chatwidget.js:1773 ElevenLabs speech recognition error: aborted
+overrideMethod @ hook.js:608
+recognition.onerror @ chatwidget.js:1773Understand this error
+chatwidget.js:1791 ElevenLabs speech recognition ended
+chatwidget.js:1680 ElevenLabs speech recognition started
+chatwidget.js:1773 ElevenLabs speech recognition error: aborted
+overrideMethod @ hook.js:608
+recognition.onerror @ chatwidget.js:1773Understand this error
+chatwidget.js:1791 ElevenLabs speech recognition ended
+chatwidget.js:1680 ElevenLabs speech recognition started
+chatwidget.js:1458 Audio playback ended
+chatwidget.js:1773 ElevenLabs speech recognition error: aborted
+overrideMethod @ hook.js:608
+recognition.onerror @ chatwidget.js:1773Understand this error
+chatwidget.js:1791 ElevenLabs speech recognition ended
+chatwidget.js:1680 ElevenLabs speech recognition started
+chatwidget.js:1773 ElevenLabs speech recognition error: aborted
+overrideMethod @ hook.js:608
+recognition.onerror @ chatwidget.js:1773Understand this error
+chatwidget.js:1791 ElevenLabs speech recognition ended
+chatwidget.js:1680 ElevenLabs speech recognition started
+chatwidget.js:1773 ElevenLabs speech recognition error: aborted
+overrideMethod @ hook.js:608
+recognition.onerror @ chatwidget.js:1773Understand this error
+chatwidget.js:1680 ElevenLabs speech recognition started
+chatwidget.js:1791 ElevenLabs speech recognition ended
+chatwidget.js:1773 ElevenLabs speech recognition error: aborted
+overrideMethod @ hook.js:608
+recognition.onerror @ chatwidget.js:1773Understand this error
+chatwidget.js:1791 ElevenLabs speech recognition ended
