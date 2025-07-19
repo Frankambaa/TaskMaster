@@ -404,8 +404,13 @@ def ask():
                 
                 # Import conversation history
                 if conversation_history:
-                    live_chat_manager.import_bot_conversation(live_session.session_id, conversation_history)
-                    logging.info(f"Imported {len(conversation_history)} messages to live chat session {live_session.session_id}")
+                    try:
+                        live_chat_manager.import_bot_conversation(live_session.session_id, conversation_history)
+                        logging.info(f"Successfully imported {len(conversation_history)} messages to live chat session {live_session.session_id}")
+                    except Exception as import_error:
+                        logging.error(f"Error importing conversation history to session {live_session.session_id}: {import_error}")
+                else:
+                    logging.warning(f"No conversation history found for user {user_identifier} - live chat session {live_session.session_id} created without history")
                 
                 answer = f"I've transferred your chat to our live agent team. Session ID: {live_session.session_id}. An agent will be with you shortly and can see your previous conversation history."
                 response_type = 'internal_live_chat_transfer'
