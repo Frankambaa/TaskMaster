@@ -289,6 +289,9 @@ deployment/       # Production deployment files
 - July 19, 2025: **FEEDBACK UI REFINEMENTS**: Simplified feedback interface to show only thumbs up/down icons without text
 - July 19, 2025: Enhanced greeting detection to exclude simple hi/hello exchanges from feedback collection
 - July 19, 2025: Reduced button size and opacity for subtle, non-intrusive feedback experience
+- July 19, 2025: **FEEDBACK FLOW REDESIGN**: Moved feedback buttons to appear before message cards instead of after
+- July 19, 2025: Implemented new thank you flow - feedback buttons removed immediately, replaced with bot message and close chat confirmation
+- July 19, 2025: Added "Yes, close chat" vs "Continue chatting" options after feedback submission for better user experience
 
 ## User Preferences
 

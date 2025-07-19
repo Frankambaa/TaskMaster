@@ -1403,7 +1403,7 @@
                 display: flex;
                 align-items: center;
                 gap: 6px;
-                margin-top: 6px;
+                margin-bottom: 6px;
                 padding: 2px 0;
                 opacity: 0.7;
             `;
@@ -1435,18 +1435,20 @@
             thumbsDownBtn.title = 'This answer needs improvement';
             thumbsDownBtn.style.cssText = thumbsUpBtn.style.cssText;
 
-            // No feedback text, just add the buttons
+            // Add feedback buttons
             feedbackContainer.appendChild(thumbsUpBtn);
             feedbackContainer.appendChild(thumbsDownBtn);
-            messageDiv.appendChild(feedbackContainer);
+            
+            // Insert BEFORE the message card, not after
+            messageDiv.parentNode.insertBefore(feedbackContainer, messageDiv);
 
             // Event listeners
             thumbsUpBtn.addEventListener('click', () => {
-                this.submitFeedback('thumbs_up', botResponse, responseData, feedbackContainer);
+                this.submitFeedback('thumbs_up', botResponse, responseData, feedbackContainer, messageDiv);
             });
 
             thumbsDownBtn.addEventListener('click', () => {
-                this.submitFeedback('thumbs_down', botResponse, responseData, feedbackContainer);
+                this.submitFeedback('thumbs_down', botResponse, responseData, feedbackContainer, messageDiv);
             });
 
             // Hover effects
@@ -1462,7 +1464,7 @@
             });
         },
 
-        submitFeedback: function(feedbackType, botResponse, responseData, feedbackContainer) {
+        submitFeedback: function(feedbackType, botResponse, responseData, feedbackContainer, messageDiv) {
             const feedbackData = {
                 session_id: sessionId,
                 user_id: config.user_id,
@@ -1476,8 +1478,8 @@
                 retrieved_chunks: responseData.retrieved_chunks || null
             };
 
-            // Show feedback being submitted
-            feedbackContainer.innerHTML = '<span style="color: #666; font-size: 12px;">Submitting feedback...</span>';
+            // Remove the feedback buttons immediately
+            feedbackContainer.remove();
 
             fetch(`${config.apiUrl}/feedback`, {
                 method: 'POST',
@@ -1490,17 +1492,115 @@
             .then(response => response.json())
             .then(data => {
                 if (data.status === 'success') {
-                    // Show thank you message and close chat option
-                    this.showThankYouFlow(feedbackContainer, feedbackType);
+                    // Add thank you message as a new bot message
+                    const thankYouText = feedbackType === 'thumbs_up' ? 
+                        'Thank you for the feedback! 😊 Would you like to close this chat?' : 
+                        'Thank you for the feedback! We\'ll work on improving this. Would you like to close this chat?';
+                    
+                    this.addThankYouMessage(thankYouText);
                 } else {
-                    // Show error
-                    feedbackContainer.innerHTML = '<span style="color: #d32f2f; font-size: 12px;">Failed to submit feedback</span>';
+                    // Add error message as bot message
+                    this.addMessage('Failed to submit feedback. Please try again.', 'bot', true);
                 }
             })
             .catch(error => {
                 console.error('Error submitting feedback:', error);
-                feedbackContainer.innerHTML = '<span style="color: #d32f2f; font-size: 12px;">Error submitting feedback</span>';
+                this.addMessage('Error submitting feedback. Please try again.', 'bot', true);
             });
+        },
+
+        addThankYouMessage: function(thankYouText) {
+            // Add the thank you message first
+            this.addMessage(thankYouText, 'bot', true);
+            
+            // Then add a separate message with the action buttons
+            const actionMessageDiv = document.createElement('div');
+            actionMessageDiv.className = 'chat-widget-message bot-message';
+            actionMessageDiv.style.cssText = `
+                display: flex;
+                justify-content: flex-start;
+                margin-bottom: 12px;
+                align-items: flex-end;
+            `;
+            
+            const actionBubble = document.createElement('div');
+            actionBubble.className = 'chat-widget-bubble';
+            actionBubble.style.cssText = `
+                background: #f1f1f1;
+                color: #333;
+                padding: 8px 12px;
+                border-radius: 18px;
+                max-width: 80%;
+                word-wrap: break-word;
+                font-size: 14px;
+                line-height: 1.4;
+            `;
+
+            // Add close chat confirmation buttons
+            const actionContainer = document.createElement('div');
+            actionContainer.style.cssText = `
+                display: flex;
+                gap: 8px;
+                align-items: center;
+            `;
+
+            const yesBtn = document.createElement('button');
+            yesBtn.innerHTML = 'Yes, close chat';
+            yesBtn.style.cssText = `
+                background: #dc3545;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                padding: 6px 12px;
+                font-size: 12px;
+                cursor: pointer;
+                transition: background-color 0.2s;
+            `;
+
+            const noBtn = document.createElement('button');
+            noBtn.innerHTML = 'Continue chatting';
+            noBtn.style.cssText = `
+                background: #28a745;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                padding: 6px 12px;
+                font-size: 12px;
+                cursor: pointer;
+                transition: background-color 0.2s;
+            `;
+
+            // Event listeners
+            yesBtn.addEventListener('click', () => {
+                this.closeWidget();
+            });
+
+            noBtn.addEventListener('click', () => {
+                // Remove the action buttons and replace with "Happy to help!" message
+                actionContainer.innerHTML = '<span style="color: #666; font-size: 12px; font-style: italic;">Happy to help! 😊</span>';
+            });
+
+            // Hover effects
+            yesBtn.addEventListener('mouseenter', () => yesBtn.style.backgroundColor = '#c82333');
+            yesBtn.addEventListener('mouseleave', () => yesBtn.style.backgroundColor = '#dc3545');
+            noBtn.addEventListener('mouseenter', () => noBtn.style.backgroundColor = '#218838');
+            noBtn.addEventListener('mouseleave', () => noBtn.style.backgroundColor = '#28a745');
+
+            actionContainer.appendChild(yesBtn);
+            actionContainer.appendChild(noBtn);
+            actionBubble.appendChild(actionContainer);
+            actionMessageDiv.appendChild(actionBubble);
+            
+            // Add to messages container
+            messagesContainer.appendChild(actionMessageDiv);
+            this.scrollToBottom();
+        },
+
+        closeWidget: function() {
+            // Close the widget
+            if (isOpen) {
+                this.toggle();
+            }
         },
 
         showThankYouFlow: function(feedbackContainer, feedbackType) {
