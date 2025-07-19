@@ -26,6 +26,8 @@ COPY models.py .
 COPY rag_chain.py .
 COPY vectorizer.py .
 COPY session_memory.py .
+COPY ai_tool_executor.py .
+COPY api_executor.py .
 COPY static/ ./static/
 COPY templates/ ./templates/
 

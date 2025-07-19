@@ -1,0 +1,44 @@
+deployment_clean-app-1       |   File "/app/app.py", line 10, in <module>
+deployment_clean-app-1       |     from rag_chain import RAGChain
+deployment_clean-app-1       |   File "/app/rag_chain.py", line 13, in <module>
+deployment_clean-app-1       |     from ai_tool_executor import AIToolExecutor
+deployment_clean-app-1       | ModuleNotFoundError: No module named 'ai_tool_executor'
+deployment_clean-app-1       | [2025-07-19 07:08:04 +0000] [7] [ERROR] Exception in worker process
+deployment_clean-app-1       | Traceback (most recent call last):
+deployment_clean-app-1       |   File "/usr/local/lib/python3.11/site-packages/gunicorn/arbiter.py", line 609, in spawn_worker
+deployment_clean-app-1       |     worker.init_process()
+deployment_clean-app-1       |   File "/usr/local/lib/python3.11/site-packages/gunicorn/workers/base.py", line 134, in init_process
+deployment_clean-app-1       |     self.load_wsgi()
+deployment_clean-app-1       |   File "/usr/local/lib/python3.11/site-packages/gunicorn/workers/base.py", line 146, in load_wsgi
+deployment_clean-app-1       |     self.wsgi = self.app.wsgi()
+deployment_clean-app-1       |                 ^^^^^^^^^^^^^^^
+deployment_clean-app-1       |   File "/usr/local/lib/python3.11/site-packages/gunicorn/app/base.py", line 67, in wsgi
+deployment_clean-app-1       |     self.callable = self.load()
+deployment_clean-app-1       |                     ^^^^^^^^^^^
+deployment_clean-app-1       |   File "/usr/local/lib/python3.11/site-packages/gunicorn/app/wsgiapp.py", line 58, in load
+deployment_clean-app-1       |     return self.load_wsgiapp()
+deployment_clean-app-1       |            ^^^^^^^^^^^^^^^^^^^
+deployment_clean-app-1       |   File "/usr/local/lib/python3.11/site-packages/gunicorn/app/wsgiapp.py", line 48, in load_wsgiapp
+deployment_clean-app-1       |     return util.import_app(self.app_uri)
+deployment_clean-app-1       |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+deployment_clean-app-1       |   File "/usr/local/lib/python3.11/site-packages/gunicorn/util.py", line 371, in import_app
+deployment_clean-app-1       |     mod = importlib.import_module(module)
+deployment_clean-app-1       |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+deployment_clean-app-1       |   File "/usr/local/lib/python3.11/importlib/__init__.py", line 126, in import_module
+deployment_clean-app-1       |     return _bootstrap._gcd_import(name[level:], package, level)
+deployment_clean-app-1       |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+deployment_clean-app-1       |   File "<frozen importlib._bootstrap>", line 1204, in _gcd_import
+deployment_clean-app-1       |   File "<frozen importlib._bootstrap>", line 1176, in _find_and_load
+deployment_clean-app-1       |   File "<frozen importlib._bootstrap>", line 1147, in _find_and_load_unlocked
+deployment_clean-app-1       |   File "<frozen importlib._bootstrap>", line 690, in _load_unlocked
+deployment_clean-app-1       |   File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+deployment_clean-app-1       |   File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+deployment_clean-app-1       |   File "/app/main.py", line 1, in <module>
+deployment_clean-app-1       |     from app import app
+deployment_clean-app-1       |   File "/app/app.py", line 10, in <module>
+deployment_clean-app-1       |     from rag_chain import RAGChain
+deployment_clean-app-1       |   File "/app/rag_chain.py", line 13, in <module>
+deployment_clean-app-1       |     from ai_tool_executor import AIToolExecutor
+deployment_clean-app-1       | ModuleNotFoundError: No module named 'ai_tool_executor'
+deployment_clean-app-1       | [2025-07-19 07:08:04 +0000] [6] [INFO] Worker exiting (pid: 6)
+deployment_clean-app-1       | [2025-07-19 07:08:04 +0000] [7] [INFO] Worker exiting (pid: 7)
