@@ -45,17 +45,10 @@ SECRET_KEY=$SECRET_KEY
 OPENAI_API_KEY=sk-placeholder
 EOF
 
-    # Get OpenAI key from environment variable or prompt user
-    if [ ! -z "$OPENAI_API_KEY" ]; then
-        OPENAI_KEY="$OPENAI_API_KEY"
-        echo "✅ Using OpenAI API key from environment variable"
+    echo "Enter your OpenAI API key:"
+    read -s OPENAI_KEY
+    if [ ! -z "$OPENAI_KEY" ]; then
         sed -i "s/sk-placeholder/$OPENAI_KEY/" .env
-    else
-        echo "Enter your OpenAI API key:"
-        read -s OPENAI_KEY
-        if [ ! -z "$OPENAI_KEY" ]; then
-            sed -i "s/sk-placeholder/$OPENAI_KEY/" .env
-        fi
     fi
 fi
 
