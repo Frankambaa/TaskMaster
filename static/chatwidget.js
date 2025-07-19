@@ -1634,14 +1634,14 @@
                     // Resume speech recognition after audio ends
                     window.speechRecognitionPaused = false;
                     
-                    // Auto-restart listening after audio ends with longer delay to prevent feedback
+                    // Auto-restart listening after audio ends with much longer delay to prevent speaker feedback
                     if (config.elevenlabsActive && !window.voiceManuallyDisconnected && !window.currentSpeechRecognition) {
                         setTimeout(() => {
                             if (config.elevenlabsActive && !window.currentSpeechRecognition && !window.elevenLabsCurrentAudio) {
-                                console.log('Resuming speech recognition after audio completion');
+                                console.log('🎤 RESUMING speech recognition after speaker audio finished');
                                 this.startElevenLabsSpeechRecognition();
                             }
-                        }, 3000); // Longer delay to prevent audio feedback loop
+                        }, 5000); // Much longer delay to ensure speaker audio doesn't interfere
                     }
                     
                     resolve();
@@ -1655,12 +1655,16 @@
                     reject(error);
                 };
 
-                // Pause speech recognition during audio playback to prevent feedback
+                // CRITICAL: Stop speech recognition BEFORE audio starts to prevent speaker feedback
                 if (window.currentSpeechRecognition) {
-                    console.log('Pausing speech recognition during audio playback');
+                    console.log('🔇 STOPPING speech recognition to prevent speaker feedback');
                     window.speechRecognitionPaused = true;
                     window.currentSpeechRecognition.stop();
+                    window.currentSpeechRecognition = null;
                 }
+
+                // Set lower volume to reduce speaker feedback
+                audio.volume = 0.7;
 
                 // Start playback
                 audio.play().catch(error => {
@@ -1703,12 +1707,18 @@
             recognition.maxAlternatives = 1;
             
             recognition.onstart = () => {
-                console.log('ElevenLabs speech recognition started');
+                console.log('🎤 ElevenLabs speech recognition LISTENING (mic active)');
                 const elevenlabsBtn = document.querySelector('.chat-widget-elevenlabs-btn');
                 if (elevenlabsBtn) {
                     elevenlabsBtn.classList.add('active');
                 }
-                // No message - silent listening for better UX
+                
+                // Ensure we're not listening during audio playback
+                if (window.elevenLabsCurrentAudio) {
+                    console.log('🚫 STOPPING recognition - audio still playing');
+                    recognition.stop();
+                    return;
+                }
             };
 
             recognition.onresult = (event) => {
@@ -1738,9 +1748,19 @@
                         window.elevenLabsCurrentAudio.pause();
                         window.elevenLabsCurrentAudio.currentTime = 0;
                         window.elevenLabsCurrentAudio = null;
+                        window.speechRecognitionPaused = false;
                     }
                     
                     // Stop recognition and restart
+                    recognition.stop();
+                    return;
+                }
+
+                // CRITICAL: Filter out bot's own responses to prevent feedback loop
+                const botPhrases = ['yes i am here to help', 'how can i assist', 'hey how can i help', 'i am here to help'];
+                const transcriptLower = (finalTranscript + interimTranscript).toLowerCase();
+                if (botPhrases.some(phrase => transcriptLower.includes(phrase))) {
+                    console.log('🚫 IGNORING bot feedback:', transcriptLower);
                     recognition.stop();
                     return;
                 }
