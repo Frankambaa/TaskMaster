@@ -352,18 +352,28 @@ def ask():
         elif is_live_chat_request and not active_webhook:
             # Route to internal live chat system with conversation history
             from live_chat_manager import live_chat_manager
-            from session_memory import session_memory_manager
             
             try:
-                # Get conversation history for transfer
+                # Get conversation history for transfer with detailed logging
                 conversation_history = []
                 if user_identifier:
+                    logging.info(f"🔍 LIVE CHAT TRANSFER: Getting conversation history for user {user_identifier}")
+                    
                     # Get persistent conversation history from UserConversation model
                     user_conv_record = UserConversation.query.filter_by(user_identifier=user_identifier).order_by(UserConversation.last_activity.desc()).first()
                     if user_conv_record:
                         history = user_conv_record.get_conversation_history()
-                        # Import ALL conversation history (not just last 8)
-                        logging.info(f"Found {len(history)} total conversation messages for user {user_identifier}")
+                        logging.info(f"📊 Found {len(history)} total conversation messages for user {user_identifier}")
+                        logging.info(f"📅 Last activity: {user_conv_record.last_activity}")
+                        
+                        # Sample of recent messages for verification
+                        if len(history) > 0:
+                            recent_sample = history[-3:] if len(history) >= 3 else history
+                            logging.info(f"🔍 Recent conversation sample:")
+                            for i, msg in enumerate(recent_sample):
+                                msg_type = msg.get('type', 'unknown')
+                                content = msg.get('content', '')[:50]
+                                logging.info(f"   {i+1}. {msg_type.upper()}: {content}...")
                         
                         for msg in history:
                             if msg.get('type') == 'human':
@@ -402,11 +412,16 @@ def ask():
                     priority='normal'
                 )
                 
-                # IMMEDIATE conversation history import with error handling
+                # IMMEDIATE conversation history import with comprehensive error handling and logging
                 try:
                     if conversation_history:
+                        logging.info(f"🚀 IMPORTING: Starting import of {len(conversation_history)} messages to session {live_session.session_id}")
+                        
                         live_chat_manager.import_bot_conversation(live_session.session_id, conversation_history)
-                        logging.info(f"✅ Successfully imported ALL {len(conversation_history)} conversation messages to live chat session {live_session.session_id}")
+                        
+                        # Verify import success
+                        imported_count = LiveChatMessage.query.filter_by(session_id=live_session.session_id).count()
+                        logging.info(f"✅ IMPORT SUCCESS: {len(conversation_history)} messages imported, {imported_count} total messages in session {live_session.session_id}")
                         
                         # Add agent welcome message with context
                         live_chat_manager.send_message(
@@ -414,15 +429,33 @@ def ask():
                             sender_type='agent',
                             sender_id='agent_john',
                             sender_name='John (Agent)',
-                            message_content=f'Hello {username or "there"}! I can see your complete conversation history with our AI assistant. How can I help you today?',
+                            message_content=f'Hello {username or "there"}! I can see your complete conversation history ({len(conversation_history)} messages) with our AI assistant. How can I help you today?',
                             message_type='text'
                         )
+                        logging.info(f"✅ AGENT WELCOME: Added agent welcome message to session {live_session.session_id}")
                     else:
-                        logging.warning(f"❌ No conversation history found for user {user_identifier} - live chat session {live_session.session_id} created without history")
+                        logging.warning(f"❌ NO HISTORY: No conversation history found for user {user_identifier} - live chat session {live_session.session_id} created without history")
+                        logging.warning(f"❌ DEBUG INFO: user_conv_record exists: {user_conv_record is not None if 'user_conv_record' in locals() else 'Variable not found'}")
+                        
                 except Exception as import_error:
-                    logging.error(f"❌ CRITICAL: Error importing conversation history to session {live_session.session_id}: {import_error}")
+                    logging.error(f"❌ CRITICAL ERROR: Failed to import conversation history to session {live_session.session_id}")
+                    logging.error(f"❌ ERROR DETAILS: {import_error}")
                     import traceback
-                    logging.error(traceback.format_exc())
+                    logging.error(f"❌ TRACEBACK: {traceback.format_exc()}")
+                    
+                    # Try to add a basic agent message even if import fails
+                    try:
+                        live_chat_manager.send_message(
+                            session_id=live_session.session_id,
+                            sender_type='agent',
+                            sender_id='agent_john',
+                            sender_name='John (Agent)',
+                            message_content=f'Hello {username or "there"}! I\'m here to help you. There was an issue loading your conversation history, but I can assist you with any questions.',
+                            message_type='text'
+                        )
+                        logging.info(f"✅ FALLBACK: Added fallback agent message to session {live_session.session_id}")
+                    except Exception as fallback_error:
+                        logging.error(f"❌ FALLBACK FAILED: Could not add fallback message: {fallback_error}")
                 
                 answer = f"I've transferred your chat to our live agent team. Session ID: {live_session.session_id}. An agent will be with you shortly and can see your previous conversation history."
                 response_type = 'internal_live_chat_transfer'
