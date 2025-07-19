@@ -65,6 +65,7 @@
     let isInitialized = false;
     let conversationHistory = [];
     let sessionId = null;
+    let ragResponseCount = 0; // Track number of RAG responses for feedback timing
 
     // DOM elements
     let widgetContainer = null;
@@ -880,8 +881,8 @@
             } else {
                 bubble.innerHTML = this.formatMessage(text, sender === 'user');
                 
-                // Add feedback buttons for RAG responses (only for new bot messages)
-                if (sender === 'bot' && storeInHistory && responseData && this.isRAGResponse(responseData)) {
+                // Add feedback buttons for RAG responses (only for new bot messages and after 3+ conversations)
+                if (sender === 'bot' && storeInHistory && responseData && this.shouldShowFeedback(responseData)) {
                     this.addFeedbackButtons(messageDiv, text, responseData);
                 }
                 
@@ -923,8 +924,8 @@
                 element.innerHTML = formattedText;
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
                 
-                // Add feedback buttons for RAG responses after typing is complete
-                if (responseData && this.isRAGResponse(responseData)) {
+                // Add feedback buttons for RAG responses after typing is complete (only after 3+ conversations)
+                if (responseData && this.shouldShowFeedback(responseData)) {
                     const messageDiv = element.closest('.chat-widget-message');
                     this.addFeedbackButtons(messageDiv, text, responseData);
                 }
@@ -1008,11 +1009,15 @@
                 // Send to API
                 this.sendToAPI(sanitizedMessage).then(response => {
                     this.hideTyping(typingDiv);
+                    
+                    // Track RAG responses for feedback timing
+                    const responseData = { ...response, user_question: sanitizedMessage };
+                    if (this.isRAGResponse(responseData)) {
+                        this.trackRAGResponse();
+                    }
+                    
                     // Pass the full response data and the user question for feedback
-                    this.addMessage(response.answer, 'bot', false, true, true, {
-                        ...response, 
-                        user_question: sanitizedMessage
-                    }); // Enable typing effect with response data
+                    this.addMessage(response.answer, 'bot', false, true, true, responseData); // Enable typing effect with response data
                     this.updateSessionInfo(response.user_info);
                 }).catch(error => {
                     this.hideTyping(typingDiv);
@@ -1296,6 +1301,7 @@
                         // Clear UI
                         messagesContainer.innerHTML = '';
                         conversationHistory = [];
+                        ragResponseCount = 0; // Reset RAG response count for feedback timing
                         
                         // Add welcome message
                         if (config.welcomeMessage) {
@@ -1335,6 +1341,31 @@
                    (responseData.response_type.includes('rag') || 
                     responseData.response_type === 'rag_with_ai_tools' ||
                     responseData.response_type === 'rag_with_memory');
+        },
+
+        shouldShowFeedback: function(responseData) {
+            // Only show feedback for RAG responses after 3+ conversations
+            // OR if the user said "thank you" (check if response includes appreciation)
+            if (!this.isRAGResponse(responseData)) {
+                return false;
+            }
+            
+            // Check if this is a thank you response (user saying thanks/goodbye)
+            const userMessage = responseData.user_question ? responseData.user_question.toLowerCase() : '';
+            const isThankYouMessage = userMessage.includes('thank') || 
+                                      userMessage.includes('thanks') || 
+                                      userMessage.includes('bye') || 
+                                      userMessage.includes('goodbye') ||
+                                      userMessage.includes('that\'s all') ||
+                                      userMessage.includes('thats all');
+            
+            // Show feedback if it's 3+ conversations OR if user is saying thanks/goodbye
+            return ragResponseCount >= 3 || isThankYouMessage;
+        },
+
+        trackRAGResponse: function() {
+            // Increment RAG response count (called when a new RAG response is received)
+            ragResponseCount++;
         },
 
         addFeedbackButtons: function(messageDiv, botResponse, responseData) {

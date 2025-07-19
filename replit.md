@@ -283,6 +283,9 @@ deployment/       # Production deployment files
 - July 19, 2025: Implemented thank you flow design: RAG answer → feedback buttons → thank you message → optional chat close
 - July 19, 2025: Added comprehensive admin panel section for feedback analytics, filtering, and training data management
 - July 19, 2025: Feedback system includes response type detection, user identification, session tracking, and training workflow integration
+- July 19, 2025: **FEEDBACK TIMING CONTROL**: Fixed feedback buttons to only appear after 3+ RAG conversations or during thank you/goodbye messages
+- July 19, 2025: Added conversation tracking counter that resets on session clear and prevents feedback spam on first messages
+- July 19, 2025: Enhanced user experience by eliminating inappropriate feedback prompts on simple initial interactions
 
 ## User Preferences
 
