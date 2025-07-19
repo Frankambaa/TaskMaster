@@ -1137,6 +1137,19 @@ def update_feedback(feedback_id):
         
         if 'training_notes' in data:
             feedback.training_notes = data['training_notes']
+            
+        # New response analysis fields
+        if 'response_category' in data:
+            feedback.response_category = data['response_category']
+            
+        if 'improvement_suggestions' in data:
+            feedback.improvement_suggestions = data['improvement_suggestions']
+            
+        if 'admin_notes' in data:
+            feedback.admin_notes = data['admin_notes']
+            
+        if 'training_priority' in data:
+            feedback.training_priority = data['training_priority']
         
         db.session.commit()
         
@@ -1284,6 +1297,156 @@ def get_chat_setting(setting_name):
         
     except Exception as e:
         logging.error(f"Error getting chat setting {setting_name}: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# Response Template Management Endpoints
+@app.route('/response_templates', methods=['GET'])
+def get_response_templates():
+    """Get all response templates"""
+    try:
+        templates = ResponseTemplate.query.order_by(ResponseTemplate.priority.desc()).all()
+        return jsonify({
+            'success': True,
+            'templates': [template.to_dict() for template in templates]
+        })
+    except Exception as e:
+        logging.error(f"Error getting response templates: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/response_templates', methods=['POST'])
+def create_response_template():
+    """Create a new response template"""
+    try:
+        data = request.get_json()
+        
+        # Validate required fields
+        required_fields = ['name', 'template_text', 'category']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({'success': False, 'error': f'Missing required field: {field}'}), 400
+        
+        template = ResponseTemplate(
+            name=data['name'],
+            description=data.get('description', ''),
+            trigger_keywords=data.get('trigger_keywords', []),
+            question_patterns=data.get('question_patterns', []),
+            categories=data.get('categories', [data['category']]),
+            template_text=data['template_text'],
+            fallback_response=data.get('fallback_response'),
+            priority=data.get('priority', 0),
+            is_active=data.get('is_active', True),
+            requires_context=data.get('requires_context', False),
+            created_by=data.get('created_by', 'admin')
+        )
+        
+        db.session.add(template)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Response template created successfully',
+            'template': template.to_dict()
+        })
+        
+    except Exception as e:
+        logging.error(f"Error creating response template: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/response_templates/<int:template_id>', methods=['PUT'])
+def update_response_template(template_id):
+    """Update response template"""
+    try:
+        data = request.get_json()
+        template = ResponseTemplate.query.get(template_id)
+        
+        if not template:
+            return jsonify({'success': False, 'error': 'Template not found'}), 404
+        
+        # Update fields if provided
+        if 'name' in data:
+            template.name = data['name']
+        if 'description' in data:
+            template.description = data['description']
+        if 'trigger_keywords' in data:
+            template.trigger_keywords = data['trigger_keywords']
+        if 'question_patterns' in data:
+            template.question_patterns = data['question_patterns']
+        if 'categories' in data:
+            template.categories = data['categories']
+        if 'template_text' in data:
+            template.template_text = data['template_text']
+        if 'fallback_response' in data:
+            template.fallback_response = data['fallback_response']
+        if 'priority' in data:
+            template.priority = data['priority']
+        if 'is_active' in data:
+            template.is_active = data['is_active']
+        if 'requires_context' in data:
+            template.requires_context = data['requires_context']
+        
+        template.updated_at = datetime.utcnow()
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Response template updated successfully',
+            'template': template.to_dict()
+        })
+        
+    except Exception as e:
+        logging.error(f"Error updating response template: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/response_templates/<int:template_id>', methods=['DELETE'])
+def delete_response_template(template_id):
+    """Delete response template"""
+    try:
+        template = ResponseTemplate.query.get(template_id)
+        if not template:
+            return jsonify({'success': False, 'error': 'Template not found'}), 404
+        
+        db.session.delete(template)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Response template deleted successfully'
+        })
+        
+    except Exception as e:
+        logging.error(f"Error deleting response template: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/feedback/<int:feedback_id>/analyze', methods=['POST'])
+def analyze_feedback_response(feedback_id):
+    """Analyze a feedback response and suggest improvements"""
+    try:
+        data = request.get_json()
+        feedback = RagFeedback.query.get(feedback_id)
+        
+        if not feedback:
+            return jsonify({'success': False, 'error': 'Feedback not found'}), 404
+        
+        # Update analysis fields
+        if 'response_category' in data:
+            feedback.response_category = data['response_category']
+        if 'improvement_suggestions' in data:
+            feedback.improvement_suggestions = data['improvement_suggestions']
+        if 'admin_notes' in data:
+            feedback.admin_notes = data['admin_notes']
+        if 'training_priority' in data:
+            feedback.training_priority = data['training_priority']
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Feedback analysis saved successfully',
+            'feedback': feedback.to_dict()
+        })
+        
+    except Exception as e:
+        logging.error(f"Error analyzing feedback: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':

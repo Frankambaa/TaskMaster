@@ -804,6 +804,76 @@
             </div>
         </div>
 
+        <!-- Response Training Section -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-graduation-cap"></i> Response Training & Analysis</span>
+                        <div>
+                            <button class="btn btn-success btn-sm me-2" data-bs-toggle="modal" data-bs-target="#addResponseTemplateModal">
+                                <i class="fas fa-plus"></i> Add Template
+                            </button>
+                            <button class="btn btn-outline-primary btn-sm" onclick="refreshResponseTraining()">
+                                <i class="fas fa-refresh"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-warning">
+                            <i class="fas fa-lightbulb"></i> <strong>Response Training:</strong> Analyze poor responses like "can you make api call" and create better response templates. Use this to train the bot for common problematic questions.
+                        </div>
+                        
+                        <!-- Navigation Tabs -->
+                        <ul class="nav nav-tabs" id="trainingTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="problematic-tab" data-bs-toggle="tab" data-bs-target="#problematic" type="button" role="tab">
+                                    <i class="fas fa-exclamation-triangle text-warning"></i> Problematic Responses
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="templates-tab" data-bs-toggle="tab" data-bs-target="#templates" type="button" role="tab">
+                                    <i class="fas fa-file-alt"></i> Response Templates
+                                </button>
+                            </li>
+                        </ul>
+                        
+                        <div class="tab-content" id="trainingTabsContent">
+                            <!-- Problematic Responses Tab -->
+                            <div class="tab-pane fade show active" id="problematic" role="tabpanel">
+                                <div class="mt-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h6>Responses Needing Improvement</h6>
+                                        <select class="form-select form-select-sm" style="width: 200px;" id="problemFilter">
+                                            <option value="">All Issues</option>
+                                            <option value="thumbs_down">👎 Negative Feedback</option>
+                                            <option value="vague">Vague Responses</option>
+                                            <option value="too_technical">Too Technical</option>
+                                            <option value="incorrect">Incorrect Answers</option>
+                                            <option value="incomplete">Incomplete Answers</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div id="problematicResponsesList">
+                                        <!-- Problematic responses will be loaded here -->
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Response Templates Tab -->
+                            <div class="tab-pane fade" id="templates" role="tabpanel">
+                                <div class="mt-3">
+                                    <div id="responseTemplatesList">
+                                        <!-- Response templates will be loaded here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Feedback Management Section -->
         <div class="row">
             <div class="col-12">
@@ -1181,6 +1251,232 @@
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                         <button type="submit" class="btn btn-primary">Update Tool</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Response Template Modal -->
+    <div class="modal fade" id="addResponseTemplateModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Response Template</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="addResponseTemplateForm">
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="addTemplateName" class="form-label">Template Name</label>
+                                    <input type="text" class="form-control" id="addTemplateName" required>
+                                    <div class="form-text">Descriptive name for this response template</div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="addTemplateDescription" class="form-label">Description</label>
+                                    <textarea class="form-control" id="addTemplateDescription" rows="2"></textarea>
+                                    <div class="form-text">Optional description of when to use this template</div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="addTemplateCategory" class="form-label">Category</label>
+                                    <select class="form-select" id="addTemplateCategory" required>
+                                        <option value="">Select category...</option>
+                                        <option value="api_clarification">API Clarification</option>
+                                        <option value="vague_response">Vague Response Fix</option>
+                                        <option value="too_technical">Simplify Technical</option>
+                                        <option value="incomplete">Complete Incomplete</option>
+                                        <option value="general_help">General Help</option>
+                                        <option value="custom">Custom</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="addTemplatePriority" class="form-label">Priority</label>
+                                    <input type="number" class="form-control" id="addTemplatePriority" value="0" min="0" max="100">
+                                    <div class="form-text">Higher numbers = checked first</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="addTemplateTriggers" class="form-label">Trigger Keywords</label>
+                                    <textarea class="form-control" id="addTemplateTriggers" rows="3" placeholder="api, make api call, call api"></textarea>
+                                    <div class="form-text">Comma-separated keywords that trigger this template</div>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="addTemplateActive" checked>
+                                    <label class="form-check-label" for="addTemplateActive">Active</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="addTemplateRequiresContext">
+                                    <label class="form-check-label" for="addTemplateRequiresContext">Requires RAG Context</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="addTemplateText" class="form-label">Improved Response Template</label>
+                            <textarea class="form-control" id="addTemplateText" rows="8" required placeholder="Write the improved response that should replace problematic answers..."></textarea>
+                            <div class="form-text">This will be the improved response shown to users</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="addTemplateFallback" class="form-label">Fallback Response</label>
+                            <textarea class="form-control" id="addTemplateFallback" rows="2" placeholder="Optional fallback if template fails..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success">Add Template</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Response Template Modal -->
+    <div class="modal fade" id="editResponseTemplateModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Response Template</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="editResponseTemplateForm">
+                    <input type="hidden" id="editTemplateId">
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="editTemplateName" class="form-label">Template Name</label>
+                                    <input type="text" class="form-control" id="editTemplateName" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="editTemplateDescription" class="form-label">Description</label>
+                                    <textarea class="form-control" id="editTemplateDescription" rows="2"></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="editTemplateCategory" class="form-label">Category</label>
+                                    <select class="form-select" id="editTemplateCategory" required>
+                                        <option value="api_clarification">API Clarification</option>
+                                        <option value="vague_response">Vague Response Fix</option>
+                                        <option value="too_technical">Simplify Technical</option>
+                                        <option value="incomplete">Complete Incomplete</option>
+                                        <option value="general_help">General Help</option>
+                                        <option value="custom">Custom</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="editTemplatePriority" class="form-label">Priority</label>
+                                    <input type="number" class="form-control" id="editTemplatePriority" min="0" max="100">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="editTemplateTriggers" class="form-label">Trigger Keywords</label>
+                                    <textarea class="form-control" id="editTemplateTriggers" rows="3"></textarea>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="editTemplateActive">
+                                    <label class="form-check-label" for="editTemplateActive">Active</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="editTemplateRequiresContext">
+                                    <label class="form-check-label" for="editTemplateRequiresContext">Requires RAG Context</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editTemplateText" class="form-label">Improved Response Template</label>
+                            <textarea class="form-control" id="editTemplateText" rows="8" required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editTemplateFallback" class="form-label">Fallback Response</label>
+                            <textarea class="form-control" id="editTemplateFallback" rows="2"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Update Template</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feedback Analysis Modal -->
+    <div class="modal fade" id="feedbackAnalysisModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Analyze Response</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="feedbackAnalysisForm">
+                    <input type="hidden" id="analysisFeedbackId">
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card mb-3">
+                                    <div class="card-header">
+                                        <strong>Original Question & Response</strong>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-2">
+                                            <strong>User Question:</strong>
+                                            <div id="analysisUserQuestion" class="text-muted"></div>
+                                        </div>
+                                        <div class="mb-2">
+                                            <strong>Bot Response:</strong>
+                                            <div id="analysisBotResponse" class="text-muted"></div>
+                                        </div>
+                                        <div>
+                                            <strong>Feedback:</strong>
+                                            <span id="analysisFeedbackType"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="analysisCategory" class="form-label">Response Category</label>
+                                    <select class="form-select" id="analysisCategory">
+                                        <option value="">Select category...</option>
+                                        <option value="vague">Vague Response</option>
+                                        <option value="too_technical">Too Technical</option>
+                                        <option value="incorrect">Incorrect Answer</option>
+                                        <option value="incomplete">Incomplete Answer</option>
+                                        <option value="helpful">Actually Helpful</option>
+                                        <option value="needs_context">Needs More Context</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="analysisTrainingPriority" class="form-label">Training Priority</label>
+                                    <select class="form-select" id="analysisTrainingPriority">
+                                        <option value="normal">Normal</option>
+                                        <option value="high">High</option>
+                                        <option value="critical">Critical</option>
+                                        <option value="low">Low</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="analysisImprovementSuggestions" class="form-label">Improvement Suggestions</label>
+                                    <textarea class="form-control" id="analysisImprovementSuggestions" rows="4" placeholder="How can this response be improved?"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="analysisAdminNotes" class="form-label">Admin Notes</label>
+                            <textarea class="form-control" id="analysisAdminNotes" rows="3" placeholder="Internal notes about this feedback"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Analysis</button>
                     </div>
                 </form>
             </div>
@@ -1964,6 +2260,233 @@ Remember: Your goal is to provide the best possible user experience by being hel
 
 
 
+        // Response Template Management Functions
+        function loadResponseTemplates() {
+            fetch('/api/response-templates')
+                .then(response => response.json())
+                .then(data => {
+                    displayResponseTemplates(data.templates || []);
+                })
+                .catch(error => console.error('Error loading response templates:', error));
+        }
+
+        function displayResponseTemplates(templates) {
+            const templatesContainer = document.getElementById('responseTemplatesList');
+            if (!templates || templates.length === 0) {
+                templatesContainer.innerHTML = '<p class="text-muted">No response templates configured yet.</p>';
+                return;
+            }
+            
+            let html = '<div class="table-responsive"><table class="table table-hover">';
+            html += '<thead><tr><th>Name</th><th>Category</th><th>Priority</th><th>Status</th><th>Usage</th><th>Actions</th></tr></thead><tbody>';
+            
+            templates.forEach(template => {
+                const statusBadge = template.is_active ? 
+                    '<span class="badge bg-success">Active</span>' : 
+                    '<span class="badge bg-secondary">Inactive</span>';
+                
+                html += `<tr>
+                    <td><strong>${template.name}</strong></td>
+                    <td><span class="badge bg-info">${template.category || 'N/A'}</span></td>
+                    <td><span class="badge bg-primary">${template.priority}</span></td>
+                    <td>${statusBadge}</td>
+                    <td><small>${template.usage_count || 0} uses</small></td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary" onclick="editResponseTemplate(${template.id})">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteResponseTemplate(${template.id})">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </td>
+                </tr>`;
+            });
+            
+            html += '</tbody></table></div>';
+            templatesContainer.innerHTML = html;
+        }
+
+        // Response Template event handlers
+        document.getElementById('addResponseTemplateForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const triggerKeywords = document.getElementById('addTemplateTriggers').value.split(',').map(k => k.trim()).filter(k => k);
+            
+            const formData = {
+                name: document.getElementById('addTemplateName').value,
+                description: document.getElementById('addTemplateDescription').value,
+                trigger_keywords: JSON.stringify(triggerKeywords),
+                question_patterns: JSON.stringify([]), // Can be enhanced later
+                categories: JSON.stringify([document.getElementById('addTemplateCategory').value]),
+                template_text: document.getElementById('addTemplateText').value,
+                fallback_response: document.getElementById('addTemplateFallback').value,
+                priority: document.getElementById('addTemplatePriority').value,
+                is_active: document.getElementById('addTemplateActive').checked,
+                requires_context: document.getElementById('addTemplateRequiresContext').checked
+            };
+            
+            try {
+                const response = await fetch('/api/response-templates', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                
+                if (response.ok) {
+                    loadResponseTemplates();
+                    document.getElementById('addResponseTemplateForm').reset();
+                    bootstrap.Modal.getInstance(document.getElementById('addResponseTemplateModal')).hide();
+                    showAlert('Response template added successfully!', 'success');
+                } else {
+                    const data = await response.json();
+                    showAlert('Error adding response template: ' + data.error, 'danger');
+                }
+            } catch (error) {
+                showAlert('Error adding response template', 'danger');
+            }
+        });
+
+        document.getElementById('editResponseTemplateForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const templateId = document.getElementById('editTemplateId').value;
+            const triggerKeywords = document.getElementById('editTemplateTriggers').value.split(',').map(k => k.trim()).filter(k => k);
+            
+            const formData = {
+                name: document.getElementById('editTemplateName').value,
+                description: document.getElementById('editTemplateDescription').value,
+                trigger_keywords: JSON.stringify(triggerKeywords),
+                question_patterns: JSON.stringify([]), // Can be enhanced later
+                categories: JSON.stringify([document.getElementById('editTemplateCategory').value]),
+                template_text: document.getElementById('editTemplateText').value,
+                fallback_response: document.getElementById('editTemplateFallback').value,
+                priority: document.getElementById('editTemplatePriority').value,
+                is_active: document.getElementById('editTemplateActive').checked,
+                requires_context: document.getElementById('editTemplateRequiresContext').checked
+            };
+            
+            try {
+                const response = await fetch(`/api/response-templates/${templateId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                
+                if (response.ok) {
+                    loadResponseTemplates();
+                    bootstrap.Modal.getInstance(document.getElementById('editResponseTemplateModal')).hide();
+                    showAlert('Response template updated successfully!', 'success');
+                } else {
+                    const data = await response.json();
+                    showAlert('Error updating response template: ' + data.error, 'danger');
+                }
+            } catch (error) {
+                showAlert('Error updating response template', 'danger');
+            }
+        });
+
+        function editResponseTemplate(templateId) {
+            fetch('/api/response-templates')
+                .then(response => response.json())
+                .then(data => {
+                    const template = data.templates.find(t => t.id === templateId);
+                    if (template) {
+                        document.getElementById('editTemplateId').value = template.id;
+                        document.getElementById('editTemplateName').value = template.name;
+                        document.getElementById('editTemplateDescription').value = template.description || '';
+                        document.getElementById('editTemplateCategory').value = JSON.parse(template.categories || '[]')[0] || '';
+                        document.getElementById('editTemplateTriggers').value = JSON.parse(template.trigger_keywords || '[]').join(', ');
+                        document.getElementById('editTemplateText').value = template.template_text;
+                        document.getElementById('editTemplateFallback').value = template.fallback_response || '';
+                        document.getElementById('editTemplatePriority').value = template.priority;
+                        document.getElementById('editTemplateActive').checked = template.is_active;
+                        document.getElementById('editTemplateRequiresContext').checked = template.requires_context;
+                        
+                        new bootstrap.Modal(document.getElementById('editResponseTemplateModal')).show();
+                    }
+                })
+                .catch(error => console.error('Error loading response template:', error));
+        }
+
+        function deleteResponseTemplate(templateId) {
+            if (confirm('Are you sure you want to delete this response template?')) {
+                fetch(`/api/response-templates/${templateId}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        loadResponseTemplates();
+                        showAlert('Response template deleted successfully!', 'success');
+                    } else {
+                        showAlert('Error deleting response template', 'danger');
+                    }
+                })
+                .catch(error => {
+                    showAlert('Error deleting response template', 'danger');
+                });
+            }
+        }
+
+        // Feedback Analysis Functions
+        document.getElementById('feedbackAnalysisForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const feedbackId = document.getElementById('analysisFeedbackId').value;
+            const formData = {
+                response_category: document.getElementById('analysisCategory').value,
+                improvement_suggestions: document.getElementById('analysisImprovementSuggestions').value,
+                admin_notes: document.getElementById('analysisAdminNotes').value,
+                training_priority: document.getElementById('analysisTrainingPriority').value
+            };
+            
+            try {
+                const response = await fetch(`/feedback/${feedbackId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                
+                if (response.ok) {
+                    bootstrap.Modal.getInstance(document.getElementById('feedbackAnalysisModal')).hide();
+                    showAlert('Response analysis saved successfully!', 'success');
+                    loadFeedback(true); // Refresh the feedback list
+                } else {
+                    const data = await response.json();
+                    showAlert('Error saving analysis: ' + data.error, 'danger');
+                }
+            } catch (error) {
+                showAlert('Error saving analysis', 'danger');
+            }
+        });
+
+        function analyzeFeedback(feedbackId) {
+            // Find the feedback data from the current list
+            fetch('/feedback')
+                .then(response => response.json())
+                .then(data => {
+                    const feedback = data.feedback.find(f => f.id === feedbackId);
+                    if (feedback) {
+                        document.getElementById('analysisFeedbackId').value = feedback.id;
+                        document.getElementById('analysisUserQuestion').textContent = feedback.user_question;
+                        document.getElementById('analysisBotResponse').textContent = feedback.bot_response;
+                        document.getElementById('analysisFeedbackType').innerHTML = 
+                            feedback.feedback_type === 'positive' ? 
+                            '<span class="badge bg-success">👍 Positive</span>' : 
+                            '<span class="badge bg-danger">👎 Negative</span>';
+                        
+                        // Pre-fill existing analysis if available
+                        document.getElementById('analysisCategory').value = feedback.response_category || '';
+                        document.getElementById('analysisImprovementSuggestions').value = feedback.improvement_suggestions || '';
+                        document.getElementById('analysisAdminNotes').value = feedback.admin_notes || '';
+                        document.getElementById('analysisTrainingPriority').value = feedback.training_priority || 'normal';
+                        
+                        new bootstrap.Modal(document.getElementById('feedbackAnalysisModal')).show();
+                    }
+                })
+                .catch(error => console.error('Error loading feedback for analysis:', error));
+        }
+
         // Initialize icon upload when page loads
         document.addEventListener('DOMContentLoaded', function() {
             console.log('DOM loaded, initializing icon upload...');
@@ -1972,6 +2495,9 @@ Remember: Your goal is to provide the best possible user experience by being hel
             // Initialize feedback management
             loadFeedbackStats();
             loadFeedback(true);
+            
+            // Initialize response templates
+            loadResponseTemplates();
             
             // Add feedback filter event listener
             const feedbackFilter = document.getElementById('feedbackFilter');
@@ -2113,6 +2639,10 @@ Remember: Your goal is to provide the best possible user experience by being hel
                             <button class="btn btn-sm btn-outline-secondary" onclick="viewFullFeedback(${feedback.id})"
                                     title="View Full Details">
                                 <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-info mt-1" onclick="analyzeFeedback(${feedback.id})"
+                                    title="Analyze Response">
+                                <i class="fas fa-chart-line"></i>
                             </button>
                             ${feedback.used_for_training ? 
                                 '<span class="badge bg-success mt-1">Used for Training</span>' : 

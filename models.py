@@ -238,6 +238,12 @@ class RagFeedback(db.Model):
     used_for_training = db.Column(db.Boolean, default=False)
     training_notes = db.Column(db.Text, nullable=True)
     
+    # Response Analysis Fields (for training improvements)
+    response_category = db.Column(db.String(100), nullable=True)  # 'vague', 'helpful', 'incorrect', 'too_technical', etc.
+    improvement_suggestions = db.Column(db.Text, nullable=True)  # Admin suggestions for improvement
+    admin_notes = db.Column(db.Text, nullable=True)  # General admin notes
+    training_priority = db.Column(db.String(20), default='normal')  # 'low', 'normal', 'high', 'critical'
+    
     def __repr__(self):
         return f'<RagFeedback {self.id}: {self.feedback_type}>'
     
@@ -258,8 +264,80 @@ class RagFeedback(db.Model):
             'question_timestamp': self.question_timestamp.isoformat() if self.question_timestamp else None,
             'feedback_timestamp': self.feedback_timestamp.isoformat() if self.feedback_timestamp else None,
             'used_for_training': self.used_for_training,
-            'training_notes': self.training_notes
+            'training_notes': self.training_notes,
+            'response_category': self.response_category,
+            'improvement_suggestions': self.improvement_suggestions,
+            'admin_notes': self.admin_notes,
+            'training_priority': self.training_priority
         }
+
+
+class ResponseTemplate(db.Model):
+    """Model for storing improved response templates for training the bot"""
+    __tablename__ = 'response_templates'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255), nullable=False, unique=True)
+    description = db.Column(db.Text)
+    
+    # Trigger conditions
+    trigger_keywords = db.Column(db.JSON, nullable=True)  # Array of keywords that should trigger this template
+    question_patterns = db.Column(db.JSON, nullable=True)  # Array of question patterns (regex or plain text)
+    categories = db.Column(db.JSON, nullable=True)  # Array of response categories this template addresses
+    
+    # Template content
+    template_text = db.Column(db.Text, nullable=False)  # The improved response template
+    fallback_response = db.Column(db.Text, nullable=True)  # Fallback if template fails
+    
+    # Configuration
+    priority = db.Column(db.Integer, default=0)  # Higher priority templates are checked first
+    is_active = db.Column(db.Boolean, default=True)
+    requires_context = db.Column(db.Boolean, default=False)  # Whether template needs RAG context
+    
+    # Metadata
+    usage_count = db.Column(db.Integer, default=0)  # How many times this template was used
+    success_rate = db.Column(db.Float, default=0.0)  # Success rate based on feedback
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_by = db.Column(db.String(255), nullable=True)  # Admin who created this
+    
+    def __repr__(self):
+        return f'<ResponseTemplate {self.name}>'
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'description': self.description,
+            'trigger_keywords': self.trigger_keywords,
+            'question_patterns': self.question_patterns,
+            'categories': self.categories,
+            'template_text': self.template_text,
+            'fallback_response': self.fallback_response,
+            'priority': self.priority,
+            'is_active': self.is_active,
+            'requires_context': self.requires_context,
+            'usage_count': self.usage_count,
+            'success_rate': self.success_rate,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'created_by': self.created_by
+        }
+    
+    def increment_usage(self):
+        """Increment usage count"""
+        self.usage_count += 1
+        db.session.commit()
+    
+    def update_success_rate(self, is_successful):
+        """Update success rate based on feedback"""
+        # Simple success rate calculation - can be made more sophisticated
+        if self.usage_count > 0:
+            current_successes = self.success_rate * self.usage_count
+            if is_successful:
+                current_successes += 1
+            self.success_rate = current_successes / self.usage_count
+            db.session.commit()
 
 
 class ApiRule(db.Model):
