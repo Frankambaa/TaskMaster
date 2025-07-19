@@ -102,13 +102,21 @@
         </div>
 
         <div class="demo-section">
-            <h3>🔧 Controls</h3>
-            <button class="btn" onclick="createConversation()">Create Conversation</button>
-            <button class="btn" onclick="startEmbeddedVoice()">Start Voice Chat</button>
-            <button class="btn danger" onclick="endConversation()">End Conversation</button>
+            <h3>🔧 Agent Management</h3>
+            <button class="btn" onclick="listAgents()">List Dashboard Agents</button>
+            <button class="btn" onclick="createAgent()">Create New Agent</button>
+            
+            <div class="demo-section">
+                <h4>Agent ID Configuration</h4>
+                <input type="text" id="agentId" placeholder="Enter Agent ID from ElevenLabs Dashboard" 
+                       style="width: 300px; padding: 8px; margin: 10px 5px; border: 1px solid #ccc; border-radius: 4px;">
+                <br>
+                <button class="btn" onclick="startEmbeddedVoice()">Start Voice Chat</button>
+                <button class="btn danger" onclick="endSession()">End Session</button>
+            </div>
             
             <div id="status" class="status info">
-                Ready to create conversation
+                Enter your Agent ID from ElevenLabs Dashboard to start
             </div>
         </div>
 
@@ -161,7 +169,7 @@ function VoiceAgent() {
     </div>
 
     <script>
-        let conversationId = null;
+        let currentAgent = null;
         let embeddedWidget = null;
 
         // Status display function
@@ -171,17 +179,41 @@ function VoiceAgent() {
             statusDiv.innerHTML = message;
         }
 
-        // Create conversation with backend
-        async function createConversation() {
+        // List available agents
+        async function listAgents() {
             try {
-                updateStatus('Creating ElevenLabs conversation...', 'info');
+                updateStatus('Fetching agents from ElevenLabs...', 'info');
                 
-                const response = await fetch('/api/elevenlabs/conversation/create', {
+                const response = await fetch('/api/elevenlabs/agents');
+                const result = await response.json();
+                
+                if (result.success) {
+                    const agents = result.data.agents || [];
+                    let agentList = '📋 Available Agents:<br>';
+                    agents.forEach(agent => {
+                        agentList += `<strong>${agent.name}</strong> (ID: ${agent.agent_id})<br>`;
+                    });
+                    updateStatus(agentList || 'No agents found. Create one in ElevenLabs Dashboard.', 'info');
+                } else {
+                    updateStatus(`❌ Error: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                updateStatus(`❌ Network error: ${error.message}`, 'error');
+            }
+        }
+
+        // Create new agent
+        async function createAgent() {
+            try {
+                updateStatus('Creating new ElevenLabs agent...', 'info');
+                
+                const response = await fetch('/api/elevenlabs/agent/create', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
+                        name: 'Apna Voice Assistant',
                         system_prompt: "You are Ria, a helpful AI assistant for Apna.co job platform. Keep responses concise and conversational for voice interaction. Help users with job-related questions, account queries, and general support."
                     })
                 });
@@ -189,8 +221,9 @@ function VoiceAgent() {
                 const result = await response.json();
                 
                 if (result.success) {
-                    conversationId = result.data.conversation_id;
-                    updateStatus(`✅ Conversation created! ID: ${conversationId}`, 'success');
+                    const agentId = result.data.agent_id;
+                    document.getElementById('agentId').value = agentId;
+                    updateStatus(`✅ Agent created! ID: ${agentId}`, 'success');
                 } else {
                     updateStatus(`❌ Error: ${result.error}`, 'error');
                 }
@@ -201,26 +234,37 @@ function VoiceAgent() {
 
         // Start embedded voice chat
         async function startEmbeddedVoice() {
-            if (!conversationId) {
-                updateStatus('❌ Please create a conversation first', 'error');
+            const agentId = document.getElementById('agentId').value.trim();
+            
+            if (!agentId) {
+                updateStatus('❌ Please enter an Agent ID from your ElevenLabs Dashboard', 'error');
                 return;
             }
 
             try {
-                updateStatus('Getting conversation token...', 'info');
+                updateStatus('Getting signed URL for agent...', 'info');
                 
-                const response = await fetch('/api/elevenlabs/conversation/token');
+                const response = await fetch('/api/elevenlabs/signed_url', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        agent_id: agentId
+                    })
+                });
+                
                 const result = await response.json();
                 
                 if (result.success) {
                     const signedUrl = result.data.signed_url;
                     
                     // Load ElevenLabs widget
-                    loadElevenLabsWidget(signedUrl);
+                    loadElevenLabsWidget(signedUrl, agentId);
                     
                     updateStatus('🎤 Voice chat active! Speak to begin conversation', 'success');
                 } else {
-                    updateStatus(`❌ Token error: ${result.error}`, 'error');
+                    updateStatus(`❌ Error: ${result.error}`, 'error');
                 }
             } catch (error) {
                 updateStatus(`❌ Network error: ${error.message}`, 'error');
@@ -228,7 +272,7 @@ function VoiceAgent() {
         }
 
         // Load ElevenLabs embedded widget
-        function loadElevenLabsWidget(signedUrl) {
+        function loadElevenLabsWidget(signedUrl, agentId) {
             const widgetContainer = document.getElementById('conversationWidget');
             
             // Clear existing content
@@ -239,48 +283,40 @@ function VoiceAgent() {
                 <small>Ultra-fast voice processing with ~75ms latency</small>
             `;
             
-            // For demonstration, we'll show the integration approach
-            // In production, this would load the actual ElevenLabs widget
+            // Set active styling
             widgetContainer.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
             
-            // Simulate widget loading (replace with actual ElevenLabs SDK)
+            // Show connection details
             setTimeout(() => {
                 widgetContainer.innerHTML += `
                     <div style="margin-top: 15px; padding: 10px; background: rgba(255,255,255,0.2); border-radius: 6px;">
-                        <strong>🔗 Connected to:</strong><br>
-                        <small>${signedUrl.substring(0, 50)}...</small>
+                        <strong>🔗 Agent ID:</strong> ${agentId}<br>
+                        <strong>🔗 Signed URL:</strong><br>
+                        <small>${signedUrl.substring(0, 60)}...</small>
                     </div>
                 `;
             }, 1000);
+            
+            currentAgent = agentId;
         }
 
-        // End conversation
-        async function endConversation() {
+        // End session
+        async function endSession() {
             try {
-                updateStatus('Ending conversation...', 'info');
+                updateStatus('Ending voice session...', 'info');
                 
-                const response = await fetch('/api/elevenlabs/conversation/end', {
-                    method: 'POST'
-                });
-
-                const result = await response.json();
+                currentAgent = null;
+                const widgetContainer = document.getElementById('conversationWidget');
+                widgetContainer.innerHTML = `
+                    <h4>Voice Agent Loading Area</h4>
+                    <p>Enter Agent ID and click "Start Voice Chat" to begin</p>
+                    <small>This will provide real-time voice conversation with minimal latency</small>
+                `;
+                widgetContainer.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
                 
-                if (result.success) {
-                    conversationId = null;
-                    const widgetContainer = document.getElementById('conversationWidget');
-                    widgetContainer.innerHTML = `
-                        <h4>Voice Agent Loading Area</h4>
-                        <p>Click "Start Voice Chat" to load the native ElevenLabs voice interface</p>
-                        <small>This will provide real-time voice conversation with minimal latency</small>
-                    `;
-                    widgetContainer.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-                    
-                    updateStatus('✅ Conversation ended successfully', 'success');
-                } else {
-                    updateStatus(`❌ Error ending conversation: ${result.error}`, 'error');
-                }
+                updateStatus('✅ Voice session ended successfully', 'success');
             } catch (error) {
-                updateStatus(`❌ Network error: ${error.message}`, 'error');
+                updateStatus(`❌ Error ending session: ${error.message}`, 'error');
             }
         }
 

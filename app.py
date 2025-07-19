@@ -2268,29 +2268,47 @@ def elevenlabs_status():
             'message': f'API Error: {str(e)}'
         })
 
-@app.route('/api/elevenlabs/conversation/create', methods=['POST'])
-def create_elevenlabs_conversation():
-    """Create a new ElevenLabs embedded conversation"""
+@app.route('/api/elevenlabs/agents', methods=['GET'])
+def list_elevenlabs_agents():
+    """List all ElevenLabs agents"""
     try:
-        data = request.get_json() or {}
-        system_prompt = data.get('system_prompt')
-        
-        result = embedded_agent.create_conversation(system_prompt)
+        result = embedded_agent.list_agents()
         return jsonify({'success': True, 'data': result})
         
     except Exception as e:
-        logging.error(f"Error creating ElevenLabs conversation: {e}")
+        logging.error(f"Error listing ElevenLabs agents: {e}")
         return jsonify({'success': False, 'error': str(e)})
 
-@app.route('/api/elevenlabs/conversation/token', methods=['GET'])
-def get_elevenlabs_token():
-    """Get signed URL token for ElevenLabs conversation"""
+@app.route('/api/elevenlabs/agent/create', methods=['POST'])
+def create_elevenlabs_agent():
+    """Create a new ElevenLabs agent programmatically"""
     try:
-        result = embedded_agent.get_conversation_token()
+        data = request.get_json() or {}
+        name = data.get('name', 'Apna Voice Assistant')
+        system_prompt = data.get('system_prompt')
+        
+        result = embedded_agent.create_agent_programmatically(name, system_prompt)
         return jsonify({'success': True, 'data': result})
         
     except Exception as e:
-        logging.error(f"Error getting ElevenLabs token: {e}")
+        logging.error(f"Error creating ElevenLabs agent: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/elevenlabs/signed_url', methods=['POST'])
+def get_elevenlabs_signed_url():
+    """Get signed URL for dashboard-created agent"""
+    try:
+        data = request.get_json() or {}
+        agent_id = data.get('agent_id')
+        
+        if not agent_id:
+            return jsonify({'success': False, 'error': 'agent_id is required'})
+        
+        result = embedded_agent.get_signed_url(agent_id)
+        return jsonify({'success': True, 'data': result})
+        
+    except Exception as e:
+        logging.error(f"Error getting ElevenLabs signed URL: {e}")
         return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/api/elevenlabs/conversation/end', methods=['POST'])

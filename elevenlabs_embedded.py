@@ -17,8 +17,36 @@ class ElevenLabsEmbeddedAgent:
         self.voice_id = "21m00Tcm4TlvDq8ikWAM"  # Rachel voice
         self.conversation_id = None
         
-    def create_conversation(self, system_prompt=None):
-        """Create a new conversation session with ElevenLabs voice agent"""
+    def get_signed_url(self, agent_id):
+        """Get signed URL for dashboard-created agent"""
+        if not self.api_key:
+            raise Exception("ElevenLabs API key not configured")
+            
+        headers = {
+            "xi-api-key": self.api_key
+        }
+        
+        try:
+            response = requests.get(
+                f"{self.base_url}/convai/conversation/get_signed_url?agent_id={agent_id}",
+                headers=headers,
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                logger.info(f"ElevenLabs signed URL generated for agent: {agent_id}")
+                return result
+            else:
+                logger.error(f"Failed to get signed URL: {response.status_code} - {response.text}")
+                raise Exception(f"Failed to get signed URL: {response.status_code}")
+                
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Network error getting signed URL: {e}")
+            raise Exception(f"Network error: {e}")
+    
+    def create_agent_programmatically(self, name, system_prompt=None):
+        """Create a new agent programmatically (optional - can use dashboard instead)"""
         if not self.api_key:
             raise Exception("ElevenLabs API key not configured")
             
@@ -34,60 +62,64 @@ class ElevenLabsEmbeddedAgent:
         }
         
         data = {
-            "voice_id": self.voice_id,
-            "system_prompt": system_prompt,
-            "first_message": "Hello! I'm Ria from Apna. How can I help you today?",
-            "language": "en"
+            "name": name,
+            "platform_settings": {
+                "voice_id": self.voice_id,
+                "language": "en"
+            },
+            "workflow": {
+                "system_prompt": system_prompt,
+                "first_message": "Hello! I'm Ria from Apna. How can I help you today?"
+            }
         }
         
         try:
             response = requests.post(
-                f"{self.base_url}/convai/conversations",
+                f"{self.base_url}/conversational-ai/agents",
                 headers=headers,
                 json=data,
-                timeout=10
+                timeout=30
             )
             
             if response.status_code == 201:
                 result = response.json()
-                self.conversation_id = result.get('conversation_id')
-                logger.info(f"ElevenLabs conversation created: {self.conversation_id}")
+                agent_id = result.get('agent_id')
+                logger.info(f"ElevenLabs agent created: {agent_id}")
                 return result
             else:
-                logger.error(f"Failed to create conversation: {response.status_code} - {response.text}")
-                raise Exception(f"Failed to create conversation: {response.status_code}")
+                logger.error(f"Failed to create agent: {response.status_code} - {response.text}")
+                raise Exception(f"Failed to create agent: {response.status_code}")
                 
         except requests.exceptions.RequestException as e:
-            logger.error(f"Network error creating conversation: {e}")
+            logger.error(f"Network error creating agent: {e}")
             raise Exception(f"Network error: {e}")
     
-    def get_conversation_token(self):
-        """Get a signed URL token for direct browser connection to ElevenLabs voice agent"""
-        if not self.conversation_id:
-            raise Exception("No active conversation. Create conversation first.")
+    def list_agents(self):
+        """List all available agents"""
+        if not self.api_key:
+            raise Exception("ElevenLabs API key not configured")
             
         headers = {
-            "xi-api-key": self.api_key,
-            "Content-Type": "application/json"
+            "xi-api-key": self.api_key
         }
         
         try:
-            response = requests.post(
-                f"{self.base_url}/convai/conversations/{self.conversation_id}/token",
+            response = requests.get(
+                f"{self.base_url}/conversational-ai/agents",
                 headers=headers,
                 timeout=10
             )
             
             if response.status_code == 200:
                 result = response.json()
-                logger.info("ElevenLabs conversation token generated")
+                logger.info("ElevenLabs agents listed successfully")
                 return result
             else:
-                logger.error(f"Failed to get token: {response.status_code} - {response.text}")
-                raise Exception(f"Failed to get conversation token: {response.status_code}")
+                logger.error(f"Failed to list agents: {response.status_code} - {response.text}")
+                raise Exception(f"Failed to list agents: {response.status_code}")
                 
         except requests.exceptions.RequestException as e:
-            logger.error(f"Network error getting token: {e}")
+            logger.error(f"Network error listing agents: {e}")
             raise Exception(f"Network error: {e}")
     
     def add_user_message(self, message):
