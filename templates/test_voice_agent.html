@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Agent Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .voice-controls {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .voice-test-area {
+            min-height: 300px;
+            background: white;
+            border: 2px dashed #dee2e6;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+        }
+        .audio-player {
+            margin: 20px 0;
+        }
+        .loading-spinner {
+            display: none;
+        }
+        .voice-status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .status-success { background: #d4edda; color: #155724; }
+        .status-error { background: #f8d7da; color: #721c24; }
+        .status-info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-12">
+                <h2><i class="fas fa-microphone"></i> Voice Agent Test</h2>
+                <p class="text-muted">Test the voice synthesis functionality with different voices and text inputs.</p>
+                
+                <!-- Voice Controls -->
+                <div class="voice-controls">
+                    <h4>Voice Configuration</h4>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label for="voiceSelect" class="form-label">Select Voice</label>
+                            <select id="voiceSelect" class="form-select">
+                                <option value="">Loading voices...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="testText" class="form-label">Test Text</label>
+                            <textarea id="testText" class="form-control" rows="3" placeholder="Enter text to convert to speech...">Hello! This is a test of the voice agent. How does this sound to you?</textarea>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <button id="generateSpeech" class="btn btn-primary">
+                            <i class="fas fa-play"></i> Generate Speech
+                        </button>
+                        <button id="stopAudio" class="btn btn-secondary" disabled>
+                            <i class="fas fa-stop"></i> Stop Audio
+                        </button>
+                        <button id="clearResults" class="btn btn-outline-warning">
+                            <i class="fas fa-trash"></i> Clear Results
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Status Display -->
+                <div id="voiceStatus" class="voice-status status-info" style="display: none;">
+                    <i class="fas fa-info-circle"></i> Ready to generate speech
+                </div>
+                
+                <!-- Loading Spinner -->
+                <div id="loadingSpinner" class="loading-spinner text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Generating speech...</span>
+                    </div>
+                    <p class="mt-2">Generating speech...</p>
+                </div>
+                
+                <!-- Voice Test Area -->
+                <div class="voice-test-area">
+                    <div id="noAudio" class="text-muted">
+                        <i class="fas fa-volume-up fa-3x mb-3"></i>
+                        <h5>No Audio Generated Yet</h5>
+                        <p>Use the controls above to generate speech from your text.</p>
+                    </div>
+                    
+                    <div id="audioContainer" style="display: none;">
+                        <h5>Generated Audio</h5>
+                        <audio id="audioPlayer" controls class="audio-player w-100">
+                            Your browser does not support the audio element.
+                        </audio>
+                        <div id="audioInfo" class="mt-3">
+                            <!-- Audio info will be populated here -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Voice Integration Examples -->
+                <div class="mt-4">
+                    <h4>Integration Examples</h4>
+                    <div class="accordion" id="integrationAccordion">
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="chatbotIntegration">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#chatbotExample">
+                                    Chatbot Voice Integration
+                                </button>
+                            </h2>
+                            <div id="chatbotExample" class="accordion-collapse collapse" data-bs-parent="#integrationAccordion">
+                                <div class="accordion-body">
+                                    <p>The voice agent can be integrated with your chatbot using the following API endpoint:</p>
+                                    <pre><code>POST /api/voice/ask
+{
+    "question": "Your question here",
+    "voice_enabled": true,
+    "voice": "indian_female",
+    "user_id": "optional_user_id"
+}</code></pre>
+                                    <p>This endpoint returns both text response and audio file for voice playback.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="apiIntegration">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#apiExample">
+                                    Direct API Integration
+                                </button>
+                            </h2>
+                            <div id="apiExample" class="accordion-collapse collapse" data-bs-parent="#integrationAccordion">
+                                <div class="accordion-body">
+                                    <p>For direct text-to-speech conversion:</p>
+                                    <pre><code>POST /api/voice/synthesize
+{
+    "text": "Text to convert to speech",
+    "voice": "indian_female"
+}</code></pre>
+                                    <p>Returns an audio file (WAV or MP3) for download and playback.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Back to Admin -->
+                <div class="mt-4">
+                    <a href="/admin" class="btn btn-outline-primary">
+                        <i class="fas fa-arrow-left"></i> Back to Admin Panel
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        class VoiceAgentTest {
+            constructor() {
+                this.currentAudio = null;
+                this.initializeEventListeners();
+                this.loadAvailableVoices();
+            }
+            
+            initializeEventListeners() {
+                document.getElementById('generateSpeech').addEventListener('click', () => this.generateSpeech());
+                document.getElementById('stopAudio').addEventListener('click', () => this.stopAudio());
+                document.getElementById('clearResults').addEventListener('click', () => this.clearResults());
+            }
+            
+            async loadAvailableVoices() {
+                try {
+                    const response = await fetch('/api/voice/available_voices');
+                    const data = await response.json();
+                    
+                    const voiceSelect = document.getElementById('voiceSelect');
+                    voiceSelect.innerHTML = '';
+                    
+                    if (data.success && data.voices.length > 0) {
+                        data.voices.forEach(voice => {
+                            const option = document.createElement('option');
+                            option.value = voice.id;
+                            option.textContent = `${voice.name} (${voice.language}) - ${voice.engine}`;
+                            voiceSelect.appendChild(option);
+                        });
+                        
+                        // Select Indian female voice by default if available
+                        const indianVoice = data.voices.find(v => v.id === 'indian_female');
+                        if (indianVoice) {
+                            voiceSelect.value = 'indian_female';
+                        }
+                        
+                        this.showStatus('Voices loaded successfully', 'success');
+                    } else {
+                        this.showStatus('No voices available', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error loading voices:', error);
+                    this.showStatus('Failed to load voices', 'error');
+                }
+            }
+            
+            async generateSpeech() {
+                const text = document.getElementById('testText').value.trim();
+                const voice = document.getElementById('voiceSelect').value;
+                
+                if (!text) {
+                    this.showStatus('Please enter some text to convert', 'error');
+                    return;
+                }
+                
+                if (!voice) {
+                    this.showStatus('Please select a voice', 'error');
+                    return;
+                }
+                
+                this.showLoading(true);
+                this.showStatus('Generating speech...', 'info');
+                
+                try {
+                    const response = await fetch('/api/voice/synthesize', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            text: text,
+                            voice: voice
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        const audioBlob = await response.blob();
+                        const audioUrl = URL.createObjectURL(audioBlob);
+                        
+                        this.playAudio(audioUrl, voice);
+                        this.showStatus('Speech generated successfully!', 'success');
+                    } else {
+                        const errorData = await response.json();
+                        this.showStatus(`Error: ${errorData.error}`, 'error');
+                    }
+                } catch (error) {
+                    console.error('Error generating speech:', error);
+                    this.showStatus('Failed to generate speech', 'error');
+                } finally {
+                    this.showLoading(false);
+                }
+            }
+            
+            playAudio(audioUrl, voiceUsed) {
+                const audioContainer = document.getElementById('audioContainer');
+                const noAudio = document.getElementById('noAudio');
+                const audioPlayer = document.getElementById('audioPlayer');
+                const audioInfo = document.getElementById('audioInfo');
+                
+                // Show audio container, hide no audio message
+                audioContainer.style.display = 'block';
+                noAudio.style.display = 'none';
+                
+                // Set audio source
+                audioPlayer.src = audioUrl;
+                this.currentAudio = audioPlayer;
+                
+                // Update audio info
+                audioInfo.innerHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>Voice Used:</strong> ${voiceUsed}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Format:</strong> ${audioUrl.includes('.mp3') ? 'MP3' : 'WAV'}
+                        </div>
+                    </div>
+                `;
+                
+                // Enable stop button when playing
+                audioPlayer.addEventListener('play', () => {
+                    document.getElementById('stopAudio').disabled = false;
+                });
+                
+                audioPlayer.addEventListener('ended', () => {
+                    document.getElementById('stopAudio').disabled = true;
+                });
+                
+                // Auto-play the audio
+                audioPlayer.play().catch(error => {
+                    console.error('Error playing audio:', error);
+                    this.showStatus('Audio generated but playback failed. Try clicking play manually.', 'error');
+                });
+            }
+            
+            stopAudio() {
+                if (this.currentAudio) {
+                    this.currentAudio.pause();
+                    this.currentAudio.currentTime = 0;
+                    document.getElementById('stopAudio').disabled = true;
+                }
+            }
+            
+            clearResults() {
+                const audioContainer = document.getElementById('audioContainer');
+                const noAudio = document.getElementById('noAudio');
+                const audioPlayer = document.getElementById('audioPlayer');
+                
+                this.stopAudio();
+                
+                audioContainer.style.display = 'none';
+                noAudio.style.display = 'block';
+                audioPlayer.src = '';
+                
+                this.showStatus('Results cleared', 'info');
+            }
+            
+            showLoading(show) {
+                const spinner = document.getElementById('loadingSpinner');
+                const generateBtn = document.getElementById('generateSpeech');
+                
+                if (show) {
+                    spinner.style.display = 'block';
+                    generateBtn.disabled = true;
+                } else {
+                    spinner.style.display = 'none';
+                    generateBtn.disabled = false;
+                }
+            }
+            
+            showStatus(message, type) {
+                const statusDiv = document.getElementById('voiceStatus');
+                statusDiv.className = `voice-status status-${type}`;
+                statusDiv.innerHTML = `<i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'exclamation' : 'info'}-circle"></i> ${message}`;
+                statusDiv.style.display = 'block';
+                
+                // Auto-hide success messages after 3 seconds
+                if (type === 'success') {
+                    setTimeout(() => {
+                        statusDiv.style.display = 'none';
+                    }, 3000);
+                }
+            }
+        }
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new VoiceAgentTest();
+        });
+    </script>
+</body>
+</html>

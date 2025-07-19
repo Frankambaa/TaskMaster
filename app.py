@@ -10,6 +10,7 @@ from vectorizer import DocumentVectorizer
 from rag_chain import RAGChain
 from models import db, ApiRule, ApiTool, UserConversation, SystemPrompt, RagFeedback, ChatSettings, ResponseTemplate, LiveChatSession, LiveChatMessage, LiveChatAgent, WebhookConfig, WebhookMessage
 from session_memory import session_manager
+from voice_agent import voice_agent
 import json
 import subprocess
 import shlex
@@ -142,6 +143,17 @@ def test_widget_sizes():
     """Test page for widget size functionality"""
     from flask import send_from_directory
     return send_from_directory('.', 'test_widget_sizes.html')
+
+@app.route('/test_voice')
+def test_voice():
+    """Voice agent test page"""
+    return render_template('test_voice_agent.html')
+
+@app.route('/test_voice_widget')
+def test_voice_widget():
+    """Voice-enabled chatwidget test page"""
+    from flask import send_from_directory
+    return send_from_directory('.', 'test_voice_chatwidget.html')
 
 @app.route('/test_time_based_greeting.html')
 def test_time_based_greeting():
@@ -1995,3 +2007,147 @@ def delete_webhook_config(config_id):
             'success': False,
             'error': 'Internal server error'
         }), 500
+
+
+# ===========================
+# VOICE AGENT ENDPOINTS
+# ===========================
+
+@app.route('/api/voice/synthesize', methods=['POST'])
+def synthesize_voice():
+    """Convert text to speech using Kokoro TTS"""
+    try:
+        data = request.get_json()
+        if not data or 'text' not in data:
+            return jsonify({'error': 'No text provided'}), 400
+        
+        text = data['text'].strip()
+        if not text:
+            return jsonify({'error': 'Text cannot be empty'}), 400
+        
+        voice = data.get('voice', 'af_heart')  # Default to American female voice
+        
+        # Synthesize speech
+        result = voice_agent.synthesize_speech(text, voice)
+        
+        if result and result.get('success'):
+            # Return audio file for download
+            from flask import send_file
+            return send_file(
+                result['audio_file'],
+                as_attachment=True,
+                download_name=f'speech_{uuid.uuid4().hex[:8]}.wav',
+                mimetype='audio/wav'
+            )
+        else:
+            error_msg = result.get('error', 'Speech synthesis failed') if result else 'Speech synthesis failed'
+            return jsonify({'error': error_msg}), 500
+            
+    except Exception as e:
+        logging.error(f"Error in voice synthesis: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/api/voice/available_voices', methods=['GET'])
+def get_available_voices():
+    """Get list of available TTS voices"""
+    try:
+        voices = voice_agent.get_available_voices()
+        return jsonify({
+            'success': True,
+            'voices': voices
+        })
+    except Exception as e:
+        logging.error(f"Error getting available voices: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/api/voice/ask', methods=['POST'])
+def voice_ask():
+    """Enhanced ask endpoint that can return both text and voice response"""
+    try:
+        data = request.get_json()
+        if not data or 'question' not in data:
+            return jsonify({'error': 'No question provided'}), 400
+        
+        question = data['question'].strip()
+        if not question:
+            return jsonify({'error': 'Question cannot be empty'}), 400
+        
+        # Extract user parameters if provided
+        user_id = data.get('user_id')
+        username = data.get('username')
+        email = data.get('email')
+        device_id = data.get('device_id')
+        voice_enabled = data.get('voice_enabled', False)
+        selected_voice = data.get('voice', 'af_heart')
+        
+        # Determine user identifier (priority: user_id > email > device_id)
+        user_identifier = user_id or email or device_id
+        
+        # Get or create session ID for fallback
+        if 'session_id' not in session:
+            session['session_id'] = str(uuid.uuid4())
+        
+        session_id = session['session_id']
+        
+        # Log the request with user context
+        if user_identifier:
+            logging.info(f"Voice-enabled question for user: {user_identifier} (username: {username})")
+        else:
+            logging.info(f"Voice-enabled question for session: {session_id}")
+        
+        # Use existing RAG chain for answer generation
+        rag_chain = RAGChain()
+        answer = rag_chain.get_answer(
+            question=question,
+            index_folder='faiss_index',
+            session_id=session_id,
+            user_identifier=user_identifier,
+            username=username,
+            email=email,
+            device_id=device_id
+        )
+        
+        response_data = {
+            'answer': answer,
+            'status': 'success',
+            'response_type': 'rag_with_ai_tools',
+            'user_info': {
+                'user_id': user_identifier,
+                'username': username,
+                'email': email,
+                'device_id': device_id,
+                'session_type': 'persistent' if user_identifier else 'temporary'
+            }
+        }
+        
+        # If voice is enabled, also generate speech
+        if voice_enabled:
+            speech_result = voice_agent.synthesize_speech(answer, selected_voice)
+            if speech_result and speech_result.get('success'):
+                response_data['voice_data'] = {
+                    'audio_file': speech_result['audio_file'],
+                    'voice_used': speech_result['voice_used'],
+                    'duration': speech_result['duration']
+                }
+        
+        return jsonify(response_data)
+        
+    except Exception as e:
+        logging.error(f"Error in voice ask endpoint: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/api/voice/cleanup/<path:filename>', methods=['DELETE'])
+def cleanup_voice_file(filename):
+    """Clean up temporary voice files"""
+    try:
+        import tempfile
+        file_path = os.path.join(tempfile.gettempdir(), filename)
+        success = voice_agent.cleanup_temp_file(file_path)
+        return jsonify({'success': success})
+    except Exception as e:
+        logging.error(f"Error cleaning up voice file: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5000)

@@ -58,7 +58,11 @@
         iconUrl: null, // Custom icon URL for the chat widget toggle button
         widgetSize: 'medium', // Widget size: 'small', 'medium', 'large'
         buttonSize: null, // Toggle button size in pixels (auto-calculated based on widgetSize)
-        timeBasedGreeting: true // Show time-based greeting for first-time users
+        timeBasedGreeting: true, // Show time-based greeting for first-time users
+        voiceEnabled: false, // Enable voice synthesis for bot responses
+        selectedVoice: 'indian_female', // Default voice for TTS (indian_female, af_heart, etc.)
+        autoPlayVoice: false, // Automatically play voice responses
+        showVoiceControls: true // Show voice control buttons in the interface
     };
 
     // Widget state
@@ -73,6 +77,12 @@
         typing_effect_speed: 25,
         auto_scroll_during_typing: false
     }; // Store backend chat settings
+    
+    // Voice-related state
+    let availableVoices = [];
+    let currentAudio = null;
+    let isPlayingVoice = false;
+    let voicePendingResponses = new Map(); // Track responses pending voice synthesis
 
     // DOM elements
     let widgetContainer = null;
@@ -1103,6 +1113,14 @@
                     // Pass the full response data and the user question for feedback
                     this.addMessage(response.answer, 'bot', false, true, true, responseData); // Enable typing effect with response data
                     this.updateSessionInfo(response.user_info);
+                    
+                    // Handle voice synthesis if enabled and voice data is available
+                    if (config.voiceEnabled && response.voice_data) {
+                        this.handleVoiceResponse(response.voice_data, response.answer);
+                    } else if (config.voiceEnabled && config.autoPlayVoice) {
+                        // Fallback: synthesize voice for the text response
+                        this.synthesizeVoice(response.answer);
+                    }
                 }).catch(error => {
                     this.hideTyping(typingDiv);
                     this.addMessage('Sorry, I encountered an error. Please try again.', 'bot', true);
@@ -1128,7 +1146,9 @@
                 email: config.email,
                 device_id: config.device_id,
                 session_id: sessionId,
-                timestamp: Date.now()
+                timestamp: Date.now(),
+                voice_enabled: config.voiceEnabled,
+                voice: config.selectedVoice
             };
 
             // Build headers
@@ -1184,6 +1204,132 @@
                 
                 throw error;
             });
+        },
+
+        // Voice synthesis methods
+        loadAvailableVoices: function() {
+            if (availableVoices.length > 0) {
+                return Promise.resolve(availableVoices);
+            }
+            
+            return fetch(`${config.apiUrl}/api/voice/available_voices`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.voices) {
+                        availableVoices = data.voices;
+                        return availableVoices;
+                    }
+                    throw new Error('Failed to load voices');
+                })
+                .catch(error => {
+                    console.error('Error loading voices:', error);
+                    return [];
+                });
+        },
+
+        synthesizeVoice: function(text) {
+            if (!config.voiceEnabled || isPlayingVoice) {
+                return Promise.resolve();
+            }
+
+            return fetch(`${config.apiUrl}/api/voice/synthesize`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Widget-Origin': window.location.origin
+                },
+                body: JSON.stringify({
+                    text: text,
+                    voice: config.selectedVoice
+                })
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.blob();
+                }
+                throw new Error('Voice synthesis failed');
+            })
+            .then(audioBlob => {
+                this.playAudioBlob(audioBlob);
+            })
+            .catch(error => {
+                console.error('Voice synthesis error:', error);
+            });
+        },
+
+        handleVoiceResponse: function(voiceData, text) {
+            if (!config.voiceEnabled) return;
+            
+            if (voiceData.audio_file && config.autoPlayVoice) {
+                // If we have a pre-generated audio file, fetch and play it
+                fetch(voiceData.audio_file)
+                    .then(response => response.blob())
+                    .then(audioBlob => this.playAudioBlob(audioBlob))
+                    .catch(error => {
+                        console.error('Error playing voice response:', error);
+                        // Fallback to text synthesis
+                        this.synthesizeVoice(text);
+                    });
+            }
+        },
+
+        playAudioBlob: function(audioBlob) {
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio = null;
+            }
+            
+            const audioUrl = URL.createObjectURL(audioBlob);
+            currentAudio = new Audio(audioUrl);
+            
+            currentAudio.addEventListener('loadstart', () => {
+                isPlayingVoice = true;
+                this.updateVoiceControls();
+            });
+            
+            currentAudio.addEventListener('ended', () => {
+                isPlayingVoice = false;
+                URL.revokeObjectURL(audioUrl);
+                currentAudio = null;
+                this.updateVoiceControls();
+            });
+            
+            currentAudio.addEventListener('error', () => {
+                isPlayingVoice = false;
+                URL.revokeObjectURL(audioUrl);
+                currentAudio = null;
+                this.updateVoiceControls();
+                console.error('Audio playback error');
+            });
+            
+            currentAudio.play().catch(error => {
+                console.error('Audio play failed:', error);
+                isPlayingVoice = false;
+                this.updateVoiceControls();
+            });
+        },
+
+        stopVoice: function() {
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio = null;
+                isPlayingVoice = false;
+                this.updateVoiceControls();
+            }
+        },
+
+        updateVoiceControls: function() {
+            // Update voice control UI if present
+            const voiceToggle = document.querySelector('.voice-toggle');
+            const voiceStop = document.querySelector('.voice-stop');
+            
+            if (voiceToggle) {
+                voiceToggle.style.opacity = config.voiceEnabled ? '1' : '0.5';
+            }
+            
+            if (voiceStop) {
+                voiceStop.style.display = isPlayingVoice ? 'block' : 'none';
+            }
         },
 
         loadChatHistory: function() {

@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice-Enabled Chat Widget Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .demo-controls {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+        }
+        .control-group {
+            margin-bottom: 15px;
+        }
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        .control-group select, .control-group input {
+            width: 100%;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+        }
+        .test-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .test-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .test-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        .test-btn.active {
+            background: #4CAF50;
+        }
+        .feature-list {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        .feature-list h3 {
+            margin-top: 0;
+        }
+        .feature-list ul {
+            list-style: none;
+            padding: 0;
+        }
+        .feature-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .feature-list li:last-child {
+            border-bottom: none;
+        }
+        .status {
+            text-align: center;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .status.success {
+            background: rgba(76, 175, 80, 0.3);
+        }
+        .status.error {
+            background: rgba(244, 67, 54, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎙️ Voice-Enabled RAG Chatbot</h1>
+            <p>Experience natural conversation with AI-powered voice responses</p>
+        </div>
+
+        <div class="demo-controls">
+            <h3>Voice Configuration</h3>
+            
+            <div class="control-group">
+                <label for="voiceSelect">Select Voice:</label>
+                <select id="voiceSelect">
+                    <option value="">Loading voices...</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label for="autoPlayToggle">
+                    <input type="checkbox" id="autoPlayToggle" checked> Auto-play bot responses
+                </label>
+            </div>
+            
+            <div class="control-group">
+                <label for="voiceEnabledToggle">
+                    <input type="checkbox" id="voiceEnabledToggle" checked> Enable voice synthesis
+                </label>
+            </div>
+            
+            <div class="test-buttons">
+                <button class="test-btn" id="initWidget">Initialize Widget</button>
+                <button class="test-btn" id="testVoice">Test Voice Synthesis</button>
+                <button class="test-btn" id="toggleWidget">Toggle Chat</button>
+                <button class="test-btn" id="stopVoice">Stop Voice</button>
+            </div>
+            
+            <div id="status" class="status" style="display: none;"></div>
+        </div>
+
+        <div class="feature-list">
+            <h3>🎯 Voice Agent Features</h3>
+            <ul>
+                <li>✅ <strong>Kokoro TTS Integration:</strong> High-quality local text-to-speech synthesis</li>
+                <li>✅ <strong>Multiple Voice Options:</strong> American English and Indian English voices available</li>
+                <li>✅ <strong>gTTS Fallback:</strong> Automatic fallback to Google Text-to-Speech when needed</li>
+                <li>✅ <strong>Seamless Integration:</strong> Voice works with existing RAG, AI tools, and live chat</li>
+                <li>✅ <strong>Configurable Playback:</strong> Auto-play or manual voice control options</li>
+                <li>✅ <strong>Voice Quality:</strong> Natural sounding speech with proper pronunciation</li>
+                <li>✅ <strong>Performance Optimized:</strong> Efficient audio streaming and cleanup</li>
+                <li>✅ <strong>Cross-Platform Compatible:</strong> Works on desktop and mobile browsers</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Load the voice-enabled chatwidget -->
+    <script src="/static/chatwidget.js"></script>
+    
+    <script>
+        class VoiceChatTest {
+            constructor() {
+                this.isWidgetInitialized = false;
+                this.availableVoices = [];
+                this.initializeEventListeners();
+                this.loadVoices();
+            }
+            
+            initializeEventListeners() {
+                document.getElementById('initWidget').addEventListener('click', () => this.initializeWidget());
+                document.getElementById('testVoice').addEventListener('click', () => this.testVoiceSynthesis());
+                document.getElementById('toggleWidget').addEventListener('click', () => this.toggleWidget());
+                document.getElementById('stopVoice').addEventListener('click', () => this.stopVoice());
+                
+                document.getElementById('voiceEnabledToggle').addEventListener('change', (e) => {
+                    this.updateWidgetConfig();
+                });
+                
+                document.getElementById('autoPlayToggle').addEventListener('change', (e) => {
+                    this.updateWidgetConfig();
+                });
+                
+                document.getElementById('voiceSelect').addEventListener('change', (e) => {
+                    this.updateWidgetConfig();
+                });
+            }
+            
+            async loadVoices() {
+                try {
+                    const response = await fetch('/api/voice/available_voices');
+                    const data = await response.json();
+                    
+                    if (data.success && data.voices) {
+                        this.availableVoices = data.voices;
+                        this.populateVoiceSelect();
+                        this.showStatus('Voices loaded successfully', 'success');
+                    } else {
+                        this.showStatus('Failed to load voices', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error loading voices:', error);
+                    this.showStatus('Error loading voices', 'error');
+                }
+            }
+            
+            populateVoiceSelect() {
+                const select = document.getElementById('voiceSelect');
+                select.innerHTML = '';
+                
+                this.availableVoices.forEach(voice => {
+                    const option = document.createElement('option');
+                    option.value = voice.id;
+                    option.textContent = `${voice.name} (${voice.language}) - ${voice.engine}`;
+                    select.appendChild(option);
+                });
+                
+                // Default to Indian female voice if available
+                const indianVoice = this.availableVoices.find(v => v.id === 'indian_female');
+                if (indianVoice) {
+                    select.value = 'indian_female';
+                } else if (this.availableVoices.length > 0) {
+                    select.value = this.availableVoices[0].id;
+                }
+            }
+            
+            initializeWidget() {
+                if (this.isWidgetInitialized) {
+                    this.showStatus('Widget already initialized', 'error');
+                    return;
+                }
+                
+                const config = this.getWidgetConfig();
+                
+                try {
+                    ChatWidget.init(config);
+                    this.isWidgetInitialized = true;
+                    this.showStatus('Voice-enabled chatbot initialized!', 'success');
+                    document.getElementById('initWidget').textContent = 'Widget Initialized';
+                    document.getElementById('initWidget').classList.add('active');
+                } catch (error) {
+                    console.error('Widget initialization error:', error);
+                    this.showStatus('Failed to initialize widget', 'error');
+                }
+            }
+            
+            getWidgetConfig() {
+                const voiceSelect = document.getElementById('voiceSelect');
+                const voiceEnabled = document.getElementById('voiceEnabledToggle').checked;
+                const autoPlay = document.getElementById('autoPlayToggle').checked;
+                
+                return {
+                    apiUrl: window.location.origin,
+                    user_id: 'voice_test_user_' + Date.now(),
+                    username: 'Voice Test User',
+                    email: 'voice.test@example.com',
+                    device_id: 'voice_test_device',
+                    position: 'bottom-right',
+                    title: 'Voice-Enabled Assistant',
+                    welcomeMessage: 'Hi! I can respond with voice. Try asking me something!',
+                    voiceEnabled: voiceEnabled,
+                    selectedVoice: voiceSelect.value || 'indian_female',
+                    autoPlayVoice: autoPlay,
+                    showVoiceControls: true,
+                    widgetSize: 'large',
+                    personalizedWelcome: true,
+                    timeBasedGreeting: true
+                };
+            }
+            
+            updateWidgetConfig() {
+                if (!this.isWidgetInitialized) {
+                    return;
+                }
+                
+                // Note: In a production environment, you would typically need to 
+                // reinitialize the widget with new config or provide an update method
+                this.showStatus('Configuration updated. Reinitialize widget to apply changes.', 'success');
+            }
+            
+            async testVoiceSynthesis() {
+                const voiceSelect = document.getElementById('voiceSelect');
+                const selectedVoice = voiceSelect.value || 'indian_female';
+                const testText = "Hello! This is a test of the voice synthesis system. The voice agent is working perfectly with both Kokoro and Google Text-to-Speech engines.";
+                
+                this.showStatus('Generating voice test...', 'success');
+                
+                try {
+                    const response = await fetch('/api/voice/synthesize', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            text: testText,
+                            voice: selectedVoice
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        const audioBlob = await response.blob();
+                        const audioUrl = URL.createObjectURL(audioBlob);
+                        const audio = new Audio(audioUrl);
+                        
+                        audio.addEventListener('ended', () => {
+                            URL.revokeObjectURL(audioUrl);
+                            this.showStatus('Voice test completed', 'success');
+                        });
+                        
+                        audio.play();
+                        this.showStatus('Playing voice test...', 'success');
+                        
+                    } else {
+                        const errorData = await response.json();
+                        this.showStatus(`Voice test failed: ${errorData.error}`, 'error');
+                    }
+                } catch (error) {
+                    console.error('Voice test error:', error);
+                    this.showStatus('Voice test failed', 'error');
+                }
+            }
+            
+            toggleWidget() {
+                if (!this.isWidgetInitialized) {
+                    this.showStatus('Initialize widget first', 'error');
+                    return;
+                }
+                
+                // Simulate clicking the widget toggle button
+                const toggleButton = document.querySelector('.chat-widget-toggle');
+                if (toggleButton) {
+                    toggleButton.click();
+                    this.showStatus('Widget toggled', 'success');
+                } else {
+                    this.showStatus('Widget toggle button not found', 'error');
+                }
+            }
+            
+            stopVoice() {
+                if (window.ChatWidget && ChatWidget.stopVoice) {
+                    ChatWidget.stopVoice();
+                    this.showStatus('Voice stopped', 'success');
+                } else {
+                    this.showStatus('Voice control not available', 'error');
+                }
+            }
+            
+            showStatus(message, type) {
+                const statusDiv = document.getElementById('status');
+                statusDiv.textContent = message;
+                statusDiv.className = `status ${type}`;
+                statusDiv.style.display = 'block';
+                
+                // Auto-hide after 3 seconds for success messages
+                if (type === 'success') {
+                    setTimeout(() => {
+                        statusDiv.style.display = 'none';
+                    }, 3000);
+                }
+            }
+        }
+        
+        // Initialize the test interface when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new VoiceChatTest();
+        });
+    </script>
+</body>
+</html>

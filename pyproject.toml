@@ -24,4 +24,10 @@ dependencies = [
     "pymysql>=1.1.1",
     "langchain-openai>=0.3.28",
     "langchain-community>=0.3.27",
+    "langchain-core>=0.3.68",
+    "requests>=2.32.4",
+    "soundfile>=0.13.1",
+    "kokoro>=0.9.4",
+    "gtts>=2.5.4",
+    "pygame>=2.6.1",
 ]
