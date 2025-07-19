@@ -300,9 +300,25 @@ class RAGChain:
     
     def get_answer(self, question: str, index_folder: str, session_id: str = None, user_identifier: str = None, username: str = None, email: str = None, device_id: str = None) -> str:
         """Get answer for a question with optional session memory (persistent or temporary)"""
-        # Check for small talk
+        logging.info(f"🚀 PROCESSING QUESTION: '{question}'")
+        logging.info(f"📋 USER: {user_identifier or 'anonymous'} | SESSION: {session_id}")
+        
+        # **STEP 1: Check Response Templates First (Keyword/Pattern Matching)**
+        template_response = self.check_response_templates(question)
+        if template_response:
+            logging.info(f"✅ RESPONSE TYPE: TEMPLATE_MATCH - Template matched")
+            logging.info(f"📝 Template Response: {template_response[:100]}...")
+            # Add to session memory
+            if user_identifier or session_id:
+                session_manager.add_user_message(session_id, question, user_identifier, username, email, device_id)
+                session_manager.add_ai_message(session_id, template_response, user_identifier, username, email, device_id)
+            return template_response
+        
+        # **STEP 2: Check for small talk (Basic Pattern Matching)**
         if self.is_small_talk(question):
             response = self.get_small_talk_response(question)
+            logging.info(f"✅ RESPONSE TYPE: SMALL_TALK - Greeting/casual detected")
+            logging.info(f"💬 Small Talk Response: {response}")
             # Add to session memory (user-based or session-based)
             if user_identifier or session_id:
                 session_manager.add_user_message(session_id, question, user_identifier, username, email, device_id)
@@ -318,11 +334,14 @@ class RAGChain:
                 for msg in history[-10:]  # Last 10 messages
             ]
         
-        # First, try AI tool selection
+        # **STEP 3: AI Tool Selection (OpenAI Function Calling - Semantic Analysis)**
+        logging.info(f"🔍 STEP 3: AI Tool Selection - Analyzing question semantically")
         try:
             used_tool, tool_response = self.ai_tool_executor.process_question_with_tools(question, conversation_history)
             
             if used_tool:
+                logging.info(f"✅ RESPONSE TYPE: AI_TOOL - Tool '{used_tool}' executed successfully")
+                logging.info(f"🛠️ AI Tool Response: {tool_response[:100]}...")
                 # Add to session memory (user-based or session-based)
                 if user_identifier or session_id:
                     session_manager.add_user_message(session_id, question, user_identifier, username, email, device_id)
@@ -330,13 +349,60 @@ class RAGChain:
                 
                 return tool_response
         except Exception as e:
-            logging.error(f"Error in AI tool selection: {str(e)}")
+            logging.error(f"❌ AI Tool Error: {str(e)}")
             # Continue to RAG fallback
         
-        # Fallback to RAG if no tools were used
+        # **STEP 4: RAG Knowledge Base (Vector Similarity Search + LLM)**
+        logging.info(f"🧠 STEP 4: RAG Knowledge Base - Searching vector database")
         relevant_chunks = self.retrieve_relevant_chunks(question, index_folder)
+        
+        if relevant_chunks:
+            logging.info(f"📚 Found {len(relevant_chunks)} relevant chunks from knowledge base")
+            for i, chunk in enumerate(relevant_chunks[:2]):  # Log first 2 chunks
+                logging.info(f"   Chunk {i+1}: {chunk.get('source', 'Unknown')} (similarity: {chunk.get('similarity_score', 'N/A')})")
+        else:
+            logging.info(f"❌ No relevant chunks found in knowledge base")
         
         # Generate answer with memory
         answer = self.generate_answer_with_memory(question, relevant_chunks, session_id, user_identifier, username, email, device_id)
         
+        logging.info(f"✅ RESPONSE TYPE: RAG_KNOWLEDGE_BASE - Generated from documents + LLM")
+        logging.info(f"📖 RAG Response: {answer[:100]}...")
+        
         return answer
+    
+    def check_response_templates(self, question: str) -> str:
+        """Check if question matches any response templates (keyword/pattern based)"""
+        try:
+            from models import ResponseTemplate
+            import json
+            
+            # Get all active templates ordered by priority
+            templates = ResponseTemplate.query.filter_by(is_active=True).order_by(ResponseTemplate.priority.desc()).all()
+            
+            question_lower = question.lower()
+            
+            for template in templates:
+                # Check trigger keywords
+                try:
+                    keywords = json.loads(template.trigger_keywords) if template.trigger_keywords else []
+                    
+                    # Check if any keyword matches
+                    for keyword in keywords:
+                        if keyword.lower() in question_lower:
+                            # Increment usage count
+                            template.usage_count = (template.usage_count or 0) + 1
+                            from models import db
+                            db.session.commit()
+                            
+                            logging.info(f"🎯 Template Match: '{template.name}' triggered by keyword '{keyword}'")
+                            return template.template_text
+                            
+                except (json.JSONDecodeError, TypeError):
+                    continue
+            
+            return None
+            
+        except Exception as e:
+            logging.error(f"Error checking response templates: {e}")
+            return None
