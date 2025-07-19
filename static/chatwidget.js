@@ -61,10 +61,7 @@
         timeBasedGreeting: true, // Show time-based greeting for first-time users
         voiceEnabled: true, // Enable voice synthesis functionality
         autoPlayVoice: false, // Auto-play bot voice responses
-        selectedVoice: 'indian_female' // Default voice selection
-        voiceEnabled: false, // Enable voice synthesis for bot responses
-        selectedVoice: 'indian_female', // Default voice for TTS (indian_female, af_heart, etc.)
-        autoPlayVoice: false, // Automatically play voice responses
+        selectedVoice: 'indian_female', // Default voice selection
         showVoiceControls: true // Show voice control buttons in the interface
     };
 
