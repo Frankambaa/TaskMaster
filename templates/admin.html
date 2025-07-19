@@ -660,6 +660,99 @@
                                             </div>
                                         </div>
                                     </div>
+                                    
+                                    <!-- Time-Based Greeting Example -->
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header" id="timeGreetingHeading">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#timeGreetingExample">
+                                                <i class="fas fa-clock me-2"></i> Time-Based Greetings
+                                            </button>
+                                        </h2>
+                                        <div id="timeGreetingExample" class="accordion-collapse collapse" data-bs-parent="#integrationExamples">
+                                            <div class="accordion-body">
+                                                <p>Automatically greet first-time users based on the time of day:</p>
+                                                
+                                                <div class="row mb-3">
+                                                    <div class="col-md-3">
+                                                        <div class="card text-center">
+                                                            <div class="card-body">
+                                                                <h6 class="card-title">🌅 Morning</h6>
+                                                                <small class="text-muted">5:00 AM - 11:59 AM</small>
+                                                                <p class="card-text mt-2">"Good morning!"</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="card text-center">
+                                                            <div class="card-body">
+                                                                <h6 class="card-title">☀️ Afternoon</h6>
+                                                                <small class="text-muted">12:00 PM - 4:59 PM</small>
+                                                                <p class="card-text mt-2">"Good afternoon!"</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="card text-center">
+                                                            <div class="card-body">
+                                                                <h6 class="card-title">🌆 Evening</h6>
+                                                                <small class="text-muted">5:00 PM - 9:59 PM</small>
+                                                                <p class="card-text mt-2">"Good evening!"</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="card text-center">
+                                                            <div class="card-body">
+                                                                <h6 class="card-title">🌙 Late Hours</h6>
+                                                                <small class="text-muted">10:00 PM - 4:59 AM</small>
+                                                                <p class="card-text mt-2">"Hello!"</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="position-relative">
+                                                    <pre class="bg-light p-3 rounded" style="font-size: 0.9rem;"><code id="timeGreetingScript">&lt;script src="{{ request.url_root }}static/chatwidget.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+    ChatWidget.init({
+        apiUrl: '{{ request.url_root.rstrip('/') }}',
+        user_id: 'user123',
+        username: 'John Doe',
+        email: 'john@example.com',
+        
+        // Enable time-based greetings
+        timeBasedGreeting: true,
+        personalizedWelcome: true,
+        
+        position: 'bottom-right',
+        title: 'Smart Assistant'
+    });
+&lt;/script&gt;</code></pre>
+                                                    <button class="btn btn-sm btn-outline-secondary position-absolute top-0 end-0 m-2" 
+                                                            onclick="copyToClipboard('timeGreetingScript')">
+                                                        <i class="fas fa-copy"></i>
+                                                    </button>
+                                                </div>
+                                                
+                                                <div class="alert alert-info mt-3">
+                                                    <i class="fas fa-info-circle"></i> <strong>How it works:</strong>
+                                                    <ul class="mb-0 mt-2">
+                                                        <li>Only shows time-based greeting for first-time users (tracked in localStorage)</li>
+                                                        <li>Combines with personalized welcome if user info is provided</li>
+                                                        <li>Example: "Good morning John! How can I help you today?"</li>
+                                                        <li>Falls back to regular welcome message for returning users</li>
+                                                        <li>Works across different time zones based on user's local time</li>
+                                                    </ul>
+                                                </div>
+                                                
+                                                <div class="mt-3">
+                                                    <a href="/test_time_based_greeting.html" class="btn btn-outline-primary" target="_blank">
+                                                        <i class="fas fa-external-link-alt"></i> Test Time-Based Greetings
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -672,6 +765,7 @@
                                 <li>✓ Responsive design (mobile & desktop)</li>
                                 <li>✓ Persistent conversation history</li>
                                 <li>✓ Privacy-focused session isolation</li>
+                                <li>✓ Time-based greetings for first-time users</li>
                             </ul>
                         </div>
                     </div>

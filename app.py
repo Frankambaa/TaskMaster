@@ -143,6 +143,12 @@ def test_widget_sizes():
     from flask import send_from_directory
     return send_from_directory('.', 'test_widget_sizes.html')
 
+@app.route('/test_time_based_greeting.html')
+def test_time_based_greeting():
+    """Test page for time-based greeting functionality"""
+    from flask import send_from_directory
+    return send_from_directory('.', 'test_time_based_greeting.html')
+
 @app.route('/upload', methods=['POST'])
 def upload_file():
     """Handle file upload"""

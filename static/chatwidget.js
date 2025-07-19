@@ -57,7 +57,8 @@
         personalizedWelcome: true, // Show personalized welcome message with user's name
         iconUrl: null, // Custom icon URL for the chat widget toggle button
         widgetSize: 'medium', // Widget size: 'small', 'medium', 'large'
-        buttonSize: null // Toggle button size in pixels (auto-calculated based on widgetSize)
+        buttonSize: null, // Toggle button size in pixels (auto-calculated based on widgetSize)
+        timeBasedGreeting: true // Show time-based greeting for first-time users
     };
 
     // Widget state
@@ -770,8 +771,41 @@
             }
         },
 
+        getTimeBasedGreeting: function() {
+            if (!config.timeBasedGreeting) {
+                return '';
+            }
+            
+            const now = new Date();
+            const hour = now.getHours();
+            
+            if (hour >= 5 && hour < 12) {
+                return 'Good morning! ';
+            } else if (hour >= 12 && hour < 17) {
+                return 'Good afternoon! ';
+            } else if (hour >= 17 && hour < 22) {
+                return 'Good evening! ';
+            } else {
+                return 'Hello! '; // Late night/early hours
+            }
+        },
+
         getPersonalizedWelcome: function() {
+            let greeting = '';
             let name = '';
+            
+            // Get time-based greeting for first-time users
+            if (config.timeBasedGreeting) {
+                // Check if this is a first-time user (no persistent history)
+                const isFirstTime = !localStorage.getItem(`chatwidget_visited_${config.user_id || config.email || config.device_id || 'anonymous'}`);
+                if (isFirstTime) {
+                    greeting = this.getTimeBasedGreeting();
+                    // Mark user as visited
+                    localStorage.setItem(`chatwidget_visited_${config.user_id || config.email || config.device_id || 'anonymous'}`, 'true');
+                }
+            }
+            
+            // Get personalized name
             if (config.personalizedWelcome) {
                 if (config.username) {
                     name = config.username;
@@ -782,9 +816,15 @@
                 }
             }
             
-            if (name) {
+            // Combine greeting with personalization
+            if (greeting && name) {
+                return `${greeting}${name}! How can I help you today?`;
+            } else if (greeting) {
+                return `${greeting}How can I help you today?`;
+            } else if (name) {
                 return `Hi ${name}! How can I help you today?`;
             }
+            
             return config.welcomeMessage;
         },
 
