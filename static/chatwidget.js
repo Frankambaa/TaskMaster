@@ -1766,62 +1766,14 @@
         }
     };
 
-    // Live Chat Extensions
-    ChatWidget.prototype.isLiveChatActive = false;
-    ChatWidget.prototype.liveChatSessionId = null;
-    ChatWidget.prototype.processedMessages = new Set();
-    ChatWidget.prototype.liveChatPollingInterval = null;
 
-    // Transfer to live agent
-    ChatWidget.prototype.transferToAgent = function(reason) {
-        const self = this;
-        const transferData = {
-            user_identifier: this.config.user_id || this.config.email || this.config.device_id || 'anonymous',
-            username: this.config.username,
-            email: this.config.email,
-            initial_message: reason || 'User requested live agent assistance',
-            department: this.config.department || 'support',
-            priority: this.config.priority || 'normal'
-        };
 
-        return fetch(`${this.config.apiUrl}/api/live_chat/transfer_to_agent`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Widget-Origin': window.location.origin
-            },
-            body: JSON.stringify(transferData)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                self.isLiveChatActive = true;
-                self.liveChatSessionId = data.session_id;
-                
-                // Add system message about transfer
-                self.addMessage(data.message, 'bot');
-                
-                // Start polling for agent messages
-                self.startLiveChatPolling();
-                
-                // Update input placeholder
-                const inputField = document.querySelector('.chat-widget-input');
-                if (inputField) {
-                    inputField.placeholder = 'Waiting for agent... Type your message here';
-                }
-                
-                console.log('Successfully transferred to live agent');
-            } else {
-                console.error('Error transferring to agent:', data.error);
-                self.addMessage('Sorry, live chat is currently unavailable. Please try again later.', 'bot');
-            }
-            return data;
-        })
-        .catch(error => {
-            console.error('Error transferring to agent:', error);
-            self.addMessage('Sorry, there was an error connecting to live chat. Please try again later.', 'bot');
-            return { success: false, error: error.message };
-        });
+    // Add live chat methods to ChatWidget
+    ChatWidget.prototype.initializeLiveChat = function() {
+        this.isLiveChatActive = false;
+        this.liveChatSessionId = null;
+        this.processedMessages = new Set();
+        this.liveChatPollingInterval = null;
     };
 
     // Start polling for live chat messages
@@ -1897,6 +1849,58 @@
         });
     };
 
+    // Transfer to live agent function
+    ChatWidget.prototype.transferToAgent = function(reason) {
+        const transferData = {
+            user_identifier: this.config.user_id || this.config.email || this.config.device_id || 'anonymous',
+            username: this.config.username,
+            email: this.config.email,
+            initial_message: reason || 'User requested live agent assistance',
+            department: this.config.department || 'support',
+            priority: this.config.priority || 'normal'
+        };
+
+        const self = this;
+        return fetch(`${this.config.apiUrl}/api/live_chat/transfer_to_agent`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Widget-Origin': window.location.origin
+            },
+            body: JSON.stringify(transferData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                self.isLiveChatActive = true;
+                self.liveChatSessionId = data.session_id;
+                
+                // Add system message about transfer
+                self.addMessage(data.message, 'bot');
+                
+                // Start polling for agent messages
+                self.startLiveChatPolling();
+                
+                // Update input placeholder
+                const inputField = document.querySelector('.chat-widget-input');
+                if (inputField) {
+                    inputField.placeholder = 'Waiting for agent... Type your message here';
+                }
+                
+                console.log('Successfully transferred to live agent');
+            } else {
+                console.error('Error transferring to agent:', data.error);
+                self.addMessage('Sorry, live chat is currently unavailable. Please try again later.', 'bot');
+            }
+            return data;
+        })
+        .catch(error => {
+            console.error('Error transferring to agent:', error);
+            self.addMessage('Sorry, there was an error connecting to live chat. Please try again later.', 'bot');
+            return { success: false, error: error.message };
+        });
+    };
+
     // Override sendMessage for live chat
     const originalSendMessage = ChatWidget.prototype.sendMessage;
     ChatWidget.prototype.sendMessage = function() {
@@ -1924,8 +1928,8 @@
         }
 
         const messagesContainer = document.querySelector('.chat-widget-messages');
-        if (messagesContainer.querySelector('.transfer-button-container')) {
-            return; // Already exists
+        if (!messagesContainer || messagesContainer.querySelector('.transfer-button-container')) {
+            return; // Already exists or container not found
         }
 
         const userMessages = messagesContainer.querySelectorAll('.chat-widget-message.user').length;
@@ -1937,16 +1941,41 @@
         transferContainer.className = 'transfer-button-container';
         transferContainer.style.cssText = 'text-align: center; margin: 10px 0; padding: 10px;';
         
+        const self = this;
         transferContainer.innerHTML = `
             <p style="margin: 5px 0; color: #666; font-size: 13px;">Need more help?</p>
-            <button class="transfer-button" onclick="window.ChatWidget.transferToAgent('User requested live assistance')" 
+            <button class="transfer-button" 
                     style="background: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 13px;">
                 <i class="fas fa-user-tie"></i> Talk to Agent
             </button>
         `;
 
+        // Add click event listener
+        const transferButton = transferContainer.querySelector('.transfer-button');
+        transferButton.addEventListener('click', function() {
+            self.transferToAgent('User requested live assistance');
+        });
+
         messagesContainer.appendChild(transferContainer);
         this.scrollToBottom();
+    };
+
+    // Initialize live chat on widget creation
+    const originalInit = ChatWidget.init;
+    ChatWidget.init = function(config) {
+        const widget = originalInit.call(this, config);
+        if (widget && widget.initializeLiveChat) {
+            widget.initializeLiveChat();
+            // Store global reference
+            window.ChatWidgetInstance = widget;
+            // Make transfer function globally accessible
+            window.transferToAgent = function(reason) {
+                if (widget && widget.transferToAgent) {
+                    widget.transferToAgent(reason);
+                }
+            };
+        }
+        return widget;
     };
 
     // Global object
