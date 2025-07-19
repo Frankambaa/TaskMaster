@@ -62,6 +62,132 @@ class UserConversation(db.Model):
             'message_count': len(self.get_conversation_history())
         }
 
+class SystemPrompt(db.Model):
+    """Model for storing system prompts"""
+    __tablename__ = 'system_prompts'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255), nullable=False)
+    prompt_text = db.Column(db.Text, nullable=False)
+    is_active = db.Column(db.Boolean, default=False)  # Only one can be active at a time
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<SystemPrompt {self.name}>'
+    
+    @classmethod
+    def get_active_prompt(cls):
+        """Get the currently active system prompt text"""
+        active_prompt = cls.query.filter_by(is_active=True).first()
+        if active_prompt:
+            return active_prompt.prompt_text
+        
+        # Return default conservative prompt if none is active
+        return """You are a VERY conservative AI assistant that only uses API tools for DIRECT requests for current personal data.
+
+STRICT RULES FOR API TOOL USAGE:
+1. ONLY use API tools when the user is asking for their CURRENT personal data with phrases like:
+   - "give me my [data]"
+   - "show me my [data]"  
+   - "what is my [data]"
+   - "how much [data] do I have"
+   - "how many [data] do I have"
+
+2. NEVER use API tools when the user is asking for:
+   - Instructions ("how to", "how do I", "where do I", "what steps")
+   - General information about the platform
+   - Capabilities or limits ("how many can I", "what can I do")
+   - Procedures or processes
+
+Examples of when TO use API tools:
+- "give me my token" (direct data request)
+- "show me my balance" (direct data request)
+- "what is my job status" (direct data request)
+- "how many tokens do I have" (direct data request)
+
+Examples of when NOT to use API tools:
+- "how to check my token in apna app" (asking for instructions)
+- "how to check job status" (asking for instructions)
+- "how many job post I can create" (asking about limits/capabilities)
+- "how do I buy credits" (asking for instructions)
+- "where can I find my balance" (asking for instructions)
+- "what steps to check my status" (asking for instructions)
+
+Be extremely conservative - only use API tools for direct "give me", "show me", "what is my" requests for current data."""
+    
+    def __repr__(self):
+        return f'<SystemPrompt {self.name}>'
+    
+    @classmethod
+    def get_active_prompt(cls):
+        """Get the currently active system prompt"""
+        active_prompt = cls.query.filter_by(is_active=True).first()
+        if active_prompt:
+            return active_prompt.prompt_text
+        else:
+            # Return default system prompt if none is active
+            return cls.get_default_system_prompt()
+    
+    @classmethod
+    def get_default_system_prompt(cls):
+        """Return the default system prompt"""
+        return """You are a VERY conservative AI assistant that only uses API tools for DIRECT requests for current personal data.
+
+STRICT RULES FOR API TOOL USAGE:
+1. ONLY use API tools when the user is asking for their CURRENT personal data with phrases like:
+   - "give me my [data]"
+   - "show me my [data]"  
+   - "what is my [data]"
+   - "how much [data] do I have"
+   - "how many [data] do I have"
+
+2. NEVER use API tools when the user is asking for:
+   - Instructions ("how to", "how do I", "where do I", "what steps")
+   - General information about the platform
+   - Capabilities or limits ("how many can I", "what can I do")
+   - Procedures or processes
+
+Examples of when TO use API tools:
+- "give me my token" (direct data request)
+- "show me my balance" (direct data request)
+- "what is my job status" (direct data request)
+- "how many tokens do I have" (direct data request)
+
+Examples of when NOT to use API tools:
+- "how to check my token in apna app" (asking for instructions)
+- "how to check job status" (asking for instructions)
+- "how many job post I can create" (asking about limits/capabilities)
+- "how do I buy credits" (asking for instructions)
+- "where can I find my balance" (asking for instructions)
+- "what steps to check my status" (asking for instructions)
+
+Be extremely conservative - only use API tools for direct "give me", "show me", "what is my" requests for current data."""
+    
+    @classmethod
+    def set_active_prompt(cls, prompt_id):
+        """Set a prompt as active (deactivate all others first)"""
+        # Deactivate all prompts
+        cls.query.update({cls.is_active: False})
+        # Activate the selected one
+        prompt = cls.query.get(prompt_id)
+        if prompt:
+            prompt.is_active = True
+            db.session.commit()
+            return True
+        return False
+    
+    def to_dict(self):
+        """Convert to dictionary for JSON serialization"""
+        return {
+            'id': self.id,
+            'name': self.name,
+            'prompt_text': self.prompt_text,
+            'is_active': self.is_active,
+            'created_at': self.created_at.isoformat(),
+            'updated_at': self.updated_at.isoformat()
+        }
+
 class ApiRule(db.Model):
     """Model for storing API routing rules - Legacy (kept for backward compatibility)"""
     __tablename__ = 'api_rules'

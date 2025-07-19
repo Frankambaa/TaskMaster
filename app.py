@@ -8,7 +8,7 @@ from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
 from vectorizer import DocumentVectorizer
 from rag_chain import RAGChain
-from models import db, ApiRule, ApiTool, UserConversation
+from models import db, ApiRule, ApiTool, UserConversation, SystemPrompt
 from session_memory import session_manager
 import json
 import subprocess
@@ -830,6 +830,116 @@ def test_widget_fix():
     </body>
     </html>
     '''
+
+# System Prompt Management Routes
+@app.route('/system_prompts', methods=['GET', 'POST'])
+def system_prompts():
+    """Handle system prompts management"""
+    if request.method == 'GET':
+        # Get all system prompts
+        prompts = SystemPrompt.query.order_by(SystemPrompt.created_at.desc()).all()
+        return jsonify({
+            'prompts': [{
+                'id': prompt.id,
+                'name': prompt.name,
+                'prompt_text': prompt.prompt_text,
+                'is_active': prompt.is_active,
+                'created_at': prompt.created_at.isoformat()
+            } for prompt in prompts]
+        })
+    
+    elif request.method == 'POST':
+        # Create new system prompt
+        try:
+            data = request.get_json()
+            
+            name = data.get('name')
+            prompt_text = data.get('prompt_text')
+            is_active = data.get('is_active', False)
+            
+            if not name or not prompt_text:
+                return jsonify({'error': 'Name and prompt text are required'}), 400
+            
+            # If setting as active, deactivate all others
+            if is_active:
+                SystemPrompt.query.update({'is_active': False})
+            
+            # Create new system prompt
+            new_prompt = SystemPrompt(
+                name=name,
+                prompt_text=prompt_text,
+                is_active=is_active
+            )
+            
+            db.session.add(new_prompt)
+            db.session.commit()
+            
+            return jsonify({'success': True, 'id': new_prompt.id})
+            
+        except Exception as e:
+            db.session.rollback()
+            logging.error(f"Error creating system prompt: {str(e)}")
+            return jsonify({'error': str(e)}), 500
+
+@app.route('/system_prompts/<int:prompt_id>', methods=['PUT', 'DELETE'])
+def system_prompt_detail(prompt_id):
+    """Handle individual system prompt operations"""
+    prompt = SystemPrompt.query.get_or_404(prompt_id)
+    
+    if request.method == 'PUT':
+        # Update system prompt
+        try:
+            data = request.get_json()
+            
+            prompt.name = data.get('name', prompt.name)
+            prompt.prompt_text = data.get('prompt_text', prompt.prompt_text)
+            is_active = data.get('is_active', False)
+            
+            # If setting as active, deactivate all others
+            if is_active and not prompt.is_active:
+                SystemPrompt.query.update({'is_active': False})
+                prompt.is_active = True
+            elif not is_active:
+                prompt.is_active = False
+            
+            db.session.commit()
+            return jsonify({'success': True})
+            
+        except Exception as e:
+            db.session.rollback()
+            logging.error(f"Error updating system prompt: {str(e)}")
+            return jsonify({'error': str(e)}), 500
+    
+    elif request.method == 'DELETE':
+        # Delete system prompt
+        try:
+            db.session.delete(prompt)
+            db.session.commit()
+            return jsonify({'success': True})
+            
+        except Exception as e:
+            db.session.rollback()
+            logging.error(f"Error deleting system prompt: {str(e)}")
+            return jsonify({'error': str(e)}), 500
+
+@app.route('/system_prompts/<int:prompt_id>/activate', methods=['POST'])
+def activate_system_prompt(prompt_id):
+    """Activate a specific system prompt"""
+    try:
+        # Deactivate all prompts
+        SystemPrompt.query.update({'is_active': False})
+        
+        # Activate the specified prompt
+        prompt = SystemPrompt.query.get_or_404(prompt_id)
+        prompt.is_active = True
+        
+        db.session.commit()
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Error activating system prompt: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 # Widget Icon Management API Endpoints
 @app.route('/api/widget/icon', methods=['GET'])

@@ -5,7 +5,7 @@ import re
 from typing import Dict, List, Optional, Any, Tuple
 from openai import OpenAI
 import os
-from models import ApiTool
+from models import ApiTool, SystemPrompt
 from flask import current_app
 
 class AIToolExecutor:
@@ -57,41 +57,12 @@ class AIToolExecutor:
             if clarification_check:
                 return False, None, None, clarification_check
             
-            # Build conversation context with system prompt
+            # Build conversation context with system prompt from database
+            system_prompt = SystemPrompt.get_active_prompt()
             messages = [
                 {
                     "role": "system",
-                    "content": """You are a VERY conservative AI assistant that only uses API tools for DIRECT requests for current personal data.
-
-STRICT RULES FOR API TOOL USAGE:
-1. ONLY use API tools when the user is asking for their CURRENT personal data with phrases like:
-   - "give me my [data]"
-   - "show me my [data]"  
-   - "what is my [data]"
-   - "how much [data] do I have"
-   - "how many [data] do I have"
-
-2. NEVER use API tools when the user is asking for:
-   - Instructions ("how to", "how do I", "where do I", "what steps")
-   - General information about the platform
-   - Capabilities or limits ("how many can I", "what can I do")
-   - Procedures or processes
-
-Examples of when TO use API tools:
-- "give me my token" (direct data request)
-- "show me my balance" (direct data request)
-- "what is my job status" (direct data request)
-- "how many tokens do I have" (direct data request)
-
-Examples of when NOT to use API tools:
-- "how to check my token in apna app" (asking for instructions)
-- "how to check job status" (asking for instructions)
-- "how many job post I can create" (asking about limits/capabilities)
-- "how do I buy credits" (asking for instructions)
-- "where can I find my balance" (asking for instructions)
-- "what steps to check my status" (asking for instructions)
-
-Be extremely conservative - only use API tools for direct "give me", "show me", "what is my" requests for current data."""
+                    "content": system_prompt
                 }
             ]
             
