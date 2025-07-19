@@ -429,3 +429,236 @@ class ApiTool(db.Model):
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat()
         }
+
+class LiveChatSession(db.Model):
+    """Model for managing live chat sessions between users and agents"""
+    __tablename__ = 'live_chat_sessions'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(db.String(255), unique=True, nullable=False, index=True)
+    user_identifier = db.Column(db.String(255), nullable=False)  # user_id, email, or device_id
+    username = db.Column(db.String(255), nullable=True)
+    email = db.Column(db.String(255), nullable=True)
+    agent_id = db.Column(db.String(255), nullable=True)  # Assigned agent identifier
+    agent_name = db.Column(db.String(255), nullable=True)
+    status = db.Column(db.String(50), default='waiting')  # waiting, active, completed, transferred
+    priority = db.Column(db.String(20), default='normal')  # low, normal, high, urgent
+    department = db.Column(db.String(100), nullable=True)  # sales, support, technical, etc.
+    initial_message = db.Column(db.Text, nullable=True)  # User's initial message
+    tags = db.Column(db.Text, nullable=True)  # JSON array of tags
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    completed_at = db.Column(db.DateTime, nullable=True)
+    
+    # Relationship with messages
+    messages = db.relationship('LiveChatMessage', backref='session', lazy='dynamic', cascade='all, delete-orphan')
+    
+    def __repr__(self):
+        return f'<LiveChatSession {self.session_id}>'
+    
+    def get_tags(self):
+        """Return tags as list"""
+        try:
+            return json.loads(self.tags) if self.tags else []
+        except json.JSONDecodeError:
+            return []
+    
+    def set_tags(self, tag_list):
+        """Set tags from list"""
+        self.tags = json.dumps(tag_list)
+    
+    def to_dict(self):
+        """Convert to dictionary for JSON serialization"""
+        return {
+            'id': self.id,
+            'session_id': self.session_id,
+            'user_identifier': self.user_identifier,
+            'username': self.username,
+            'email': self.email,
+            'agent_id': self.agent_id,
+            'agent_name': self.agent_name,
+            'status': self.status,
+            'priority': self.priority,
+            'department': self.department,
+            'initial_message': self.initial_message,
+            'tags': self.get_tags(),
+            'created_at': self.created_at.isoformat(),
+            'updated_at': self.updated_at.isoformat(),
+            'completed_at': self.completed_at.isoformat() if self.completed_at else None,
+            'message_count': self.messages.count()
+        }
+
+class LiveChatMessage(db.Model):
+    """Model for storing individual messages in live chat sessions"""
+    __tablename__ = 'live_chat_messages'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(db.String(255), db.ForeignKey('live_chat_sessions.session_id'), nullable=False, index=True)
+    message_id = db.Column(db.String(255), unique=True, nullable=False)  # Unique message identifier
+    sender_type = db.Column(db.String(20), nullable=False)  # user, agent, system, bot
+    sender_id = db.Column(db.String(255), nullable=True)  # Agent ID or user identifier
+    sender_name = db.Column(db.String(255), nullable=True)  # Display name
+    message_content = db.Column(db.Text, nullable=False)
+    message_type = db.Column(db.String(50), default='text')  # text, image, file, system_notification
+    message_metadata = db.Column(db.Text, nullable=True)  # JSON metadata (file info, etc.)
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<LiveChatMessage {self.message_id}>'
+    
+    def get_metadata(self):
+        """Return metadata as dict"""
+        try:
+            return json.loads(self.message_metadata) if self.message_metadata else {}
+        except json.JSONDecodeError:
+            return {}
+    
+    def set_metadata(self, meta_dict):
+        """Set metadata from dict"""
+        self.message_metadata = json.dumps(meta_dict)
+    
+    def to_dict(self):
+        """Convert to dictionary for JSON serialization"""
+        return {
+            'id': self.id,
+            'session_id': self.session_id,
+            'message_id': self.message_id,
+            'sender_type': self.sender_type,
+            'sender_id': self.sender_id,
+            'sender_name': self.sender_name,
+            'message_content': self.message_content,
+            'message_type': self.message_type,
+            'metadata': self.get_metadata(),
+            'is_read': self.is_read,
+            'created_at': self.created_at.isoformat()
+        }
+
+class LiveChatAgent(db.Model):
+    """Model for managing live chat agents"""
+    __tablename__ = 'live_chat_agents'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    agent_id = db.Column(db.String(255), unique=True, nullable=False)
+    agent_name = db.Column(db.String(255), nullable=False)
+    email = db.Column(db.String(255), nullable=True)
+    department = db.Column(db.String(100), nullable=True)
+    status = db.Column(db.String(20), default='offline')  # online, offline, busy, away
+    max_concurrent_chats = db.Column(db.Integer, default=5)
+    current_chat_count = db.Column(db.Integer, default=0)
+    skills = db.Column(db.Text, nullable=True)  # JSON array of skills
+    last_activity = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_active = db.Column(db.Boolean, default=True)
+    
+    def __repr__(self):
+        return f'<LiveChatAgent {self.agent_name}>'
+    
+    def get_skills(self):
+        """Return skills as list"""
+        try:
+            return json.loads(self.skills) if self.skills else []
+        except json.JSONDecodeError:
+            return []
+    
+    def set_skills(self, skill_list):
+        """Set skills from list"""
+        self.skills = json.dumps(skill_list)
+    
+    def is_available(self):
+        """Check if agent is available for new chats"""
+        return (self.status == 'online' and 
+                self.is_active and 
+                self.current_chat_count < self.max_concurrent_chats)
+    
+    def to_dict(self):
+        """Convert to dictionary for JSON serialization"""
+        return {
+            'id': self.id,
+            'agent_id': self.agent_id,
+            'agent_name': self.agent_name,
+            'email': self.email,
+            'department': self.department,
+            'status': self.status,
+            'max_concurrent_chats': self.max_concurrent_chats,
+            'current_chat_count': self.current_chat_count,
+            'skills': self.get_skills(),
+            'last_activity': self.last_activity.isoformat(),
+            'created_at': self.created_at.isoformat(),
+            'is_active': self.is_active,
+            'is_available': self.is_available()
+        }
+
+class WebhookConfig(db.Model):
+    """Model for storing webhook configurations for third-party integrations"""
+    __tablename__ = 'webhook_configs'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255), nullable=False)  # Display name for the webhook
+    provider = db.Column(db.String(100), nullable=False)  # freshchat, zendesk, intercom, etc.
+    webhook_url = db.Column(db.Text, nullable=False)  # Target webhook URL
+    webhook_secret = db.Column(db.String(255), nullable=True)  # Secret for verification
+    event_types = db.Column(db.Text, nullable=False)  # JSON array of events to send
+    headers = db.Column(db.Text, nullable=True)  # JSON object of custom headers
+    auth_type = db.Column(db.String(50), default='none')  # none, bearer, basic, api_key
+    auth_credentials = db.Column(db.Text, nullable=True)  # JSON object with auth details
+    is_active = db.Column(db.Boolean, default=True)
+    retry_count = db.Column(db.Integer, default=3)  # Number of retry attempts
+    timeout_seconds = db.Column(db.Integer, default=30)  # Request timeout
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_used = db.Column(db.DateTime, nullable=True)
+    
+    def __repr__(self):
+        return f'<WebhookConfig {self.name}>'
+    
+    def get_event_types(self):
+        """Return event types as list"""
+        try:
+            return json.loads(self.event_types) if self.event_types else []
+        except json.JSONDecodeError:
+            return []
+    
+    def set_event_types(self, event_list):
+        """Set event types from list"""
+        self.event_types = json.dumps(event_list)
+    
+    def get_headers(self):
+        """Return headers as dict"""
+        try:
+            return json.loads(self.headers) if self.headers else {}
+        except json.JSONDecodeError:
+            return {}
+    
+    def set_headers(self, header_dict):
+        """Set headers from dict"""
+        self.headers = json.dumps(header_dict)
+    
+    def get_auth_credentials(self):
+        """Return auth credentials as dict"""
+        try:
+            return json.loads(self.auth_credentials) if self.auth_credentials else {}
+        except json.JSONDecodeError:
+            return {}
+    
+    def set_auth_credentials(self, auth_dict):
+        """Set auth credentials from dict"""
+        self.auth_credentials = json.dumps(auth_dict)
+    
+    def to_dict(self):
+        """Convert to dictionary for JSON serialization"""
+        return {
+            'id': self.id,
+            'name': self.name,
+            'provider': self.provider,
+            'webhook_url': self.webhook_url,
+            'event_types': self.get_event_types(),
+            'headers': self.get_headers(),
+            'auth_type': self.auth_type,
+            'is_active': self.is_active,
+            'retry_count': self.retry_count,
+            'timeout_seconds': self.timeout_seconds,
+            'created_at': self.created_at.isoformat(),
+            'updated_at': self.updated_at.isoformat(),
+            'last_used': self.last_used.isoformat() if self.last_used else None
+        }

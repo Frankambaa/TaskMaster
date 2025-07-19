@@ -3278,6 +3278,142 @@ Remember: Your goal is to provide the best possible user experience by being hel
                 timeout = setTimeout(later, wait);
             };
         }
+
+        // Live Chat Management Functions
+        function loadLiveChatSessions() {
+            fetch('/api/live_chat/sessions')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    displayLiveChatSessions(data.sessions);
+                } else {
+                    console.error('Error loading sessions:', data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error loading live chat sessions:', error);
+            });
+        }
+
+        function displayLiveChatSessions(sessions) {
+            const tbody = document.querySelector('#liveChatSessionsTable tbody');
+            if (!tbody) return;
+            
+            if (sessions.length === 0) {
+                tbody.innerHTML = `
+                    <tr><td colspan="7" class="text-center text-muted">No chat sessions found</td></tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = sessions.map(session => `
+                <tr>
+                    <td><code>${session.session_id.substring(0, 8)}...</code></td>
+                    <td>${session.username || session.user_identifier}</td>
+                    <td><span class="badge bg-primary">${session.status}</span></td>
+                    <td>${session.agent_name || 'Unassigned'}</td>
+                    <td>${new Date(session.created_at).toLocaleDateString()}</td>
+                    <td><span class="badge bg-secondary">${session.message_count || 0}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary" onclick="viewSession('${session.session_id}')">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function viewSession(sessionId) {
+            window.open(`/agent_portal?session=${sessionId}`, '_blank');
+        }
     </script>
+
+    <!-- Live Chat Management Section -->
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-headset"></i> Live Chat Management
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <!-- Agent Portal Link -->
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-user-tie fa-3x text-primary mb-3"></i>
+                                        <h5>Agent Portal</h5>
+                                        <p class="text-muted">Access the live chat agent interface</p>
+                                        <a href="/agent_portal" target="_blank" class="btn btn-primary">
+                                            <i class="fas fa-external-link-alt"></i> Open Agent Portal
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Live Chat Sessions -->
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-comments fa-3x text-success mb-3"></i>
+                                        <h5>Active Sessions</h5>
+                                        <p class="text-muted">Monitor live chat sessions</p>
+                                        <button class="btn btn-success" onclick="loadLiveChatSessions()">
+                                            <i class="fas fa-sync-alt"></i> View Sessions
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Agent Management -->
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-users fa-3x text-info mb-3"></i>
+                                        <h5>Agent Management</h5>
+                                        <p class="text-muted">Manage live chat agents</p>
+                                        <button class="btn btn-info" onclick="alert('Agent management coming soon!')">
+                                            <i class="fas fa-cogs"></i> Manage Agents
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sessions Table -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <h5><i class="fas fa-table"></i> Recent Chat Sessions</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-striped" id="liveChatSessionsTable">
+                                        <thead>
+                                            <tr>
+                                                <th>Session ID</th>
+                                                <th>User</th>
+                                                <th>Status</th>
+                                                <th>Agent</th>
+                                                <th>Created</th>
+                                                <th>Messages</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td colspan="7" class="text-center text-muted">
+                                                    <i class="fas fa-spinner fa-spin"></i> Loading sessions...
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>

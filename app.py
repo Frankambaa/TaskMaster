@@ -8,7 +8,7 @@ from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
 from vectorizer import DocumentVectorizer
 from rag_chain import RAGChain
-from models import db, ApiRule, ApiTool, UserConversation, SystemPrompt, RagFeedback, ChatSettings, ResponseTemplate
+from models import db, ApiRule, ApiTool, UserConversation, SystemPrompt, RagFeedback, ChatSettings, ResponseTemplate, LiveChatSession, LiveChatMessage, LiveChatAgent, WebhookConfig
 from session_memory import session_manager
 import json
 import subprocess
@@ -1524,6 +1524,237 @@ def get_system_logs():
             
     except Exception as e:
         logging.error(f"Error getting system logs: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# ==================== LIVE CHAT ENDPOINTS ====================
+
+@app.route('/agent_portal')
+def agent_portal():
+    """Live chat agent portal interface"""
+    return render_template('agent_portal.html')
+
+@app.route('/api/live_chat/sessions', methods=['GET'])
+def get_live_chat_sessions():
+    """Get live chat sessions for agent dashboard"""
+    try:
+        status = request.args.get('status', 'all')
+        agent_id = request.args.get('agent_id')
+        
+        query = LiveChatSession.query
+        
+        if status != 'all':
+            query = query.filter_by(status=status)
+        
+        if agent_id:
+            query = query.filter_by(agent_id=agent_id)
+        
+        sessions = query.order_by(LiveChatSession.updated_at.desc()).limit(50).all()
+        
+        return jsonify({
+            'success': True,
+            'sessions': [session.to_dict() for session in sessions]
+        })
+        
+    except Exception as e:
+        logging.error(f"Error getting live chat sessions: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/live_chat/sessions/<session_id>/messages', methods=['GET'])
+def get_session_messages(session_id):
+    """Get messages for a specific live chat session"""
+    try:
+        from live_chat_manager import live_chat_manager
+        messages = live_chat_manager.get_session_messages(session_id)
+        
+        return jsonify({
+            'success': True,
+            'messages': [message.to_dict() for message in reversed(messages)]
+        })
+        
+    except Exception as e:
+        logging.error(f"Error getting session messages: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/live_chat/sessions/<session_id>/send_message', methods=['POST'])
+def send_live_chat_message(session_id):
+    """Send a message in a live chat session"""
+    try:
+        from live_chat_manager import live_chat_manager
+        data = request.json
+        
+        message = live_chat_manager.send_message(
+            session_id=session_id,
+            sender_type=data.get('sender_type', 'agent'),
+            sender_id=data.get('sender_id'),
+            sender_name=data.get('sender_name'),
+            message_content=data.get('message_content'),
+            message_type=data.get('message_type', 'text'),
+            metadata=data.get('metadata')
+        )
+        
+        return jsonify({
+            'success': True,
+            'message': message.to_dict()
+        })
+        
+    except Exception as e:
+        logging.error(f"Error sending live chat message: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/live_chat/transfer_to_agent', methods=['POST'])
+def transfer_to_agent():
+    """Transfer a chatbot conversation to live agent"""
+    try:
+        from live_chat_manager import live_chat_manager
+        data = request.json
+        
+        # Create live chat session
+        session = live_chat_manager.create_session(
+            user_identifier=data.get('user_identifier', 'anonymous'),
+            username=data.get('username'),
+            email=data.get('email'),
+            initial_message=data.get('initial_message'),
+            department=data.get('department'),
+            priority=data.get('priority', 'normal')
+        )
+        
+        return jsonify({
+            'success': True,
+            'session_id': session.session_id,
+            'message': 'Chat transferred to live agent. You will be connected shortly.'
+        })
+        
+    except Exception as e:
+        logging.error(f"Error transferring to agent: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/live_chat/agents', methods=['GET'])
+def get_live_chat_agents():
+    """Get live chat agents"""
+    try:
+        agents = LiveChatAgent.query.filter_by(is_active=True).all()
+        
+        return jsonify({
+            'success': True,
+            'agents': [agent.to_dict() for agent in agents]
+        })
+        
+    except Exception as e:
+        logging.error(f"Error getting live chat agents: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/live_chat/agents', methods=['POST'])
+def create_live_chat_agent():
+    """Create a new live chat agent"""
+    try:
+        data = request.json
+        
+        agent = LiveChatAgent(
+            agent_id=data.get('agent_id', f"agent_{uuid.uuid4().hex[:8]}"),
+            agent_name=data['agent_name'],
+            email=data.get('email'),
+            department=data.get('department'),
+            max_concurrent_chats=data.get('max_concurrent_chats', 5)
+        )
+        
+        if data.get('skills'):
+            agent.set_skills(data['skills'])
+        
+        db.session.add(agent)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'agent': agent.to_dict()
+        })
+        
+    except Exception as e:
+        logging.error(f"Error creating live chat agent: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/live_chat/agents/<agent_id>/status', methods=['PUT'])
+def update_agent_status(agent_id):
+    """Update agent status"""
+    try:
+        from live_chat_manager import live_chat_manager
+        data = request.json
+        
+        success = live_chat_manager.update_agent_status(agent_id, data['status'])
+        
+        return jsonify({
+            'success': success,
+            'message': f"Agent status updated to {data['status']}" if success else "Agent not found"
+        })
+        
+    except Exception as e:
+        logging.error(f"Error updating agent status: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# ==================== WEBHOOK MANAGEMENT ENDPOINTS ====================
+
+@app.route('/api/webhooks', methods=['GET'])
+def get_webhooks():
+    """Get all webhook configurations"""
+    try:
+        webhooks = WebhookConfig.query.all()
+        
+        return jsonify({
+            'success': True,
+            'webhooks': [webhook.to_dict() for webhook in webhooks]
+        })
+        
+    except Exception as e:
+        logging.error(f"Error getting webhooks: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/webhooks', methods=['POST'])
+def create_webhook():
+    """Create a new webhook configuration"""
+    try:
+        data = request.json
+        
+        webhook = WebhookConfig(
+            name=data['name'],
+            provider=data['provider'],
+            webhook_url=data['webhook_url'],
+            webhook_secret=data.get('webhook_secret'),
+            auth_type=data.get('auth_type', 'none'),
+            retry_count=data.get('retry_count', 3),
+            timeout_seconds=data.get('timeout_seconds', 30)
+        )
+        
+        webhook.set_event_types(data.get('event_types', []))
+        webhook.set_headers(data.get('headers', {}))
+        webhook.set_auth_credentials(data.get('auth_credentials', {}))
+        
+        db.session.add(webhook)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'webhook': webhook.to_dict()
+        })
+        
+    except Exception as e:
+        logging.error(f"Error creating webhook: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/webhooks/<int:webhook_id>/test', methods=['POST'])
+def test_webhook(webhook_id):
+    """Test a webhook configuration"""
+    try:
+        from webhook_manager import webhook_manager
+        
+        webhook = WebhookConfig.query.get_or_404(webhook_id)
+        result = webhook_manager.test_webhook(webhook)
+        
+        return jsonify({
+            'success': True,
+            'test_result': result
+        })
+        
+    except Exception as e:
+        logging.error(f"Error testing webhook: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':
