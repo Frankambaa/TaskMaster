@@ -19,7 +19,7 @@ services:
 
   app:
     build:
-      context: .
+      context: ..
       dockerfile: deployment_clean/Dockerfile
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-chatbot_user}:${POSTGRES_PASSWORD:-secure_password}@postgres:5432/${POSTGRES_DB:-chatbot_db}
