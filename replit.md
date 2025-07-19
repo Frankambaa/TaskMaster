@@ -347,6 +347,10 @@ deployment/       # Production deployment files
 - July 19, 2025: Fixed voice synthesis gTTS fallback system and API request parameter mapping (question vs message)
 - July 19, 2025: Added personalized welcome message: "Hello! Welcome to voice mode. How can I help you today? This is Ria."
 - July 19, 2025: Voice system now fully functional with Indian English accent and continuous conversation capability
+- July 19, 2025: **ENHANCED ACTIVE LISTENING**: Implemented interrupt-driven voice system with voice activity detection
+- July 19, 2025: Added continuous speech recognition that auto-restarts, stops speaking when user talks, handles natural pauses
+- July 19, 2025: Enhanced speech recognition with interim results, Indian English lang setting, and intelligent conversation flow
+- July 19, 2025: Fixed call disconnection issues with manual disconnect flags and proper recognition lifecycle management
 
 ## Known Issues
 

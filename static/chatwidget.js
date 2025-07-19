@@ -1419,6 +1419,7 @@
             config.continuousVoice = true;
             config.autoPlayVoice = true;
             config.voiceEnabled = true;
+            window.voiceManuallyDisconnected = false;  // Reset flag
             
             console.log('Starting continuous voice mode');
             
@@ -1426,7 +1427,7 @@
             this.updateVoiceControls();
             
             // Add voice mode indicator message
-            this.addMessage("📞 Voice call started. Speak your question...", 'bot', false, false);
+            this.addMessage("📞 Voice call connected. Listening actively...", 'bot', false, false);
             
             // Provide welcome voice message and start speech recognition
             const welcomeMessage = "Hello! Welcome to voice mode. How can I help you today? This is Ria.";
@@ -1436,10 +1437,12 @@
                 // After welcome message, start speech recognition
                 setTimeout(() => {
                     this.startSpeechRecognition();
-                }, 500); // Small delay after voice
+                }, 1000); // Longer delay after voice to ensure it's finished
             }).catch(() => {
                 // If voice synthesis fails, still start recognition
-                this.startSpeechRecognition();
+                setTimeout(() => {
+                    this.startSpeechRecognition();
+                }, 500);
             });
         },
 
@@ -1447,6 +1450,7 @@
             // Disconnect continuous voice mode
             config.continuousVoice = false;
             config.autoPlayVoice = false;
+            window.voiceManuallyDisconnected = true;  // Flag to prevent auto-restart
             
             console.log('Disconnecting voice mode');
             
@@ -1464,6 +1468,11 @@
                 window.currentSpeechRecognition.stop();
                 window.currentSpeechRecognition = null;
             }
+            
+            // Reset manual disconnect flag after a delay
+            setTimeout(() => {
+                window.voiceManuallyDisconnected = false;
+            }, 2000);
         },
 
         startSpeechRecognition: function() {
@@ -1485,9 +1494,9 @@
             // Store globally so we can stop it when needed
             window.currentSpeechRecognition = recognition;
             
-            recognition.continuous = false;
-            recognition.interimResults = false;
-            recognition.lang = 'en-US';
+            recognition.continuous = true;  // Keep listening continuously
+            recognition.interimResults = true;  // Get partial results
+            recognition.lang = 'en-IN';  // Indian English for better recognition
 
             recognition.onstart = () => {
                 console.log('Speech recognition started');
@@ -1504,21 +1513,42 @@
             };
 
             recognition.onresult = (event) => {
-                const transcript = event.results[0][0].transcript;
-                console.log('Speech recognition result:', transcript);
+                let finalTranscript = '';
+                let interimTranscript = '';
                 
-                // Remove listening message
-                const messages = messagesContainer.querySelectorAll('.chat-widget-message');
-                const lastMessage = messages[messages.length - 1];
-                if (lastMessage && lastMessage.textContent.includes('🎤 Listening...')) {
-                    lastMessage.remove();
+                // Process all results
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        finalTranscript += transcript;
+                    } else {
+                        interimTranscript += transcript;
+                    }
                 }
                 
-                // Add user message and send it
-                this.addMessage(transcript, 'user');
+                console.log('Speech recognition result:', finalTranscript || interimTranscript);
                 
-                // Send the recognized speech as a message
-                this.sendUserMessage(transcript);
+                // If we have final results, process them
+                if (finalTranscript.trim()) {
+                    // Stop any ongoing voice playback when user speaks
+                    this.stopVoice();
+                    
+                    // Remove listening message
+                    const messages = messagesContainer.querySelectorAll('.chat-widget-message');
+                    const lastMessage = messages[messages.length - 1];
+                    if (lastMessage && lastMessage.textContent.includes('🎤 Listening...')) {
+                        lastMessage.remove();
+                    }
+                    
+                    // Add user message and send it
+                    this.addMessage(finalTranscript.trim(), 'user');
+                    
+                    // Send the recognized speech as a message
+                    this.sendUserMessage(finalTranscript.trim());
+                    
+                    // Stop current recognition to restart after response
+                    recognition.stop();
+                }
             };
 
             recognition.onerror = (event) => {
@@ -1549,6 +1579,13 @@
                 
                 // Clear the global reference
                 window.currentSpeechRecognition = null;
+                
+                // Restart recognition if still in continuous voice mode (unless manually stopped)
+                if (config.continuousVoice && !window.voiceManuallyDisconnected) {
+                    setTimeout(() => {
+                        this.startSpeechRecognition();
+                    }, 1000); // Wait 1 second before restarting
+                }
             };
 
             // Start recognition
@@ -1622,14 +1659,14 @@
                     setTimeout(() => {
                         this.synthesizeVoice(data.answer).then(() => {
                             // In continuous voice mode, start listening again after response
-                            if (config.continuousVoice) {
+                            if (config.continuousVoice && !window.voiceManuallyDisconnected) {
                                 setTimeout(() => {
                                     this.startSpeechRecognition();
-                                }, 1000); // Wait 1 second after voice finishes
+                                }, 1500); // Wait 1.5 seconds after voice finishes for natural pause
                             }
                         }).catch(() => {
                             // If voice synthesis fails but we're in continuous mode, still restart listening
-                            if (config.continuousVoice) {
+                            if (config.continuousVoice && !window.voiceManuallyDisconnected) {
                                 setTimeout(() => {
                                     this.startSpeechRecognition();
                                 }, 1000);
