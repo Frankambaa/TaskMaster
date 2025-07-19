@@ -81,8 +81,23 @@ class VoiceAgent:
             # Use provided voice or default
             selected_voice = voice or self.voice_name
             
+            # If indian_female is requested, prefer gTTS for better Indian accent
+            if selected_voice == 'indian_female':
+                logging.info("🇮🇳 Indian female voice requested - using gTTS for better accent")
+                return None  # This will trigger fallback to gTTS
+            
+            # Map custom voice names to actual Kokoro voices
+            voice_mapping = {
+                'af_heart': 'af_heart',
+                'af_sky': 'af_sky', 
+                'am_adam': 'am_adam',
+                'am_michael': 'am_michael'
+            }
+            
+            kokoro_voice = voice_mapping.get(selected_voice, 'af_heart')
+            
             # Generate speech
-            generator = self.kokoro_pipeline(text, voice=selected_voice)
+            generator = self.kokoro_pipeline(text, voice=kokoro_voice)
             
             # Get the first (and typically only) output
             for i, (generated_text, phonemes, audio) in enumerate(generator):
@@ -100,7 +115,7 @@ class VoiceAgent:
                     'success': True,
                     'audio_file': temp_file.name,
                     'generated_text': generated_text,
-                    'voice_used': selected_voice,
+                    'voice_used': f'kokoro_{kokoro_voice}',
                     'sample_rate': self.sample_rate,
                     'duration': len(audio) / self.sample_rate,
                     'engine': 'kokoro'
