@@ -306,6 +306,10 @@ deployment/       # Production deployment files
 - July 19, 2025: **EXECUTION ORDER CLARIFICATION**: System now clearly logs 4-step process: Templates → Small Talk → AI Tools → RAG Knowledge Base
 - July 19, 2025: **RESPONSE TYPE TRACKING**: Each response now clearly labeled as TEMPLATE_MATCH, SMALL_TALK, AI_TOOL, or RAG_KNOWLEDGE_BASE
 - July 19, 2025: Template system is keyword-based (not semantic), AI tools are semantic (OpenAI Function Calling), RAG uses vector similarity
+- July 19, 2025: **REAL-TIME SYSTEM LOGS VIEWER**: Added comprehensive logs section to admin dashboard showing live application activity
+- July 19, 2025: Implemented custom log handler to capture all system logs with response type categorization
+- July 19, 2025: Added terminal-style log viewer with filtering by level, response type, search, auto-refresh, and download capabilities
+- July 19, 2025: System logs now show real-time processing: question analysis, template matches, AI tool calls, OpenAI API interactions, and RAG responses
 
 ## Known Issues
 

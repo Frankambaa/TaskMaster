@@ -1449,12 +1449,43 @@ def analyze_feedback_response(feedback_id):
         logging.error(f"Error analyzing feedback: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+from datetime import datetime
+
+# Global log storage for the admin panel
+admin_logs = []
+
+class AdminLogHandler(logging.Handler):
+    """Custom log handler to capture logs for the admin panel"""
+    def emit(self, record):
+        global admin_logs
+        try:
+            # Format the log entry
+            log_entry = {
+                'timestamp': datetime.fromtimestamp(record.created).strftime('%Y-%m-%d %H:%M:%S'),
+                'level': record.levelname,
+                'message': record.getMessage(),
+                'response_type': getattr(record, 'response_type', 'SYSTEM')
+            }
+            
+            # Add to the beginning of the list (newest first)
+            admin_logs.insert(0, log_entry)
+            
+            # Keep only the last 1000 logs to prevent memory issues
+            if len(admin_logs) > 1000:
+                admin_logs = admin_logs[:1000]
+                
+        except Exception:
+            pass  # Don't let log handler errors break the application
+
+# Set up the admin log handler
+admin_handler = AdminLogHandler()
+admin_handler.setLevel(logging.INFO)
+logging.getLogger().addHandler(admin_handler)
+
 @app.route('/logs', methods=['GET'])
 def get_system_logs():
     """Get system logs for the admin panel"""
     try:
-        import subprocess
-        import os
         from datetime import datetime, timedelta
         
         # Get query parameters
@@ -1463,51 +1494,8 @@ def get_system_logs():
         response_type_filter = request.args.get('response_type', '')
         search_query = request.args.get('search', '')
         
-        # Get recent application logs
-        log_entries = []
-        current_time = datetime.now()
-        
-        # Add some sample log entries to show the format
-        sample_logs = [
-            {
-                'timestamp': (current_time - timedelta(minutes=5)).strftime('%Y-%m-%d %H:%M:%S'),
-                'level': 'INFO',
-                'message': '🚀 PROCESSING QUESTION: \'can you help me\'',
-                'response_type': 'TEMPLATE_MATCH'
-            },
-            {
-                'timestamp': (current_time - timedelta(minutes=4)).strftime('%Y-%m-%d %H:%M:%S'),
-                'level': 'INFO', 
-                'message': '🎯 Template Match: \'Helpful Greeting Response\' triggered by keyword \'help\'',
-                'response_type': 'TEMPLATE_MATCH'
-            },
-            {
-                'timestamp': (current_time - timedelta(minutes=4)).strftime('%Y-%m-%d %H:%M:%S'),
-                'level': 'INFO',
-                'message': '✅ RESPONSE TYPE: TEMPLATE_MATCH - Template matched',
-                'response_type': 'TEMPLATE_MATCH'
-            },
-            {
-                'timestamp': (current_time - timedelta(minutes=3)).strftime('%Y-%m-%d %H:%M:%S'),
-                'level': 'INFO',
-                'message': '🚀 PROCESSING QUESTION: \'hello there\'',
-                'response_type': 'SMALL_TALK'
-            },
-            {
-                'timestamp': (current_time - timedelta(minutes=2)).strftime('%Y-%m-%d %H:%M:%S'),
-                'level': 'ERROR',
-                'message': '❌ AI Tool Error: Error code: 429 - OpenAI quota exceeded',
-                'response_type': 'AI_TOOL'
-            },
-            {
-                'timestamp': (current_time - timedelta(minutes=1)).strftime('%Y-%m-%d %H:%M:%S'),
-                'level': 'INFO',
-                'message': '🧠 STEP 4: RAG Knowledge Base - Searching vector database',
-                'response_type': 'RAG_KNOWLEDGE_BASE'
-            }
-        ]
-        
-        log_entries.extend(sample_logs)
+        # Get logs from our global storage
+        log_entries = list(admin_logs)  # Make a copy
         
         # Apply filters
         if level_filter:
