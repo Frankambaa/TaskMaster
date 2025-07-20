@@ -417,6 +417,11 @@ deployment/       # Production deployment files
 - July 20, 2025: Removed all live chat related code, database entries, and UI components
 - July 20, 2025: Maintained conversation saving functionality for chatbot interactions only
 - July 20, 2025: System now provides pure RAG chatbot experience with comprehensive conversation management
+- July 20, 2025: **AGENT PORTAL ENHANCEMENTS**: Implemented IST timezone display, auto-refresh every 10 seconds, and response type labels
+- July 20, 2025: Added response_type database field to UnifiedMessage model for tracking message classifications
+- July 20, 2025: Enhanced conversation display with response type badges (Small Talk, RAG Response, AI Tool, Template)
+- July 20, 2025: Auto-refresh functionality refreshes conversation list and selected conversation messages automatically
+- July 20, 2025: All timestamps now display in Indian Standard Time (IST) format throughout the agent portal interface
 
 ## Known Issues
 

@@ -280,7 +280,7 @@ class RAGChain:
             # Add to session memory (user-based or session-based)
             if user_identifier or session_id:
                 session_manager.add_user_message(session_id, question, user_identifier, username, email, device_id)
-                session_manager.add_ai_message(session_id, answer, user_identifier, username, email, device_id)
+                session_manager.add_ai_message(session_id, answer, user_identifier, username, email, device_id, 'RAG_KNOWLEDGE_BASE')
             
             return answer
             
@@ -311,7 +311,7 @@ class RAGChain:
             # Add to session memory
             if user_identifier or session_id:
                 session_manager.add_user_message(session_id, question, user_identifier, username, email, device_id)
-                session_manager.add_ai_message(session_id, template_response, user_identifier, username, email, device_id)
+                session_manager.add_ai_message(session_id, template_response, user_identifier, username, email, device_id, 'TEMPLATE_MATCH')
             return template_response
         
         # **STEP 2: Check for small talk (Basic Pattern Matching)**
@@ -322,7 +322,7 @@ class RAGChain:
             # Add to session memory (user-based or session-based)
             if user_identifier or session_id:
                 session_manager.add_user_message(session_id, question, user_identifier, username, email, device_id)
-                session_manager.add_ai_message(session_id, response, user_identifier, username, email, device_id)
+                session_manager.add_ai_message(session_id, response, user_identifier, username, email, device_id, 'SMALL_TALK')
             return response
         
         # Get conversation history for AI tool selection
@@ -345,7 +345,7 @@ class RAGChain:
                 # Add to session memory (user-based or session-based)
                 if user_identifier or session_id:
                     session_manager.add_user_message(session_id, question, user_identifier, username, email, device_id)
-                    session_manager.add_ai_message(session_id, tool_response, user_identifier, username, email, device_id)
+                    session_manager.add_ai_message(session_id, tool_response, user_identifier, username, email, device_id, 'AI_TOOL')
                 
                 return tool_response
         except Exception as e:

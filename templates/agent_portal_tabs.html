@@ -154,6 +154,58 @@
             padding: 40px;
             color: #6c757d;
         }
+
+        /* Message header and response type badges */
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
+
+        .sender-name {
+            font-weight: 600;
+        }
+
+        /* Response type badges */
+        .badge {
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-weight: 500;
+        }
+
+        .badge-small-talk {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .badge-rag {
+            background-color: #cce5ff;
+            color: #004085;
+            border: 1px solid #b8daff;
+        }
+
+        .badge-ai-tool {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .badge-template {
+            background-color: #e2e3e5;
+            color: #495057;
+            border: 1px solid #d6d8db;
+        }
+
+        .badge-other {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
         .search-box {
             background: white;
             border-radius: 8px;
@@ -283,6 +335,17 @@
         // Initialize the application
         document.addEventListener('DOMContentLoaded', function() {
             loadChatbotConversations();
+            
+            // Set up auto-refresh every 10 seconds
+            setInterval(() => {
+                if (!selectedChatbotSession) {
+                    // Only auto-refresh conversation list if no conversation is selected
+                    loadChatbotConversations();
+                } else {
+                    // Also refresh the selected conversation messages
+                    selectChatbotConversation(selectedChatbotSession, false);
+                }
+            }, 10000); // 10 seconds
         });
 
         // Load chatbot conversations
@@ -346,22 +409,35 @@
 
 
         // Select chatbot conversation
-        async function selectChatbotConversation(sessionId) {
+        async function selectChatbotConversation(sessionId, showLoading = true) {
             selectedChatbotSession = sessionId;
             
-            // Highlight selected conversation
-            document.querySelectorAll('#chatbotConversationsList .conversation-item').forEach(item => {
-                item.classList.remove('active');
-            });
-            event.currentTarget.classList.add('active');
+            // Highlight selected conversation (only if called from UI click)
+            if (showLoading) {
+                document.querySelectorAll('#chatbotConversationsList .conversation-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+                if (event && event.currentTarget) {
+                    event.currentTarget.classList.add('active');
+                }
+            }
+            
+            if (showLoading) {
+                document.getElementById('chatbotMessagesContainer').innerHTML = `
+                    <div class="loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Loading conversation messages...</p>
+                    </div>
+                `;
+            }
             
             // Load messages
             try {
-                const response = await fetch(`/api/chatbot/conversations/${sessionId}/messages`);
+                const response = await fetch(`/api/conversations/${sessionId}`);
                 const data = await response.json();
                 
-                if (data.success) {
-                    displayChatbotMessages(data.messages);
+                if (data.conversation && data.messages) {
+                    displayChatbotMessages(data.messages, data.conversation);
                 } else {
                     showError('chatbotMessagesContainer', 'Failed to load conversation messages');
                 }
@@ -374,7 +450,7 @@
 
 
         // Display chatbot messages
-        function displayChatbotMessages(messages) {
+        function displayChatbotMessages(messages, conversation) {
             const container = document.getElementById('chatbotMessagesContainer');
             
             if (messages.length === 0) {
@@ -388,15 +464,36 @@
                 return;
             }
 
+            // Function to get response type badge
+            function getResponseTypeBadge(responseType) {
+                if (!responseType) return '';
+                
+                const badges = {
+                    'SMALL_TALK': '<span class="badge badge-small-talk">Small Talk</span>',
+                    'RAG_KNOWLEDGE_BASE': '<span class="badge badge-rag">RAG Response</span>',
+                    'AI_TOOL': '<span class="badge badge-ai-tool">AI Tool</span>',
+                    'TEMPLATE_MATCH': '<span class="badge badge-template">Template</span>'
+                };
+                
+                return badges[responseType] || `<span class="badge badge-other">${responseType}</span>`;
+            }
+
             container.innerHTML = `
                 <div class="conversation-messages">
                     <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
                         <h5><i class="fas fa-robot me-2"></i>Chatbot Conversation</h5>
-                        <small class="text-muted">${messages.length} messages</small>
+                        <div>
+                            <small class="text-muted me-2">${messages.length} messages</small>
+                            <small class="text-muted">Last: ${conversation.last_activity}</small>
+                        </div>
                     </div>
                     <div class="messages-content">
                         ${messages.map(msg => `
                             <div class="message-bubble ${msg.sender_type === 'user' ? 'user' : 'bot'}">
+                                <div class="message-header">
+                                    <span class="sender-name">${msg.sender_type === 'user' ? 'User' : 'Assistant'}</span>
+                                    ${msg.sender_type === 'assistant' ? getResponseTypeBadge(msg.response_type) : ''}
+                                </div>
                                 <div class="message-content">${msg.message_content}</div>
                                 <div class="message-time">${msg.timestamp}</div>
                             </div>

@@ -80,7 +80,7 @@ class UnifiedConversation(db.Model):
             for msg in messages
         ]
     
-    def add_message(self, sender_type, content, sender_id=None, sender_name=None, message_type='text'):
+    def add_message(self, sender_type, content, sender_id=None, sender_name=None, message_type='text', response_type=None):
         """Add a single message to conversation"""
         from uuid import uuid4
         
@@ -91,7 +91,8 @@ class UnifiedConversation(db.Model):
             sender_id=sender_id,
             sender_name=sender_name,
             message_content=content,
-            message_type=message_type
+            message_type=message_type,
+            response_type=response_type
         )
         db.session.add(message)
         
@@ -107,13 +108,23 @@ class UnifiedConversation(db.Model):
         self.last_activity = datetime.utcnow()
     
     def to_dict(self):
-        """Convert to dictionary for JSON serialization"""
+        """Convert to dictionary for JSON serialization with IST timezone"""
+        from datetime import timezone, timedelta
+        
+        # Convert UTC to IST
+        ist_timezone = timezone(timedelta(hours=5, minutes=30))
+        
+        def convert_to_ist(dt):
+            if dt:
+                return dt.replace(tzinfo=timezone.utc).astimezone(ist_timezone).strftime('%Y-%m-%d %H:%M:%S IST')
+            return None
+        
         return {
             'id': self.id,
             'session_id': self.session_id,
             'user_identifier': self.user_identifier,
-            'username': self.username,
-            'email': self.email,
+            'username': self.username or 'Anonymous User',
+            'email': self.email or 'Not provided',
             'device_id': self.device_id,
             'agent_id': self.agent_id,
             'agent_name': self.agent_name,
@@ -124,10 +135,10 @@ class UnifiedConversation(db.Model):
             'initial_message': self.initial_message,
             'tags': self.get_tags(),
             'extra_metadata': self.get_metadata(),
-            'created_at': self.created_at.isoformat(),
-            'updated_at': self.updated_at.isoformat(),
-            'last_activity': self.last_activity.isoformat(),
-            'completed_at': self.completed_at.isoformat() if self.completed_at else None,
+            'created_at': convert_to_ist(self.created_at),
+            'updated_at': convert_to_ist(self.updated_at),
+            'last_activity': convert_to_ist(self.last_activity),
+            'completed_at': convert_to_ist(self.completed_at),
             'message_count': self.messages.count()
         }
 
@@ -143,6 +154,7 @@ class UnifiedMessage(db.Model):
     sender_name = db.Column(db.String(255), nullable=True)  # Display name
     message_content = db.Column(db.Text, nullable=False)
     message_type = db.Column(db.String(50), default='text')  # text, image, file, system_notification
+    response_type = db.Column(db.String(50), nullable=True)  # SMALL_TALK, RAG_KNOWLEDGE_BASE, AI_TOOL, TEMPLATE_MATCH
     message_metadata = db.Column(db.Text, nullable=True)  # JSON metadata (file info, etc.)
     is_read = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -162,7 +174,13 @@ class UnifiedMessage(db.Model):
         self.message_metadata = json.dumps(meta_dict)
     
     def to_dict(self):
-        """Convert to dictionary for JSON serialization"""
+        """Convert to dictionary for JSON serialization with IST timezone"""
+        from datetime import timezone, timedelta
+        
+        # Convert UTC to IST
+        ist_timezone = timezone(timedelta(hours=5, minutes=30))
+        created_at_ist = self.created_at.replace(tzinfo=timezone.utc).astimezone(ist_timezone)
+        
         return {
             'id': self.id,
             'session_id': self.session_id,
@@ -172,9 +190,11 @@ class UnifiedMessage(db.Model):
             'sender_name': self.sender_name,
             'message_content': self.message_content,
             'message_type': self.message_type,
+            'response_type': self.response_type,
             'message_metadata': self.get_metadata(),
             'is_read': self.is_read,
-            'created_at': self.created_at.isoformat()
+            'created_at': created_at_ist.strftime('%Y-%m-%d %H:%M:%S IST'),
+            'timestamp': created_at_ist.strftime('%H:%M:%S')
         }
 
 # Legacy alias for backward compatibility

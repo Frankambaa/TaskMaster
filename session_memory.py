@@ -70,7 +70,11 @@ class PersistentChatMessageHistory(BaseChatMessageHistory):
                 if isinstance(msg, HumanMessage):
                     history.append({'type': 'human', 'content': msg.content})
                 elif isinstance(msg, AIMessage):
-                    history.append({'type': 'ai', 'content': msg.content})
+                    entry = {'type': 'ai', 'content': msg.content}
+                    # Get response type from AIMessage metadata
+                    if hasattr(msg, 'additional_kwargs') and 'response_type' in msg.additional_kwargs:
+                        entry['response_type'] = msg.additional_kwargs['response_type']
+                    history.append(entry)
             
             # Clear existing messages and add new ones
             user_conversation.messages.delete()
@@ -78,7 +82,8 @@ class PersistentChatMessageHistory(BaseChatMessageHistory):
                 user_conversation.add_message(
                     sender_type='user' if msg['type'] == 'human' else 'assistant',
                     content=msg['content'],
-                    sender_name='User' if msg['type'] == 'human' else 'Assistant'
+                    sender_name='User' if msg['type'] == 'human' else 'Assistant',
+                    response_type=msg.get('response_type') if msg['type'] == 'ai' else None
                 )
             # Update user info if provided
             if self.username:
@@ -191,13 +196,19 @@ class SessionMemoryManager:
             session = self.get_or_create_session(session_id)
         session.add_message(HumanMessage(content=message))
     
-    def add_ai_message(self, session_id: str, message: str, user_identifier: str = None, username: str = None, email: str = None, device_id: str = None) -> None:
+    def add_ai_message(self, session_id: str, message: str, user_identifier: str = None, username: str = None, email: str = None, device_id: str = None, response_type: str = None) -> None:
         """Add AI message to session history (persistent or temporary)."""
         if user_identifier:
             session = self.get_or_create_user_session(user_identifier, username, email, device_id)
         else:
             session = self.get_or_create_session(session_id)
-        session.add_message(AIMessage(content=message))
+        
+        # Store response type in AIMessage metadata
+        ai_message = AIMessage(content=message)
+        if response_type:
+            ai_message.additional_kwargs['response_type'] = response_type
+        
+        session.add_message(ai_message)
     
     def get_session_history(self, session_id: str, user_identifier: str = None) -> List[BaseMessage]:
         """Get conversation history for a session (persistent or temporary)."""
