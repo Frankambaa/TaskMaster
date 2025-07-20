@@ -1855,12 +1855,86 @@ def get_system_logs():
         logging.error(f"Error getting system logs: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-# ==================== LIVE CHAT ENDPOINTS ====================
+# ==================== AGENT PORTAL ENDPOINTS ====================
 
 @app.route('/agent_portal')
 def agent_portal():
-    """Live chat agent portal interface"""
-    return render_template('agent_portal_enhanced.html')
+    """Agent portal interface with chatbot and live chat tabs"""
+    return render_template('agent_portal_tabs.html')
+
+@app.route('/api/chatbot/conversations', methods=['GET'])
+def get_chatbot_conversations():
+    """Get all chatbot conversations"""
+    try:
+        from models import UnifiedConversation
+        
+        # Query unified conversations that are chatbot type
+        conversations = UnifiedConversation.query.filter_by(
+            conversation_type='chatbot'
+        ).order_by(UnifiedConversation.updated_at.desc()).limit(100).all()
+        
+        # Format for display
+        chatbot_sessions = []
+        for conv in conversations:
+            # Get message count
+            from models import UnifiedMessage
+            message_count = UnifiedMessage.query.filter_by(session_id=conv.session_id).count()
+            
+            chatbot_sessions.append({
+                'session_id': conv.session_id,
+                'user_identifier': conv.user_identifier,
+                'username': conv.username or 'Anonymous',
+                'email': conv.email or 'Not provided',
+                'device_id': conv.device_id or 'Unknown device',
+                'message_count': message_count,
+                'created_at': conv.created_at.isoformat() if conv.created_at else '',
+                'updated_at': conv.updated_at.isoformat() if conv.updated_at else '',
+                'last_activity': conv.updated_at.strftime('%Y-%m-%d %H:%M:%S') if conv.updated_at else 'Unknown'
+            })
+        
+        return jsonify({
+            'success': True,
+            'conversations': chatbot_sessions,
+            'total_count': len(chatbot_sessions)
+        })
+        
+    except Exception as e:
+        logging.error(f"Error getting chatbot conversations: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/chatbot/conversations/<session_id>/messages', methods=['GET'])
+def get_chatbot_conversation_messages(session_id):
+    """Get messages for a specific chatbot conversation"""
+    try:
+        from models import UnifiedMessage
+        
+        # Get messages from unified conversation system
+        messages = UnifiedMessage.query.filter_by(session_id=session_id).order_by(UnifiedMessage.created_at.asc()).all()
+        
+        # Format messages for display
+        formatted_messages = []
+        for msg in messages:
+            formatted_messages.append({
+                'id': msg.id,
+                'session_id': session_id,
+                'message_content': msg.message_content,
+                'sender_type': msg.sender_type,
+                'sender_name': msg.sender_name or msg.sender_type,
+                'created_at': msg.created_at.isoformat() if msg.created_at else '',
+                'timestamp': msg.created_at.strftime('%H:%M:%S') if msg.created_at else ''
+            })
+        
+        return jsonify({
+            'success': True,
+            'messages': formatted_messages,
+            'total_count': len(formatted_messages)
+        })
+        
+    except Exception as e:
+        logging.error(f"Error getting chatbot conversation messages: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# ==================== LIVE CHAT ENDPOINTS ====================
 
 @app.route('/api/live_chat/sessions', methods=['GET'])
 def get_live_chat_sessions():
