@@ -140,6 +140,53 @@ class UnifiedConversation(db.Model):
             db.session.commit()
             print(f"🏷️ Added 'Live Agent' tag to session {self.session_id}")
     
+    def set_native_live_chat_mode(self):
+        """Set conversation to native live chat mode (disables RAG)"""
+        current_tags = self.get_tags()
+        if 'Native Live Chat' not in current_tags:
+            current_tags.append('Native Live Chat')
+            self.set_tags(current_tags)
+            self.status = 'native_live_chat'  # Set special status
+            db.session.commit()
+            print(f"🔄 Enabled Native Live Chat mode for session {self.session_id}")
+    
+    def is_native_live_chat_active(self):
+        """Check if conversation is in native live chat mode"""
+        return 'Native Live Chat' in self.get_tags() or self.status == 'native_live_chat'
+    
+    @classmethod
+    def get_or_create(cls, session_id, user_identifier=None, username=None, email=None, device_id=None):
+        """Get existing conversation or create new one"""
+        # Try to find existing conversation by session_id
+        conversation = cls.query.filter_by(session_id=session_id).first()
+        
+        if conversation:
+            # Update user information if provided and different
+            if user_identifier and conversation.user_identifier != user_identifier:
+                conversation.user_identifier = user_identifier
+            if username and conversation.username != username:
+                conversation.username = username
+            if email and conversation.email != email:
+                conversation.email = email
+            if device_id and conversation.device_id != device_id:
+                conversation.device_id = device_id
+            conversation.last_activity = datetime.utcnow()
+            db.session.commit()
+        else:
+            # Create new conversation
+            conversation = cls(
+                session_id=session_id,
+                user_identifier=user_identifier or session_id,
+                username=username,
+                email=email,
+                device_id=device_id,
+                conversation_type='chatbot'
+            )
+            db.session.add(conversation)
+            db.session.commit()
+            
+        return conversation
+    
     def has_live_agent_tag(self):
         """Check if conversation has Live Agent tag"""
         return 'Live Agent' in self.get_tags()

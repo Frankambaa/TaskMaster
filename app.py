@@ -295,6 +295,48 @@ def ask():
             logging.info(f"Processing question for user: {user_identifier} (username: {username})")
         else:
             logging.info(f"Processing question for session: {session_id}")
+            
+        # Check if conversation is already in native live chat mode
+        unified_conv = UnifiedConversation.get_or_create(
+            session_id=session_id,
+            user_identifier=user_identifier,
+            username=username,
+            email=email,
+            device_id=device_id
+        )
+        
+        if unified_conv.is_native_live_chat_active():
+            # Conversation is in native live chat mode - don't use RAG, just acknowledge messages
+            session_memory_manager.add_user_message(
+                session_id, question, user_identifier, username, email, device_id
+            )
+            
+            answer = "Your message has been noted. An agent will review and respond to your message shortly. Thank you for your patience."
+            response_type = 'native_live_chat_active'
+            
+            # Store bot response in memory
+            session_memory_manager.add_ai_message(
+                session_id, answer, user_identifier, username, email, device_id, response_type
+            )
+            
+            # Get current logo for consistent response format
+            current_logo = None
+            if os.path.exists(LOGO_FOLDER):
+                for filename in os.listdir(LOGO_FOLDER):
+                    if allowed_image_file(filename):
+                        current_logo = f'/static/logos/{filename}'
+                        break
+            
+            return jsonify({
+                'answer': answer,
+                'logo': current_logo,
+                'response_type': response_type,
+                'session_info': {
+                    'session_id': session_id,
+                    'user_identifier': user_identifier,
+                    'mode': 'native_live_chat'
+                }
+            })
         
         # Enhanced live chat transfer detection with comprehensive patterns
         live_chat_keywords = [
@@ -324,7 +366,7 @@ def ask():
         active_webhook = WebhookConfig.query.filter_by(is_active=True).first()
         
         if is_live_chat_request and active_webhook:
-            # Route to external platform via webhook
+            # Route to external platform via webhook - WEBHOOK LIVE CHAT
             try:
                 from webhook_integration import webhook_integration
                 webhook_integration.load_config()
@@ -351,6 +393,17 @@ def ask():
                 if result['success']:
                     answer = "I'm connecting you with a live agent through our external support platform. Please wait a moment while we transfer your chat."
                     response_type = 'webhook_live_chat_transfer'
+                    
+                    # Add only Live Agent tag for webhook transfers
+                    if user_identifier:
+                        unified_conv = UnifiedConversation.get_or_create(
+                            session_id=session_id,
+                            user_identifier=user_identifier,
+                            username=username,
+                            email=email,
+                            device_id=device_id
+                        )
+                        unified_conv.add_live_agent_tag()
                 else:
                     # Fallback to standard response if webhook fails
                     answer = rag_chain.get_answer(question, FAISS_INDEX_FOLDER, session_id, user_identifier, username, email, device_id)
@@ -363,120 +416,34 @@ def ask():
                 response_type = 'rag_with_ai_tools'
                 
         elif is_live_chat_request and not active_webhook:
-            # Route to internal live chat system with conversation history
-            from live_chat_manager import live_chat_manager
-            
+            # NATIVE LIVE CHAT - Shows "Transferring to agent" and disables RAG
             try:
-                # Get conversation history for transfer with detailed logging
-                conversation_history = []
-                if user_identifier:
-                    logging.info(f"🔍 LIVE CHAT TRANSFER: Getting conversation history for user {user_identifier}")
-                    
-                    # Get persistent conversation history from UserConversation model
-                    user_conv_record = UserConversation.query.filter_by(user_identifier=user_identifier).order_by(UserConversation.last_activity.desc()).first()
-                    if user_conv_record:
-                        history = user_conv_record.get_conversation_history()
-                        logging.info(f"📊 Found {len(history)} total conversation messages for user {user_identifier}")
-                        logging.info(f"📅 Last activity: {user_conv_record.last_activity}")
-                        
-                        # Sample of recent messages for verification
-                        if len(history) > 0:
-                            recent_sample = history[-3:] if len(history) >= 3 else history
-                            logging.info(f"🔍 Recent conversation sample:")
-                            for i, msg in enumerate(recent_sample):
-                                msg_type = msg.get('type', 'unknown')
-                                content = msg.get('content', '')[:50]
-                                logging.info(f"   {i+1}. {msg_type.upper()}: {content}...")
-                        
-                        for msg in history:
-                            if msg.get('type') == 'human':
-                                conversation_history.append({
-                                    'role': 'user', 
-                                    'content': msg.get('content', ''),
-                                    'sender_id': user_identifier, 
-                                    'sender_name': username or 'User'
-                                })
-                            elif msg.get('type') == 'ai':
-                                conversation_history.append({
-                                    'role': 'assistant', 
-                                    'content': msg.get('content', ''),
-                                    'sender_id': 'bot', 
-                                    'sender_name': 'AI Assistant'
-                                })
-                else:
-                    # Get session-based memory
-                    memory = session_memory_manager.get_session_memory(session_id)
-                    if hasattr(memory, 'buffer'):
-                        for msg in memory.buffer[-10:]:  # Last 10 messages
-                            conversation_history.append({
-                                'role': msg.type,
-                                'content': msg.content,
-                                'sender_id': 'user' if msg.type == 'human' else 'bot',
-                                'sender_name': username or 'User' if msg.type == 'human' else 'AI Assistant'
-                            })
-                
-                # Create live chat session with conversation history
-                live_session = live_chat_manager.create_session(
-                    user_identifier=user_identifier or session_id,
+                # Create or get unified conversation
+                unified_conv = UnifiedConversation.get_or_create(
+                    session_id=session_id,
+                    user_identifier=user_identifier,
                     username=username,
                     email=email,
-                    initial_message=question,
-                    department='support',
-                    priority='normal'
+                    device_id=device_id
                 )
                 
-                # IMMEDIATE conversation history import with comprehensive error handling and logging
-                try:
-                    if conversation_history:
-                        logging.info(f"🚀 IMPORTING: Starting import of {len(conversation_history)} messages to session {live_session.session_id}")
-                        
-                        live_chat_manager.import_bot_conversation(live_session.session_id, conversation_history)
-                        
-                        # Verify import success
-                        imported_count = LiveChatMessage.query.filter_by(session_id=live_session.session_id).count()
-                        logging.info(f"✅ IMPORT SUCCESS: {len(conversation_history)} messages imported, {imported_count} total messages in session {live_session.session_id}")
-                        
-                        # Add agent welcome message with context
-                        live_chat_manager.send_message(
-                            session_id=live_session.session_id,
-                            sender_type='agent',
-                            sender_id='agent_john',
-                            sender_name='John (Agent)',
-                            message_content=f'Hello {username or "there"}! I can see your complete conversation history ({len(conversation_history)} messages) with our AI assistant. How can I help you today?',
-                            message_type='text'
-                        )
-                        logging.info(f"✅ AGENT WELCOME: Added agent welcome message to session {live_session.session_id}")
-                    else:
-                        logging.warning(f"❌ NO HISTORY: No conversation history found for user {user_identifier} - live chat session {live_session.session_id} created without history")
-                        logging.warning(f"❌ DEBUG INFO: user_conv_record exists: {user_conv_record is not None if 'user_conv_record' in locals() else 'Variable not found'}")
-                        
-                except Exception as import_error:
-                    logging.error(f"❌ CRITICAL ERROR: Failed to import conversation history to session {live_session.session_id}")
-                    logging.error(f"❌ ERROR DETAILS: {import_error}")
-                    import traceback
-                    logging.error(f"❌ TRACEBACK: {traceback.format_exc()}")
-                    
-                    # Try to add a basic agent message even if import fails
-                    try:
-                        live_chat_manager.send_message(
-                            session_id=live_session.session_id,
-                            sender_type='agent',
-                            sender_id='agent_john',
-                            sender_name='John (Agent)',
-                            message_content=f'Hello {username or "there"}! I\'m here to help you. There was an issue loading your conversation history, but I can assist you with any questions.',
-                            message_type='text'
-                        )
-                        logging.info(f"✅ FALLBACK: Added fallback agent message to session {live_session.session_id}")
-                    except Exception as fallback_error:
-                        logging.error(f"❌ FALLBACK FAILED: Could not add fallback message: {fallback_error}")
+                # Set native live chat mode (disables RAG)
+                unified_conv.set_native_live_chat_mode()
                 
-                answer = f"I've transferred your chat to our live agent team. Session ID: {live_session.session_id}. An agent will be with you shortly and can see your previous conversation history."
-                response_type = 'internal_live_chat_transfer'
+                # Store the user's request message
+                session_memory_manager.add_user_message(
+                    session_id, question, user_identifier, username, email, device_id
+                )
+                
+                answer = "🔄 **Transferring to agent...** \n\nI'm connecting you with our customer support team. Your conversation history has been preserved and an agent will be with you shortly to assist with your request."
+                response_type = 'native_live_chat_transfer'
+                
+                logging.info(f"✅ NATIVE LIVE CHAT: Activated for session {session_id} - RAG disabled")
                 
             except Exception as e:
-                logging.error(f"Error creating live chat session: {e}")
-                answer = "I'll connect you with a live agent. Please wait while I transfer your chat to our support team."
-                response_type = 'internal_live_chat_transfer'
+                logging.error(f"Error activating native live chat: {e}")
+                answer = "I'll connect you with our customer support team. Please wait while I transfer your chat."
+                response_type = 'native_live_chat_transfer'
             
         else:
             # Normal AI/RAG processing
