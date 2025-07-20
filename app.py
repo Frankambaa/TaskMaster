@@ -1901,7 +1901,8 @@ def get_chatbot_conversations():
                 'message_count': message_count,
                 'created_at': conv.created_at.isoformat() if conv.created_at else '',
                 'updated_at': conv.updated_at.isoformat() if conv.updated_at else '',
-                'last_activity': conv.updated_at.strftime('%Y-%m-%d %H:%M:%S') if conv.updated_at else 'Unknown'
+                'last_activity': conv.updated_at.strftime('%Y-%m-%d %H:%M:%S') if conv.updated_at else 'Unknown',
+                'tags': conv.get_tags()  # Include tags for filtering
             })
         
         return jsonify({
