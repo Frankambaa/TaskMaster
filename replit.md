@@ -427,6 +427,11 @@ deployment/       # Production deployment files
 - July 20, 2025: Fixed "Continue chatting" button to properly remove button container without closing chat widget
 - July 20, 2025: Enhanced click-outside event handling to prevent interference with feedback interactions
 - July 20, 2025: **ADMIN DASHBOARD SIMPLIFICATION**: Removed ElevenLabs Voice Configuration and All Conversations sections from admin panel per user request
+- July 20, 2025: **UNIFIED LIVE CHAT SYSTEM**: Consolidated "Live Agent" and "Live Chat" into single "Live Chat" system for simplicity
+- July 20, 2025: Fixed session ID handling to use provided session_id from API requests for proper conversation continuity
+- July 20, 2025: Removed duplicate "Live Agent" filter from agent portal - now shows unified "Live Chat" filter with orange styling
+- July 20, 2025: Updated all database tags and method names from "Live Agent" to "Live Chat" for consistent terminology
+- July 20, 2025: Verified live chat transfer working correctly with proper acknowledgment responses for follow-up messages
 
 ## Known Issues
 

@@ -310,7 +310,6 @@
                             <!-- Filter Buttons -->
                             <div class="filter-buttons">
                                 <button class="filter-btn active" data-filter="all" onclick="setChatbotFilter('all')">All</button>
-                                <button class="filter-btn" data-filter="live-agent" onclick="setChatbotFilter('live-agent')" style="background: #28a745; color: white; border-color: #28a745;">Live Agent</button>
                                 <button class="filter-btn" data-filter="live-chat" onclick="setChatbotFilter('live-chat')" style="background: #ff6b35; color: white; border-color: #ff6b35;">Live Chat</button>
                                 <button class="filter-btn" data-filter="today" onclick="setChatbotFilter('today')">Today</button>
                                 <button class="filter-btn" data-filter="week" onclick="setChatbotFilter('week')">This Week</button>
@@ -543,10 +542,8 @@
             return conversations.filter(conv => {
                 const convDate = new Date(conv.updated_at);
                 switch (filter) {
-                    case 'live-agent':
-                        return conv.tags && conv.tags.includes('Live Agent');
                     case 'live-chat':
-                        return conv.tags && conv.tags.includes('Live Chat');
+                        return conv.tags && (conv.tags.includes('Live Chat') || conv.tags.includes('Live Agent'));
                     case 'today':
                         return convDate >= today;
                     case 'week':

@@ -102,7 +102,7 @@ class UnifiedConversation(db.Model):
         
         # Check for live agent requests in user messages
         if sender_type == 'user' and self.detect_live_agent_request(content):
-            self.add_live_agent_tag()
+            self.add_live_chat_tag()
         
         return message
     
@@ -131,14 +131,14 @@ class UnifiedConversation(db.Model):
                 
         return False
     
-    def add_live_agent_tag(self):
-        """Add Live Agent tag to conversation"""
+    def add_live_chat_tag(self):
+        """Add Live Chat tag to conversation"""
         current_tags = self.get_tags()
-        if 'Live Agent' not in current_tags:
-            current_tags.append('Live Agent')
+        if 'Live Chat' not in current_tags:
+            current_tags.append('Live Chat')
             self.set_tags(current_tags)
             db.session.commit()
-            print(f"🏷️ Added 'Live Agent' tag to session {self.session_id}")
+            print(f"🏷️ Added 'Live Chat' tag to session {self.session_id}")
     
     def set_live_chat_mode(self):
         """Set conversation to live chat mode (disables RAG)"""

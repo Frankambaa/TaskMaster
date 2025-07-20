@@ -374,7 +374,8 @@ def ask():
                     device_id=device_id
                 )
                 
-                # Set live chat mode (disables RAG)
+                # Set live chat mode (disables RAG) and add tag
+                unified_conv.add_live_chat_tag()
                 unified_conv.set_live_chat_mode()
                 
                 # Store the user's request message
