@@ -202,15 +202,7 @@
                 </div>
             </div>
             
-            <div class="stats-card">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <div class="stats-number" id="totalLiveChatSessions">0</div>
-                        <small class="text-muted">Live Chat Sessions</small>
-                    </div>
-                    <i class="fas fa-comments text-success" style="font-size: 2rem; opacity: 0.3;"></i>
-                </div>
-            </div>
+
         </div>
         
         <!-- Navigation -->
@@ -237,26 +229,8 @@
                 </button>
             </div>
 
-            <!-- Tabs -->
-            <ul class="nav nav-tabs" id="conversationTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="chatbot-tab" data-bs-toggle="tab" data-bs-target="#chatbot" 
-                            type="button" role="tab" aria-controls="chatbot" aria-selected="true">
-                        <i class="fas fa-robot me-2"></i>Chatbot Conversations
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="livechat-tab" data-bs-toggle="tab" data-bs-target="#livechat" 
-                            type="button" role="tab" aria-controls="livechat" aria-selected="false">
-                        <i class="fas fa-comments me-2"></i>Live Chat Sessions
-                    </button>
-                </li>
-            </ul>
-
-            <!-- Tab Content -->
-            <div class="tab-content" id="conversationTabsContent">
-                <!-- Chatbot Tab -->
-                <div class="tab-pane fade show active" id="chatbot" role="tabpanel" aria-labelledby="chatbot-tab">
+            <!-- Chatbot Conversations Section -->
+            <div class="chatbot-conversations-section">
                     <div class="row">
                         <div class="col-md-4">
                             <!-- Search and Filters -->
@@ -293,45 +267,6 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- Live Chat Tab -->
-                <div class="tab-pane fade" id="livechat" role="tabpanel" aria-labelledby="livechat-tab">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <!-- Search and Filters -->
-                            <div class="search-box">
-                                <input type="text" class="form-control" id="livechatSearch" 
-                                       placeholder="Search live chat sessions..." onkeyup="filterLiveChatSessions()">
-                            </div>
-                            
-                            <!-- Filter Buttons -->
-                            <div class="filter-buttons">
-                                <button class="filter-btn active" data-filter="all" onclick="setLiveChatFilter('all')">All</button>
-                                <button class="filter-btn" data-filter="active" onclick="setLiveChatFilter('active')">Active</button>
-                                <button class="filter-btn" data-filter="assigned" onclick="setLiveChatFilter('assigned')">Assigned</button>
-                            </div>
-                            
-                            <!-- Live Chat Sessions List -->
-                            <div id="liveChatSessionsList">
-                                <div class="loading">
-                                    <i class="fas fa-spinner fa-spin"></i>
-                                    <p>Loading live chat sessions...</p>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="col-md-8">
-                            <!-- Selected Session Messages -->
-                            <div id="liveChatMessagesContainer">
-                                <div class="empty-state">
-                                    <i class="fas fa-comments"></i>
-                                    <h4>Select a Live Chat Session</h4>
-                                    <p>Choose a session from the list to view the conversation and respond to customers</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
@@ -342,25 +277,12 @@
     <script>
         // Global variables
         let chatbotConversations = [];
-        let liveChatSessions = [];
         let selectedChatbotSession = null;
-        let selectedLiveChatSession = null;
         let chatbotFilter = 'all';
-        let liveChatFilter = 'all';
 
         // Initialize the application
         document.addEventListener('DOMContentLoaded', function() {
             loadChatbotConversations();
-            loadLiveChatSessions();
-            
-            // Set up tab change handlers
-            document.getElementById('chatbot-tab').addEventListener('shown.bs.tab', function() {
-                loadChatbotConversations();
-            });
-            
-            document.getElementById('livechat-tab').addEventListener('shown.bs.tab', function() {
-                loadLiveChatSessions();
-            });
         });
 
         // Load chatbot conversations
@@ -383,25 +305,7 @@
             }
         }
 
-        // Load live chat sessions
-        async function loadLiveChatSessions() {
-            try {
-                const response = await fetch('/api/live_chat/sessions');
-                const data = await response.json();
-                
-                if (data.success) {
-                    liveChatSessions = data.sessions;
-                    displayLiveChatSessions();
-                    updateStats();
-                } else {
-                    console.error('Error loading live chat sessions:', data.error);
-                    showError('liveChatSessionsList', 'Failed to load live chat sessions');
-                }
-            } catch (error) {
-                console.error('Error loading live chat sessions:', error);
-                showError('liveChatSessionsList', 'Failed to load live chat sessions');
-            }
-        }
+
 
         // Display chatbot conversations
         function displayChatbotConversations() {
@@ -439,44 +343,7 @@
             `).join('');
         }
 
-        // Display live chat sessions
-        function displayLiveChatSessions() {
-            const container = document.getElementById('liveChatSessionsList');
-            let filteredSessions = filterSessions(liveChatSessions, liveChatFilter);
-            
-            if (filteredSessions.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-comments"></i>
-                        <h5>No Live Chat Sessions</h5>
-                        <p>No live chat sessions found</p>
-                    </div>
-                `;
-                return;
-            }
 
-            container.innerHTML = filteredSessions.map(session => `
-                <div class="conversation-item" onclick="selectLiveChatSession('${session.session_id}')">
-                    <div class="conversation-meta">
-                        <div class="user-info">
-                            ${session.username}
-                            <span class="badge badge-live ms-2">Live</span>
-                        </div>
-                        <div class="text-success small">
-                            <i class="fas fa-circle me-1"></i>${session.status}
-                        </div>
-                    </div>
-                    <div class="text-muted small">
-                        <i class="fas fa-user me-1"></i>${session.user_identifier}
-                        ${session.email ? `<br><i class="fas fa-envelope me-1"></i>${session.email}` : ''}
-                        ${session.agent_id ? `<br><i class="fas fa-headset me-1"></i>Agent: ${session.agent_id}` : ''}
-                    </div>
-                    <div class="last-activity">
-                        <i class="fas fa-clock me-1"></i>${new Date(session.updated_at).toLocaleString()}
-                    </div>
-                </div>
-            `).join('');
-        }
 
         // Select chatbot conversation
         async function selectChatbotConversation(sessionId) {
@@ -504,31 +371,7 @@
             }
         }
 
-        // Select live chat session
-        async function selectLiveChatSession(sessionId) {
-            selectedLiveChatSession = sessionId;
-            
-            // Highlight selected session
-            document.querySelectorAll('#liveChatSessionsList .conversation-item').forEach(item => {
-                item.classList.remove('active');
-            });
-            event.currentTarget.classList.add('active');
-            
-            // Load messages
-            try {
-                const response = await fetch(`/api/live_chat/sessions/${sessionId}/messages`);
-                const data = await response.json();
-                
-                if (data.success) {
-                    displayLiveChatMessages(data.messages);
-                } else {
-                    showError('liveChatMessagesContainer', 'Failed to load session messages');
-                }
-            } catch (error) {
-                console.error('Error loading live chat messages:', error);
-                showError('liveChatMessagesContainer', 'Failed to load session messages');
-            }
-        }
+
 
         // Display chatbot messages
         function displayChatbotMessages(messages) {
@@ -567,42 +410,7 @@
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
 
-        // Display live chat messages
-        function displayLiveChatMessages(messages) {
-            const container = document.getElementById('liveChatMessagesContainer');
-            
-            if (messages.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-comments"></i>
-                        <h5>No Messages</h5>
-                        <p>This live chat session has no messages yet</p>
-                    </div>
-                `;
-                return;
-            }
 
-            container.innerHTML = `
-                <div class="conversation-messages">
-                    <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
-                        <h5><i class="fas fa-comments me-2"></i>Live Chat Session</h5>
-                        <small class="text-muted">${messages.length} messages</small>
-                    </div>
-                    <div class="messages-content">
-                        ${messages.map(msg => `
-                            <div class="message-bubble ${msg.sender_type === 'user' ? 'user' : 'bot'}">
-                                <div class="message-content">${msg.message_content}</div>
-                                <div class="message-time">${new Date(msg.created_at).toLocaleTimeString()}</div>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            `;
-            
-            // Scroll to bottom
-            const messagesContainer = container.querySelector('.messages-content');
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }
 
         // Filter functions
         function filterConversations(conversations, filter) {
@@ -623,37 +431,19 @@
             });
         }
 
-        function filterSessions(sessions, filter) {
-            return sessions.filter(session => {
-                switch (filter) {
-                    case 'active':
-                        return session.status === 'active';
-                    case 'assigned':
-                        return session.agent_id !== null;
-                    default:
-                        return true;
-                }
-            });
-        }
+
 
         // Filter setters
         function setChatbotFilter(filter) {
             chatbotFilter = filter;
-            document.querySelectorAll('#chatbot .filter-btn').forEach(btn => {
+            document.querySelectorAll('.filter-btn').forEach(btn => {
                 btn.classList.remove('active');
             });
-            document.querySelector(`#chatbot .filter-btn[data-filter="${filter}"]`).classList.add('active');
+            document.querySelector(`.filter-btn[data-filter="${filter}"]`).classList.add('active');
             displayChatbotConversations();
         }
 
-        function setLiveChatFilter(filter) {
-            liveChatFilter = filter;
-            document.querySelectorAll('#livechat .filter-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            document.querySelector(`#livechat .filter-btn[data-filter="${filter}"]`).classList.add('active');
-            displayLiveChatSessions();
-        }
+
 
         // Search functions
         function filterChatbotConversations() {
@@ -690,53 +480,16 @@
             `).join('');
         }
 
-        function filterLiveChatSessions() {
-            const searchTerm = document.getElementById('livechatSearch').value.toLowerCase();
-            if (!searchTerm) {
-                displayLiveChatSessions();
-                return;
-            }
-            
-            const filtered = liveChatSessions.filter(session => 
-                session.username.toLowerCase().includes(searchTerm) ||
-                session.user_identifier.toLowerCase().includes(searchTerm) ||
-                (session.email && session.email.toLowerCase().includes(searchTerm))
-            );
-            
-            const container = document.getElementById('liveChatSessionsList');
-            container.innerHTML = filtered.map(session => `
-                <div class="conversation-item" onclick="selectLiveChatSession('${session.session_id}')">
-                    <div class="conversation-meta">
-                        <div class="user-info">
-                            ${session.username}
-                            <span class="badge badge-live ms-2">Live</span>
-                        </div>
-                        <div class="text-success small">
-                            <i class="fas fa-circle me-1"></i>${session.status}
-                        </div>
-                    </div>
-                    <div class="text-muted small">
-                        <i class="fas fa-user me-1"></i>${session.user_identifier}
-                        ${session.email ? `<br><i class="fas fa-envelope me-1"></i>${session.email}` : ''}
-                        ${session.agent_id ? `<br><i class="fas fa-headset me-1"></i>Agent: ${session.agent_id}` : ''}
-                    </div>
-                    <div class="last-activity">
-                        <i class="fas fa-clock me-1"></i>${new Date(session.updated_at).toLocaleString()}
-                    </div>
-                </div>
-            `).join('');
-        }
+
 
         // Update statistics
         function updateStats() {
             document.getElementById('totalChatbotConversations').textContent = chatbotConversations.length;
-            document.getElementById('totalLiveChatSessions').textContent = liveChatSessions.length;
         }
 
         // Refresh all data
         function refreshData() {
             loadChatbotConversations();
-            loadLiveChatSessions();
         }
 
         // Show error message

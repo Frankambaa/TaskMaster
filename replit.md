@@ -411,11 +411,12 @@ deployment/       # Production deployment files
 - July 20, 2025: Fixed UnifiedMessage field mapping errors (content → message_content, sender → sender_type/sender_name)
 - July 20, 2025: Resolved agent portal display issues - now shows all live chat sessions with complete conversation history
 - July 20, 2025: Unified conversation system now maintains single thread when users transfer between chatbot and live agent
-- July 20, 2025: **AGENT PORTAL REDESIGN**: Created comprehensive agent portal with two separate tabs (Chatbot and Live Chat)
-- July 20, 2025: Implemented proper conversation categorization - chatbot conversations appear in Chatbot tab until transferred
-- July 20, 2025: When users transfer to live chat, conversations move to Live Chat tab with complete history preservation
-- July 20, 2025: Added search, filtering, and real-time statistics for both chatbot and live chat conversations
-- July 20, 2025: Created clean, professional UI with conversation management, message viewing, and agent workflow integration
+- July 20, 2025: **SYSTEM SIMPLIFICATION**: Removed all live chat transfer functionality per user request
+- July 20, 2025: Cleaned up chatwidget.js to contain only pure chatbot RAG functionality
+- July 20, 2025: Simplified agent portal to show only chatbot conversations with clean single-section interface
+- July 20, 2025: Removed all live chat related code, database entries, and UI components
+- July 20, 2025: Maintained conversation saving functionality for chatbot interactions only
+- July 20, 2025: System now provides pure RAG chatbot experience with comprehensive conversation management
 
 ## Known Issues
 
