@@ -883,6 +883,8 @@
         },
 
         closeWidget: function() {
+            console.log('closeWidget() called - chat will be closed');
+            console.trace('closeWidget called from:');
             chatWindow.style.display = 'none';
             
             // Update toggle button to show chat icon
@@ -1902,7 +1904,9 @@
             closeBtn.style.cssText = 'background: #e2e8f0; color: #4a5568; border: none; padding: 8px 16px; margin: 0 5px; border-radius: 15px; cursor: pointer; font-size: 12px;';
 
             continueBtn.onclick = () => {
+                console.log('Continue chatting clicked - removing button container only');
                 buttonContainer.remove();
+                console.log('Button container removed, chat should remain open');
             };
 
             closeBtn.onclick = () => {
