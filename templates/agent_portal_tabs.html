@@ -126,6 +126,20 @@
             color: #2c3e50;
             margin-right: auto;
         }
+        .message-bubble.agent {
+            background: #28a745;
+            color: white;
+            margin-left: auto;
+            text-align: right;
+        }
+        .agent-input-section {
+            border: 2px dashed #28a745;
+            border-radius: 8px;
+        }
+        .agent-input-section h6 {
+            color: #28a745;
+            margin-bottom: 15px;
+        }
         .message-time {
             font-size: 0.7rem;
             opacity: 0.7;
@@ -311,6 +325,7 @@
                             <div class="filter-buttons">
                                 <button class="filter-btn active" data-filter="all" onclick="setChatbotFilter('all')">All</button>
                                 <button class="filter-btn" data-filter="live-chat" onclick="setChatbotFilter('live-chat')" style="background: #ff6b35; color: white; border-color: #ff6b35;">Live Chat</button>
+                                <button class="filter-btn" data-filter="resolved" onclick="setChatbotFilter('resolved')" style="background: #28a745; color: white; border-color: #28a745;">Resolved</button>
                                 <button class="filter-btn" data-filter="today" onclick="setChatbotFilter('today')">Today</button>
                                 <button class="filter-btn" data-filter="week" onclick="setChatbotFilter('week')">This Week</button>
                             </div>
@@ -502,20 +517,25 @@
                 return badges[responseType] || `<span class="badge badge-other">${responseType}</span>`;
             }
 
+            const isLiveChat = conversation.tags && conversation.tags.includes('Live Chat');
+            const isResolved = conversation.tags && conversation.tags.includes('Resolved');
+            
             container.innerHTML = `
                 <div class="conversation-messages">
                     <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
                         <h5><i class="fas fa-robot me-2"></i>Chatbot Conversation</h5>
-                        <div>
+                        <div class="d-flex align-items-center gap-2">
+                            ${isLiveChat && !isResolved ? `<button class="btn btn-success btn-sm" onclick="resolveConversation('${selectedChatbotSession}')"><i class="fas fa-check me-1"></i>Resolve</button>` : ''}
+                            ${isResolved ? '<span class="badge bg-success">Resolved</span>' : ''}
                             <small class="text-muted me-2">${messages.length} messages</small>
                             <small class="text-muted">Last: ${conversation.last_activity}</small>
                         </div>
                     </div>
                     <div class="messages-content">
                         ${messages.map(msg => `
-                            <div class="message-bubble ${msg.sender_type === 'user' ? 'user' : 'bot'}">
+                            <div class="message-bubble ${msg.sender_type === 'user' ? 'user' : (msg.sender_type === 'agent' ? 'agent' : 'bot')}">
                                 <div class="message-header">
-                                    <span class="sender-name">${msg.sender_type === 'user' ? 'User' : 'Assistant'}</span>
+                                    <span class="sender-name">${msg.sender_type === 'user' ? 'User' : (msg.sender_type === 'agent' ? 'Agent' : 'Assistant')}</span>
                                     ${msg.sender_type === 'assistant' ? getResponseTypeBadge(msg.response_type) : ''}
                                 </div>
                                 <div class="message-content">${msg.message_content}</div>
@@ -523,6 +543,17 @@
                             </div>
                         `).join('')}
                     </div>
+                    ${isLiveChat && !isResolved ? `
+                    <div class="agent-input-section mt-3 p-3 bg-light rounded">
+                        <h6><i class="fas fa-user-tie me-1"></i>Agent Response</h6>
+                        <div class="input-group">
+                            <textarea id="agentMessage" class="form-control" rows="3" placeholder="Type your response to the customer..."></textarea>
+                            <button class="btn btn-primary" type="button" onclick="sendAgentMessage('${selectedChatbotSession}')">
+                                <i class="fas fa-paper-plane me-1"></i>Send
+                            </button>
+                        </div>
+                    </div>
+                    ` : ''}
                 </div>
             `;
             
@@ -543,7 +574,9 @@
                 const convDate = new Date(conv.updated_at);
                 switch (filter) {
                     case 'live-chat':
-                        return conv.tags && (conv.tags.includes('Live Chat') || conv.tags.includes('Live Agent'));
+                        return conv.tags && (conv.tags.includes('Live Chat') || conv.tags.includes('Live Agent')) && !(conv.tags && conv.tags.includes('Resolved'));
+                    case 'resolved':
+                        return conv.tags && conv.tags.includes('Resolved');
                     case 'today':
                         return convDate >= today;
                     case 'week':
@@ -628,6 +661,75 @@
                     </button>
                 </div>
             `;
+        }
+
+        // Send agent message
+        async function sendAgentMessage(sessionId) {
+            const messageInput = document.getElementById('agentMessage');
+            const message = messageInput.value.trim();
+            
+            if (!message) {
+                alert('Please enter a message');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/agent/send-message', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        session_id: sessionId,
+                        message: message
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    messageInput.value = ''; // Clear input
+                    // Refresh the conversation to show the new message
+                    await selectChatbotConversation(sessionId, false);
+                } else {
+                    alert('Failed to send message: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error sending agent message:', error);
+                alert('Failed to send message');
+            }
+        }
+
+        // Resolve conversation
+        async function resolveConversation(sessionId) {
+            if (!confirm('Are you sure you want to resolve this conversation? It will be moved to the resolved section.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/agent/resolve-conversation', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        session_id: sessionId
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Refresh conversations list and show updated conversation
+                    await loadChatbotConversations();
+                    await selectChatbotConversation(sessionId, false);
+                } else {
+                    alert('Failed to resolve conversation: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error resolving conversation:', error);
+                alert('Failed to resolve conversation');
+            }
         }
     </script>
 </body>

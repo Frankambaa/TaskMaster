@@ -1888,6 +1888,7 @@ def get_chatbot_conversation_messages(session_id):
                 'message_content': msg.message_content,
                 'sender_type': msg.sender_type,
                 'sender_name': msg.sender_name or msg.sender_type,
+                'response_type': msg.response_type,
                 'created_at': msg.created_at.isoformat() if msg.created_at else '',
                 'timestamp': msg.created_at.strftime('%H:%M:%S') if msg.created_at else ''
             })
@@ -1900,6 +1901,59 @@ def get_chatbot_conversation_messages(session_id):
         
     except Exception as e:
         logging.error(f"Error getting chatbot conversation messages: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/agent/send-message', methods=['POST'])
+def send_agent_message():
+    """Send message from agent to customer"""
+    try:
+        data = request.get_json()
+        session_id = data.get('session_id')
+        message = data.get('message')
+        
+        if not session_id or not message:
+            return jsonify({'success': False, 'error': 'Missing session_id or message'}), 400
+        
+        # Get the conversation
+        unified_conv = UnifiedConversation.query.filter_by(session_id=session_id).first()
+        if not unified_conv:
+            return jsonify({'success': False, 'error': 'Conversation not found'}), 404
+        
+        # Add agent message to conversation
+        unified_conv.add_message('agent', message, 'agent', 'Agent', 'text', 'agent_response')
+        
+        logging.info(f"✅ Agent message sent to session {session_id}")
+        
+        return jsonify({'success': True, 'message': 'Message sent successfully'})
+        
+    except Exception as e:
+        logging.error(f"Error sending agent message: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/agent/resolve-conversation', methods=['POST'])
+def resolve_agent_conversation():
+    """Resolve a live chat conversation"""
+    try:
+        data = request.get_json()
+        session_id = data.get('session_id')
+        
+        if not session_id:
+            return jsonify({'success': False, 'error': 'Missing session_id'}), 400
+        
+        # Get the conversation
+        unified_conv = UnifiedConversation.query.filter_by(session_id=session_id).first()
+        if not unified_conv:
+            return jsonify({'success': False, 'error': 'Conversation not found'}), 404
+        
+        # Resolve the conversation
+        unified_conv.resolve_conversation()
+        
+        logging.info(f"✅ Conversation {session_id} resolved")
+        
+        return jsonify({'success': True, 'message': 'Conversation resolved successfully'})
+        
+    except Exception as e:
+        logging.error(f"Error resolving conversation: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 # ==================== LIVE CHAT ENDPOINTS ====================

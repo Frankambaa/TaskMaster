@@ -154,6 +154,20 @@ class UnifiedConversation(db.Model):
         """Check if conversation is in live chat mode"""
         return 'Live Chat' in self.get_tags() or self.status == 'live_chat'
     
+    def resolve_conversation(self):
+        """Mark conversation as resolved"""
+        current_tags = self.get_tags()
+        if 'Resolved' not in current_tags:
+            current_tags.append('Resolved')
+            self.set_tags(current_tags)
+            self.status = 'resolved'
+            db.session.commit()
+            print(f"✅ Resolved conversation {self.session_id}")
+    
+    def is_resolved(self):
+        """Check if conversation is resolved"""
+        return 'Resolved' in self.get_tags() or self.status == 'resolved'
+    
     @classmethod
     def get_or_create(cls, session_id, user_identifier=None, username=None, email=None, device_id=None):
         """Get existing conversation or create new one"""

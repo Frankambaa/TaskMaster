@@ -432,6 +432,14 @@ deployment/       # Production deployment files
 - July 20, 2025: Removed duplicate "Live Agent" filter from agent portal - now shows unified "Live Chat" filter with orange styling
 - July 20, 2025: Updated all database tags and method names from "Live Agent" to "Live Chat" for consistent terminology
 - July 20, 2025: Verified live chat transfer working correctly with proper acknowledgment responses for follow-up messages
+- July 20, 2025: **ENHANCED AGENT PORTAL**: Added comprehensive live chat management with agent input functionality and resolve system
+- July 20, 2025: Implemented agent message sending capability directly from portal to customers in live chat conversations
+- July 20, 2025: Added "Resolve" button for live chat conversations that marks them as resolved and moves to separate filter
+- July 20, 2025: Created "Resolved" conversation filter (green styling) to view completed live chat sessions
+- July 20, 2025: Enhanced message display with Agent message bubbles (green styling) distinct from User/Bot messages
+- July 20, 2025: Live chat conversations show agent input section and resolve functionality only when active (not resolved)
+- July 20, 2025: Added comprehensive API endpoints: /api/agent/send-message and /api/agent/resolve-conversation
+- July 20, 2025: Cleared all previous conversations and implemented fresh database structure for enhanced system
 
 ## Known Issues
 
