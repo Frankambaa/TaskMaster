@@ -1235,14 +1235,14 @@
                 this.sendToAPI(sanitizedMessage).then(response => {
                     this.hideTyping(typingDiv);
                     
-                    // Track RAG responses for feedback timing
+                    // Track RAG responses for feedback timing and add user question for feedback
                     const responseData = { ...response, user_question: sanitizedMessage };
                     if (this.isRAGResponse(responseData)) {
                         this.trackRAGResponse();
                     }
                     
-                    // Pass the full response data and the user question for feedback
-                    this.addMessage(response.answer, 'bot', false, true, true, response); // Enable typing effect with response data
+                    // Pass the full response data including user question for feedback
+                    this.addMessage(response.answer, 'bot', false, true, true, responseData); // Enable typing effect with response data
                     this.updateSessionInfo(response.user_info);
                     
                     // Handle voice synthesis if enabled and voice data is available
@@ -1843,15 +1843,20 @@
         },
 
         submitFeedback: function(responseText, responseData, rating, feedbackDiv) {
+            // Map rating to feedback_type expected by backend
+            const feedbackType = rating === 'positive' ? 'thumbs_up' : 'thumbs_down';
+            
             const feedbackData = {
-                response_text: responseText,
-                response_type: responseData.response_type,
-                rating: rating,
+                user_question: responseData.user_question || 'Unknown question',
+                bot_response: responseText,
+                response_type: responseData.response_type || 'rag',
+                feedback_type: feedbackType,
                 user_id: config.user_id || null,
+                username: config.username || null,
                 email: config.email || null,
-                device_id: config.device_id || null,
                 session_id: sessionId,
-                response_metadata: responseData
+                feedback_comment: '',
+                retrieved_chunks: JSON.stringify(responseData.retrieved_chunks || null)
             };
 
             fetch(`${config.apiUrl}/feedback`, {
@@ -1864,7 +1869,7 @@
             })
             .then(response => response.json())
             .then(data => {
-                if (data.success) {
+                if (data.status === 'success') {
                     // Remove feedback buttons immediately
                     feedbackDiv.remove();
                     
@@ -1874,7 +1879,7 @@
                     // Add continue/close buttons
                     this.addChatCloseButtons();
                 } else {
-                    console.error('Feedback submission failed:', data.error);
+                    console.error('Feedback submission failed:', data.message);
                 }
             })
             .catch(error => {
