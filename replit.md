@@ -422,6 +422,11 @@ deployment/       # Production deployment files
 - July 20, 2025: Enhanced conversation display with response type badges (Small Talk, RAG Response, AI Tool, Template)
 - July 20, 2025: Auto-refresh functionality refreshes conversation list and selected conversation messages automatically
 - July 20, 2025: All timestamps now display in Indian Standard Time (IST) format throughout the agent portal interface
+- July 20, 2025: **FEEDBACK SYSTEM ENHANCEMENT**: Fixed feedback button positioning and continue chat functionality
+- July 20, 2025: Moved feedback buttons (👍👎) to appear below bot responses instead of above for better UX
+- July 20, 2025: Fixed "Continue chatting" button to properly remove button container without closing chat widget
+- July 20, 2025: Enhanced click-outside event handling to prevent interference with feedback interactions
+- July 20, 2025: **ADMIN DASHBOARD SIMPLIFICATION**: Removed ElevenLabs Voice Configuration and All Conversations sections from admin panel per user request
 
 ## Known Issues
 
