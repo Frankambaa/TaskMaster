@@ -62,6 +62,22 @@
             border-color: #007bff;
             background: #f8f9ff;
         }
+        .conversation-item.live-agent {
+            border-left: 4px solid #28a745;
+            background: linear-gradient(90deg, #f8fff8 0%, #ffffff 100%);
+        }
+        .conversation-item.live-agent:hover {
+            border-color: #28a745;
+            background: linear-gradient(90deg, #f0fff0 0%, #f8f9ff 100%);
+        }
+        .live-agent-badge {
+            background: #28a745;
+            color: white;
+            font-size: 0.75rem;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
         .conversation-meta {
             display: flex;
             justify-content: space-between;
@@ -294,6 +310,7 @@
                             <!-- Filter Buttons -->
                             <div class="filter-buttons">
                                 <button class="filter-btn active" data-filter="all" onclick="setChatbotFilter('all')">All</button>
+                                <button class="filter-btn" data-filter="live-agent" onclick="setChatbotFilter('live-agent')" style="background: #28a745; color: white; border-color: #28a745;">Live Agent</button>
                                 <button class="filter-btn" data-filter="today" onclick="setChatbotFilter('today')">Today</button>
                                 <button class="filter-btn" data-filter="week" onclick="setChatbotFilter('week')">This Week</button>
                             </div>
@@ -386,12 +403,18 @@
                 return;
             }
 
-            container.innerHTML = filteredConversations.map(conv => `
-                <div class="conversation-item" onclick="selectChatbotConversation('${conv.session_id}')">
+            container.innerHTML = filteredConversations.map(conv => {
+                const isLiveAgent = conv.tags && conv.tags.includes('Live Agent');
+                const liveAgentClass = isLiveAgent ? 'live-agent' : '';
+                const liveAgentBadge = isLiveAgent ? '<span class="live-agent-badge ms-2">Live Agent</span>' : '';
+                
+                return `
+                <div class="conversation-item ${liveAgentClass}" onclick="selectChatbotConversation('${conv.session_id}')">
                     <div class="conversation-meta">
                         <div class="user-info">
                             ${conv.username}
                             <span class="badge badge-chatbot ms-2">Bot</span>
+                            ${liveAgentBadge}
                         </div>
                         <div class="message-count">${conv.message_count} msgs</div>
                     </div>
@@ -401,7 +424,8 @@
                     </div>
                     <div class="last-activity">
                         <i class="fas fa-clock me-1"></i>${conv.last_activity}
-                    </div>
+                    </div>`
+            }).join('');
                 </div>
             `).join('');
         }
@@ -518,6 +542,8 @@
             return conversations.filter(conv => {
                 const convDate = new Date(conv.updated_at);
                 switch (filter) {
+                    case 'live-agent':
+                        return conv.tags && conv.tags.includes('Live Agent');
                     case 'today':
                         return convDate >= today;
                     case 'week':

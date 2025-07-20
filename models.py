@@ -100,7 +100,49 @@ class UnifiedConversation(db.Model):
         self.last_activity = datetime.utcnow()
         self.updated_at = datetime.utcnow()
         
+        # Check for live agent requests in user messages
+        if sender_type == 'user' and self.detect_live_agent_request(content):
+            self.add_live_agent_tag()
+        
         return message
+    
+    def detect_live_agent_request(self, message_content):
+        """Detect if user is requesting to talk with a live agent"""
+        if not message_content:
+            return False
+            
+        message_lower = message_content.lower().strip()
+        
+        # Define patterns for live agent requests
+        agent_patterns = [
+            'talk with agent', 'talk to agent', 'chat with agent', 'speak with agent',
+            'live chat', 'live agent', 'human agent', 'real person', 'customer support',
+            'transfer to agent', 'transfer to human', 'connect me to agent',
+            'speak to someone', 'talk to someone', 'human support', 'agent please',
+            'i need help from agent', 'can i talk to agent', 'could you transfer',
+            'transfer me to', 'connect to agent', 'agent help', 'live support',
+            'talk to a person', 'speak to a person', 'human help'
+        ]
+        
+        # Check if any pattern matches
+        for pattern in agent_patterns:
+            if pattern in message_lower:
+                return True
+                
+        return False
+    
+    def add_live_agent_tag(self):
+        """Add Live Agent tag to conversation"""
+        current_tags = self.get_tags()
+        if 'Live Agent' not in current_tags:
+            current_tags.append('Live Agent')
+            self.set_tags(current_tags)
+            db.session.commit()
+            print(f"🏷️ Added 'Live Agent' tag to session {self.session_id}")
+    
+    def has_live_agent_tag(self):
+        """Check if conversation has Live Agent tag"""
+        return 'Live Agent' in self.get_tags()
     
     def clear_conversation(self):
         """Clear all conversation messages"""
