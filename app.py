@@ -1921,12 +1921,12 @@ def get_session_messages(session_id):
             live_chat_messages.append({
                 'id': msg.id,
                 'session_id': session_id,
-                'message_content': msg.content,
-                'sender_type': msg.message_type,
-                'sender_name': msg.sender,
-                'message_type': 'text',
+                'message_content': msg.message_content,
+                'sender_type': msg.sender_type,
+                'sender_name': msg.sender_name,
+                'message_type': msg.message_type,
                 'created_at': msg.created_at.isoformat(),
-                'metadata': {}
+                'metadata': msg.get_metadata()
             })
         
         return jsonify({
@@ -1987,6 +1987,7 @@ def send_live_chat_message(session_id):
     """Send a message in a live chat session using unified conversation system"""
     try:
         from models import UnifiedConversation, UnifiedMessage
+        import uuid
         data = request.json
         
         # Find the unified conversation
@@ -2002,9 +2003,11 @@ def send_live_chat_message(session_id):
         # Create unified message
         message = UnifiedMessage(
             session_id=session_id,
-            message_type=sender_type,
-            content=message_content,
-            sender=sender_name,
+            message_id=f"live_{uuid.uuid4().hex[:12]}",
+            sender_type=sender_type,
+            sender_name=sender_name,
+            message_content=message_content,
+            message_type='text',
             created_at=datetime.utcnow()
         )
         
@@ -2042,6 +2045,7 @@ def transfer_to_agent():
         from live_chat_manager import live_chat_manager
         from models import UnifiedConversation, UnifiedMessage
         from datetime import datetime
+        import uuid
         data = request.json
         
         user_identifier = data.get('user_identifier', 'anonymous')
@@ -2063,8 +2067,10 @@ def transfer_to_agent():
             transfer_message = UnifiedMessage(
                 session_id=session_id,
                 message_type='system',
-                content=f"Chat transferred to live agent: {data.get('initial_message', 'User requested live chat')}",
-                sender='system',
+                message_content=f"Chat transferred to live agent: {data.get('initial_message', 'User requested live chat')}",
+                sender_type='system',
+                sender_name='System',
+                message_id=f"transfer_{uuid.uuid4().hex[:12]}",
                 created_at=datetime.utcnow()
             )
             
