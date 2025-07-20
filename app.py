@@ -175,6 +175,12 @@ def test_feedback_buttons():
     from flask import send_from_directory
     return send_from_directory('.', 'test_feedback_buttons.html')
 
+@app.route('/test_live_agent_detection.html')
+def test_live_agent_detection():
+    """Test page for live agent detection functionality"""
+    from flask import send_from_directory
+    return send_from_directory('.', 'test_live_agent_detection.html')
+
 @app.route('/upload', methods=['POST'])
 def upload_file():
     """Handle file upload"""
