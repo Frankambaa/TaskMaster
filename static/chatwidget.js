@@ -846,6 +846,10 @@
             // Click outside to close
             document.addEventListener('click', (e) => {
                 if (isOpen && !widgetContainer.contains(e.target)) {
+                    // Don't close if clicking on feedback buttons or chat close buttons
+                    if (e.target.closest('.chat-close-buttons') || e.target.closest('.feedback-buttons')) {
+                        return;
+                    }
                     this.closeWidget();
                 }
             });
@@ -1903,8 +1907,10 @@
             closeBtn.textContent = 'Yes, close chat';
             closeBtn.style.cssText = 'background: #e2e8f0; color: #4a5568; border: none; padding: 8px 16px; margin: 0 5px; border-radius: 15px; cursor: pointer; font-size: 12px;';
 
-            continueBtn.onclick = () => {
+            continueBtn.onclick = (e) => {
                 console.log('Continue chatting clicked - removing button container only');
+                e.preventDefault();
+                e.stopPropagation();
                 buttonContainer.remove();
                 console.log('Button container removed, chat should remain open');
             };
