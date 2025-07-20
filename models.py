@@ -135,23 +135,40 @@ class UnifiedConversation(db.Model):
         return False
     
     def add_live_chat_tag(self):
-        """Add Live Chat tag to conversation"""
+        """Add Live Chat tag to conversation and reactivate if resolved"""
         current_tags = self.get_tags()
+        
+        # If conversation was resolved, remove resolved tag and reactivate
+        if 'Resolved' in current_tags:
+            current_tags.remove('Resolved')
+            self.status = 'active'  # Change from resolved back to active
+            print(f"🔄 Reactivating resolved conversation {self.session_id} for live chat")
+        
+        # Add Live Chat tag if not present
         if 'Live Chat' not in current_tags:
             current_tags.append('Live Chat')
-            self.set_tags(current_tags)
-            db.session.commit()
             print(f"🏷️ Added 'Live Chat' tag to session {self.session_id}")
+        
+        self.set_tags(current_tags)
+        db.session.commit()
     
     def set_live_chat_mode(self):
-        """Set conversation to live chat mode (disables RAG)"""
+        """Set conversation to live chat mode (disables RAG) and reactivate if resolved"""
         current_tags = self.get_tags()
+        
+        # If conversation was resolved, remove resolved tag and reactivate
+        if 'Resolved' in current_tags:
+            current_tags.remove('Resolved')
+            print(f"🔄 Reactivating resolved conversation {self.session_id} for live chat")
+        
+        # Add Live Chat tag if not present
         if 'Live Chat' not in current_tags:
             current_tags.append('Live Chat')
-            self.set_tags(current_tags)
-            self.status = 'live_chat'  # Set special status
-            db.session.commit()
-            print(f"🔄 Enabled Live Chat mode for session {self.session_id}")
+        
+        self.set_tags(current_tags)
+        self.status = 'live_chat'  # Set special status
+        db.session.commit()
+        print(f"🔄 Enabled Live Chat mode for session {self.session_id}")
     
     def is_live_chat_active(self):
         """Check if conversation is in live chat mode"""

@@ -312,7 +312,39 @@ def ask():
             device_id=device_id
         )
         
-        if unified_conv.is_live_chat_active():
+        # Live chat transfer detection with semantic phrase patterns
+        live_chat_keywords = [
+            'live chat', 'chat with agent', 'talk to agent', 'talk with agent', 'human agent', 'speak to human', 
+            'connect to agent', 'i want to talk', 'speak with someone', 'customer service', 'support agent', 
+            'real person', 'human help', 'agent help', 'call center', 'representative', 'operator', 
+            'staff member', 'transfer me', 'escalate', 'human support', 'live support', 'personal assistance',
+            'can i talk to', 'could you transfer', 'transfer to agent', 'connect me to', 'talk to someone',
+            'speak to agent', 'contact agent', 'reach agent', 'get agent', 'agent please'
+        ]
+        
+        # Semantic pattern matching for natural language requests
+        question_lower = question.lower()
+        live_chat_patterns = [
+            'talk to' in question_lower and 'agent' in question_lower,
+            'talk with' in question_lower and 'agent' in question_lower,
+            'transfer' in question_lower and ('agent' in question_lower or 'live' in question_lower),
+            'connect' in question_lower and ('agent' in question_lower or 'human' in question_lower),
+            'speak' in question_lower and ('agent' in question_lower or 'someone' in question_lower),
+            'chat with' in question_lower and ('agent' in question_lower or 'human' in question_lower),
+            'can i' in question_lower and 'talk' in question_lower and ('agent' in question_lower or 'someone' in question_lower),
+            'could you' in question_lower and ('transfer' in question_lower or 'connect' in question_lower),
+            'need help' in question_lower and 'agent' in question_lower,
+            'speak to' in question_lower and ('human' in question_lower or 'person' in question_lower)
+        ]
+        
+        is_live_chat_request = any(keyword in question.lower() for keyword in live_chat_keywords) or any(live_chat_patterns)
+
+        # Check if this is a live chat request on a resolved conversation - reactivate it
+        if is_live_chat_request and unified_conv.is_resolved():
+            unified_conv.add_live_chat_tag()  # This will remove resolved tag and reactivate
+            logging.info(f"🔄 REACTIVATED: Resolved conversation {session_id} reactivated for live chat")
+        
+        if unified_conv.is_live_chat_active() and not unified_conv.is_resolved():
             # Conversation is in live chat mode - don't use RAG, just acknowledge messages
             unified_conv.add_message('user', question, user_identifier, username, 'text', 'live_chat_message')
             
@@ -341,45 +373,9 @@ def ask():
                 }
             })
         
-        # Live chat transfer detection with semantic phrase patterns
-        live_chat_keywords = [
-            'live chat', 'chat with agent', 'talk to agent', 'talk with agent', 'human agent', 'speak to human', 
-            'connect to agent', 'i want to talk', 'speak with someone', 'customer service', 'support agent', 
-            'real person', 'human help', 'agent help', 'call center', 'representative', 'operator', 
-            'staff member', 'transfer me', 'escalate', 'human support', 'live support', 'personal assistance',
-            'can i talk to', 'could you transfer', 'transfer to agent', 'connect me to', 'talk to someone',
-            'speak to agent', 'contact agent', 'reach agent', 'get agent', 'agent please'
-        ]
-        
-        # Semantic pattern matching for natural language requests
-        question_lower = question.lower()
-        live_chat_patterns = [
-            'talk to' in question_lower and 'agent' in question_lower,
-            'talk with' in question_lower and 'agent' in question_lower,
-            'transfer' in question_lower and ('agent' in question_lower or 'live' in question_lower),
-            'connect' in question_lower and ('agent' in question_lower or 'human' in question_lower),
-            'speak' in question_lower and ('agent' in question_lower or 'someone' in question_lower),
-            'chat with' in question_lower and ('agent' in question_lower or 'human' in question_lower),
-            'can i' in question_lower and 'talk' in question_lower and ('agent' in question_lower or 'someone' in question_lower),
-            'could you' in question_lower and ('transfer' in question_lower or 'connect' in question_lower),
-            'need help' in question_lower and 'agent' in question_lower,
-            'speak to' in question_lower and ('human' in question_lower or 'person' in question_lower)
-        ]
-        
-        is_live_chat_request = any(keyword in question.lower() for keyword in live_chat_keywords) or any(live_chat_patterns)
-        
         if is_live_chat_request:
             # LIVE CHAT TRANSFER - Shows "Transferring to agent" and disables RAG
             try:
-                # Create or get unified conversation
-                unified_conv = UnifiedConversation.get_or_create(
-                    session_id=session_id,
-                    user_identifier=user_identifier,
-                    username=username,
-                    email=email,
-                    device_id=device_id
-                )
-                
                 # Set live chat mode (disables RAG) and add tag
                 unified_conv.add_live_chat_tag()
                 unified_conv.set_live_chat_mode()
