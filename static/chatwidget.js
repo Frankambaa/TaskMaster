@@ -1242,7 +1242,7 @@
                     }
                     
                     // Pass the full response data and the user question for feedback
-                    this.addMessage(response.answer, 'bot', false, true, true, responseData); // Enable typing effect with response data
+                    this.addMessage(response.answer, 'bot', false, true, true, response); // Enable typing effect with response data
                     this.updateSessionInfo(response.user_info);
                     
                     // Handle voice synthesis if enabled and voice data is available
@@ -1791,15 +1791,29 @@
         },
 
         shouldShowFeedback: function(responseData) {
-            // Show feedback for RAG responses only (knowledge base responses)
-            if (!responseData || !responseData.response_type) return false;
-            if (responseData.response_type !== 'RAG_KNOWLEDGE_BASE') return false;
+            // Debug response data structure
+            console.log('shouldShowFeedback - responseData:', responseData);
             
+            // Show feedback for RAG responses only (knowledge base responses)
+            if (!responseData || !responseData.response_type) {
+                console.log('shouldShowFeedback - No responseData or response_type:', responseData);
+                return false;
+            }
+            // Check for RAG response types (both old and new format)
+            const ragResponseTypes = ['RAG_KNOWLEDGE_BASE', 'rag_with_ai_tools'];
+            if (!ragResponseTypes.includes(responseData.response_type)) {
+                console.log('shouldShowFeedback - Not RAG response, type:', responseData.response_type);
+                return false;
+            }
+            
+            console.log('shouldShowFeedback - RAG response detected, showing feedback buttons');
             // Show feedback buttons for all RAG responses 
             return true;
         },
 
         addFeedbackButtons: function(messageDiv, text, responseData) {
+            console.log('addFeedbackButtons called for:', text.substring(0, 50), 'responseData:', responseData);
+            
             // Create feedback container
             const feedbackDiv = document.createElement('div');
             feedbackDiv.className = 'feedback-buttons';
