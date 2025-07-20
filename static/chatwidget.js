@@ -1805,6 +1805,13 @@
                 console.log('shouldShowFeedback - No responseData or response_type:', responseData);
                 return false;
             }
+            
+            // Exclude webhook-related response types
+            if (responseData.response_type.startsWith('webhook_')) {
+                console.log('shouldShowFeedback - Webhook response detected, no feedback:', responseData.response_type);
+                return false;
+            }
+            
             // Check for RAG response types (both old and new format)
             const ragResponseTypes = ['RAG_KNOWLEDGE_BASE', 'rag_with_ai_tools'];
             if (!ragResponseTypes.includes(responseData.response_type)) {
