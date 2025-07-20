@@ -406,6 +406,11 @@ deployment/       # Production deployment files
 - July 19, 2025: Implemented embedded voice agent with ~75ms latency vs 3-5 second current system
 - July 19, 2025: Added API endpoints for conversation creation, token generation, and session management
 - July 19, 2025: Created comprehensive test interface at /test_elevenlabs_embedded for embedded voice demonstration
+- July 20, 2025: **CRITICAL LIVE CHAT TRANSFER FIX**: Fixed duplicate conversation issue when transferring from chatbot to live chat
+- July 20, 2025: Updated transfer logic to convert existing chatbot sessions to live_chat type instead of creating new sessions
+- July 20, 2025: Fixed UnifiedMessage field mapping errors (content → message_content, sender → sender_type/sender_name)
+- July 20, 2025: Resolved agent portal display issues - now shows all live chat sessions with complete conversation history
+- July 20, 2025: Unified conversation system now maintains single thread when users transfer between chatbot and live agent
 
 ## Known Issues
 
