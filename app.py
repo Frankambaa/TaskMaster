@@ -365,7 +365,84 @@ def ask():
         # Check if webhook is active
         active_webhook = WebhookConfig.query.filter_by(is_active=True).first()
         
-        if is_live_chat_request and active_webhook:
+        # NATIVE LIVE CHAT keywords that always trigger native mode regardless of webhook status
+        native_live_chat_keywords = [
+            'talk with agent', 'talk to agent', 'speak to agent', 'native agent', 
+            'transfer to agent', 'connect me to agent', 'human agent'
+        ]
+        
+        is_native_live_chat_request = any(keyword in question.lower() for keyword in native_live_chat_keywords)
+        
+        if is_native_live_chat_request:
+            # Always use NATIVE LIVE CHAT for explicit agent requests - Shows "Transferring to agent" and disables RAG
+            try:
+                # Create or get unified conversation
+                unified_conv = UnifiedConversation.get_or_create(
+                    session_id=session_id,
+                    user_identifier=user_identifier,
+                    username=username,
+                    email=email,
+                    device_id=device_id
+                )
+                
+                # Set native live chat mode (disables RAG)
+                unified_conv.set_native_live_chat_mode()
+                
+                # Store the user's request message
+                unified_conv.add_message('user', question, user_identifier, username, 'text', 'native_live_chat_request')
+                
+                answer = "🔄 **Transferring to agent...** \n\nI'm connecting you with our customer support team. Your conversation history has been preserved and an agent will be with you shortly to assist with your request."
+                response_type = 'native_live_chat_transfer'
+                
+                # Store bot response
+                unified_conv.add_message('assistant', answer, 'system', 'Assistant', 'text', response_type)
+                
+                logging.info(f"✅ NATIVE LIVE CHAT: Activated for session {session_id} - RAG disabled")
+                
+                # Get current logo for consistent response format
+                current_logo = None
+                if os.path.exists(LOGO_FOLDER):
+                    for filename in os.listdir(LOGO_FOLDER):
+                        if allowed_image_file(filename):
+                            current_logo = f'/static/logos/{filename}'
+                            break
+                
+                return jsonify({
+                    'answer': answer,
+                    'logo': current_logo,
+                    'response_type': response_type,
+                    'session_info': {
+                        'session_id': session_id,
+                        'user_identifier': user_identifier,
+                        'mode': 'native_live_chat'
+                    }
+                })
+                
+            except Exception as e:
+                logging.error(f"Error activating native live chat: {e}")
+                answer = "I'll connect you with our customer support team. Please wait while I transfer your chat."
+                response_type = 'native_live_chat_transfer'
+                
+                # Get current logo for consistent response format
+                current_logo = None
+                if os.path.exists(LOGO_FOLDER):
+                    for filename in os.listdir(LOGO_FOLDER):
+                        if allowed_image_file(filename):
+                            current_logo = f'/static/logos/{filename}'
+                            break
+                
+                return jsonify({
+                    'answer': answer,
+                    'logo': current_logo,
+                    'response_type': response_type,
+                    'session_info': {
+                        'session_id': session_id,
+                        'user_identifier': user_identifier,
+                        'mode': 'native_live_chat'
+                    }
+                })
+                
+        elif is_live_chat_request and active_webhook:
             # Route to external platform via webhook - WEBHOOK LIVE CHAT
             try:
                 from webhook_integration import webhook_integration
@@ -414,35 +491,6 @@ def ask():
                 # Fallback to standard response
                 answer = rag_chain.get_answer(question, FAISS_INDEX_FOLDER, session_id, user_identifier, username, email, device_id)
                 response_type = 'rag_with_ai_tools'
-                
-        elif is_live_chat_request and not active_webhook:
-            # NATIVE LIVE CHAT - Shows "Transferring to agent" and disables RAG
-            try:
-                # Create or get unified conversation
-                unified_conv = UnifiedConversation.get_or_create(
-                    session_id=session_id,
-                    user_identifier=user_identifier,
-                    username=username,
-                    email=email,
-                    device_id=device_id
-                )
-                
-                # Set native live chat mode (disables RAG)
-                unified_conv.set_native_live_chat_mode()
-                
-                # Store the user's request message
-                session_memory_manager.add_user_message(
-                    session_id, question, user_identifier, username, email, device_id
-                )
-                
-                answer = "🔄 **Transferring to agent...** \n\nI'm connecting you with our customer support team. Your conversation history has been preserved and an agent will be with you shortly to assist with your request."
-                response_type = 'native_live_chat_transfer'
-                
-                logging.info(f"✅ NATIVE LIVE CHAT: Activated for session {session_id} - RAG disabled")
-                
-            except Exception as e:
-                logging.error(f"Error activating native live chat: {e}")
-                answer = "I'll connect you with our customer support team. Please wait while I transfer your chat."
                 response_type = 'native_live_chat_transfer'
             
         else:
