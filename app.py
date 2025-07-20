@@ -181,6 +181,12 @@ def test_live_agent_detection():
     from flask import send_from_directory
     return send_from_directory('.', 'test_live_agent_detection.html')
 
+@app.route('/test_bidirectional_chat.html')
+def test_bidirectional_chat():
+    """Test page for bidirectional live chat functionality"""
+    from flask import send_from_directory
+    return send_from_directory('.', 'test_bidirectional_chat.html')
+
 @app.route('/upload', methods=['POST'])
 def upload_file():
     """Handle file upload"""
@@ -1924,10 +1930,63 @@ def send_agent_message():
         
         logging.info(f"✅ Agent message sent to session {session_id}")
         
-        return jsonify({'success': True, 'message': 'Message sent successfully'})
+        return jsonify({
+            'success': True, 
+            'message': 'Message sent successfully',
+            'agent_message': {
+                'content': message,
+                'timestamp': datetime.now().strftime('%H:%M:%S'),
+                'sender': 'Agent'
+            }
+        })
         
     except Exception as e:
         logging.error(f"Error sending agent message: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/customer/get-new-messages/<session_id>', methods=['GET'])
+def get_new_messages_for_customer(session_id):
+    """Get new messages for customer (used by chatwidget to check for agent responses)"""
+    try:
+        from models import UnifiedMessage
+        import datetime
+        
+        # Get last_check_time from query parameters
+        last_check = request.args.get('last_check')
+        if last_check:
+            try:
+                last_check_time = datetime.datetime.fromisoformat(last_check.replace('Z', '+00:00'))
+            except:
+                last_check_time = datetime.datetime.now() - datetime.timedelta(minutes=1)
+        else:
+            last_check_time = datetime.datetime.now() - datetime.timedelta(minutes=1)
+        
+        # Get messages from agents since last check
+        new_messages = UnifiedMessage.query.filter(
+            UnifiedMessage.session_id == session_id,
+            UnifiedMessage.sender_type == 'agent',
+            UnifiedMessage.created_at > last_check_time
+        ).order_by(UnifiedMessage.created_at.asc()).all()
+        
+        # Format messages for customer
+        formatted_messages = []
+        for msg in new_messages:
+            formatted_messages.append({
+                'id': msg.id,
+                'content': msg.message_content,
+                'sender': msg.sender_name or 'Agent',
+                'timestamp': msg.created_at.isoformat() if msg.created_at else '',
+                'type': 'agent_message'
+            })
+        
+        return jsonify({
+            'success': True,
+            'messages': formatted_messages,
+            'has_new_messages': len(formatted_messages) > 0
+        })
+        
+    except Exception as e:
+        logging.error(f"Error getting new messages for customer: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/agent/resolve-conversation', methods=['POST'])

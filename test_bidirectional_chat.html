@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bidirectional Live Chat Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .chat-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .chat-header {
+            background: #007bff;
+            color: white;
+            padding: 1rem;
+            font-weight: bold;
+        }
+        .chat-messages {
+            height: 400px;
+            overflow-y: auto;
+            padding: 1rem;
+            background: #f8f9fa;
+        }
+        .message {
+            margin-bottom: 1rem;
+            padding: 0.8rem;
+            border-radius: 8px;
+            max-width: 80%;
+        }
+        .customer-message {
+            background: #e3f2fd;
+            margin-left: auto;
+            text-align: right;
+        }
+        .agent-message {
+            background: #e8f5e8;
+        }
+        .system-message {
+            background: #fff3cd;
+            color: #856404;
+            text-align: center;
+            font-style: italic;
+        }
+        .message-info {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 0.5rem;
+        }
+        .chat-controls {
+            padding: 1rem;
+            border-top: 1px solid #ddd;
+            background: white;
+        }
+        .polling-status {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 1rem;
+        }
+        .polling-active {
+            color: #28a745;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12">
+                <h1 class="text-center mb-4">Bidirectional Live Chat Test</h1>
+                <div class="alert alert-info">
+                    <strong>Test Instructions:</strong>
+                    <ol>
+                        <li>Click "Start Live Chat" to initiate a live chat session</li>
+                        <li>Send messages as a customer</li>
+                        <li>Use the agent controls to send responses back to the customer</li>
+                        <li>Watch real-time bidirectional communication in action</li>
+                    </ol>
+                </div>
+                
+                <div class="chat-container">
+                    <div class="chat-header">
+                        Live Chat Session
+                        <div class="polling-status" id="pollingStatus">Not connected</div>
+                    </div>
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="message system-message">
+                            Click "Start Live Chat" to begin your session
+                        </div>
+                    </div>
+                    <div class="chat-controls">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <input type="text" class="form-control" id="customerMessage" placeholder="Type your message as a customer..." disabled>
+                            </div>
+                            <div class="col-md-4">
+                                <button class="btn btn-primary w-100" id="sendCustomerBtn" disabled>Send Message</button>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-8">
+                                <input type="text" class="form-control" id="agentMessage" placeholder="Type agent response..." disabled>
+                            </div>
+                            <div class="col-md-4">
+                                <button class="btn btn-success w-100" id="sendAgentBtn" disabled>Send as Agent</button>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-12 text-center">
+                                <button class="btn btn-info" id="startChatBtn">Start Live Chat</button>
+                                <button class="btn btn-danger ms-2" id="stopChatBtn" disabled>Stop Chat</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class BidirectionalChatTest {
+            constructor() {
+                this.sessionId = null;
+                this.isPolling = false;
+                this.pollingInterval = null;
+                this.lastCheckTime = null;
+                this.initializeElements();
+                this.attachEventListeners();
+            }
+
+            initializeElements() {
+                this.chatMessages = document.getElementById('chatMessages');
+                this.customerMessage = document.getElementById('customerMessage');
+                this.agentMessage = document.getElementById('agentMessage');
+                this.sendCustomerBtn = document.getElementById('sendCustomerBtn');
+                this.sendAgentBtn = document.getElementById('sendAgentBtn');
+                this.startChatBtn = document.getElementById('startChatBtn');
+                this.stopChatBtn = document.getElementById('stopChatBtn');
+                this.pollingStatus = document.getElementById('pollingStatus');
+            }
+
+            attachEventListeners() {
+                this.startChatBtn.addEventListener('click', () => this.startLiveChat());
+                this.stopChatBtn.addEventListener('click', () => this.stopChat());
+                this.sendCustomerBtn.addEventListener('click', () => this.sendCustomerMessage());
+                this.sendAgentBtn.addEventListener('click', () => this.sendAgentMessage());
+                
+                // Enter key handlers
+                this.customerMessage.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.sendCustomerMessage();
+                });
+                this.agentMessage.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.sendAgentMessage();
+                });
+            }
+
+            async startLiveChat() {
+                try {
+                    this.updatePollingStatus('Connecting...', false);
+                    
+                    // Send initial live chat request
+                    const response = await fetch('/ask', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            question: 'I want to talk to an agent',
+                            user_id: 'test_bidirectional_customer',
+                            username: 'Test Customer',
+                            email: 'customer@test.com'
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.response_type === 'live_chat_transfer') {
+                        this.sessionId = data.session_info.session_id;
+                        this.addMessage('system', 'Live chat session started! You are now connected to our support system.');
+                        this.addMessage('bot', data.answer || 'Transferring you to an agent...');
+                        
+                        // Enable controls
+                        this.customerMessage.disabled = false;
+                        this.agentMessage.disabled = false;
+                        this.sendCustomerBtn.disabled = false;
+                        this.sendAgentBtn.disabled = false;
+                        this.startChatBtn.disabled = true;
+                        this.stopChatBtn.disabled = false;
+                        
+                        // Start polling for agent messages
+                        this.startPolling();
+                        this.updatePollingStatus('Connected - Polling for agent messages', true);
+                        
+                    } else {
+                        this.addMessage('system', 'Failed to start live chat. Please try again.');
+                    }
+                } catch (error) {
+                    console.error('Error starting live chat:', error);
+                    this.addMessage('system', 'Error starting live chat: ' + error.message);
+                }
+            }
+
+            async sendCustomerMessage() {
+                const message = this.customerMessage.value.trim();
+                if (!message || !this.sessionId) return;
+
+                try {
+                    this.addMessage('customer', message);
+                    this.customerMessage.value = '';
+
+                    const response = await fetch('/ask', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            question: message,
+                            session_id: this.sessionId,
+                            user_id: 'test_bidirectional_customer',
+                            username: 'Test Customer'
+                        })
+                    });
+
+                    const data = await response.json();
+                    if (data.response_type === 'live_chat_active') {
+                        this.addMessage('system', 'Message sent to agent. Waiting for response...');
+                    }
+                } catch (error) {
+                    console.error('Error sending customer message:', error);
+                    this.addMessage('system', 'Error sending message: ' + error.message);
+                }
+            }
+
+            async sendAgentMessage() {
+                const message = this.agentMessage.value.trim();
+                if (!message || !this.sessionId) return;
+
+                try {
+                    this.agentMessage.value = '';
+
+                    const response = await fetch('/api/agent/send-message', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            session_id: this.sessionId,
+                            message: message
+                        })
+                    });
+
+                    const data = await response.json();
+                    if (data.success) {
+                        this.addMessage('agent', message);
+                    } else {
+                        this.addMessage('system', 'Error sending agent message: ' + data.error);
+                    }
+                } catch (error) {
+                    console.error('Error sending agent message:', error);
+                    this.addMessage('system', 'Error sending agent message: ' + error.message);
+                }
+            }
+
+            startPolling() {
+                if (this.isPolling) return;
+
+                this.isPolling = true;
+                this.lastCheckTime = new Date().toISOString();
+                
+                this.pollingInterval = setInterval(async () => {
+                    try {
+                        const response = await fetch(
+                            `/api/customer/get-new-messages/${this.sessionId}?last_check=${this.lastCheckTime}`
+                        );
+                        
+                        const data = await response.json();
+                        
+                        if (data.success && data.has_new_messages) {
+                            data.messages.forEach(msg => {
+                                this.addMessage('agent', msg.content, msg.sender, msg.timestamp);
+                            });
+                            
+                            // Update last check time to most recent message
+                            if (data.messages.length > 0) {
+                                this.lastCheckTime = new Date().toISOString();
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Polling error:', error);
+                    }
+                }, 2000); // Poll every 2 seconds
+            }
+
+            stopPolling() {
+                if (this.pollingInterval) {
+                    clearInterval(this.pollingInterval);
+                    this.pollingInterval = null;
+                }
+                this.isPolling = false;
+            }
+
+            stopChat() {
+                this.stopPolling();
+                this.sessionId = null;
+                
+                // Disable controls
+                this.customerMessage.disabled = true;
+                this.agentMessage.disabled = true;
+                this.sendCustomerBtn.disabled = true;
+                this.sendAgentBtn.disabled = true;
+                this.startChatBtn.disabled = false;
+                this.stopChatBtn.disabled = true;
+                
+                this.addMessage('system', 'Chat session ended.');
+                this.updatePollingStatus('Not connected', false);
+            }
+
+            addMessage(type, content, sender = null, timestamp = null) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${type}-message`;
+                
+                let senderLabel = '';
+                switch(type) {
+                    case 'customer': senderLabel = 'You'; break;
+                    case 'agent': senderLabel = sender || 'Agent'; break;
+                    case 'system': senderLabel = 'System'; break;
+                    case 'bot': senderLabel = 'Bot'; break;
+                }
+                
+                const timeStr = timestamp ? new Date(timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
+                
+                messageDiv.innerHTML = `
+                    <div>${content}</div>
+                    <div class="message-info">${senderLabel} • ${timeStr}</div>
+                `;
+                
+                this.chatMessages.appendChild(messageDiv);
+                this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+            }
+
+            updatePollingStatus(status, isActive) {
+                this.pollingStatus.textContent = status;
+                this.pollingStatus.className = `polling-status ${isActive ? 'polling-active' : ''}`;
+            }
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new BidirectionalChatTest();
+        });
+    </script>
+</body>
+</html>

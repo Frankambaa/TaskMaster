@@ -100,6 +100,9 @@ class UnifiedConversation(db.Model):
         self.last_activity = datetime.utcnow()
         self.updated_at = datetime.utcnow()
         
+        # Commit the changes to database
+        db.session.commit()
+        
         # Check for live agent requests in user messages
         if sender_type == 'user' and self.detect_live_agent_request(content):
             self.add_live_chat_tag()

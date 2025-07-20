@@ -78,6 +78,9 @@
         typing_effect_speed: 25,
         auto_scroll_during_typing: false
     }; // Store backend chat settings
+    let isLiveChatActive = false;
+    let liveChatPollingInterval = null;
+    let lastMessageCheckTime = null;
     
     // Voice-related state
     let availableVoices = [];
@@ -891,6 +894,9 @@
             console.trace('closeWidget called from:');
             chatWindow.style.display = 'none';
             
+            // Stop live chat polling when widget is closed
+            this.stopLiveChatPolling();
+            
             // Update toggle button to show chat icon
             if (config.iconUrl && customIconImg) {
                 // For custom icons, restore original appearance
@@ -1241,6 +1247,11 @@
                 this.sendToAPI(sanitizedMessage).then(response => {
                     this.hideTyping(typingDiv);
                     
+                    // Check if live chat was just activated
+                    if (response.response_type === 'live_chat_transfer') {
+                        this.startLiveChatPolling();
+                    }
+                    
                     // Track RAG responses for feedback timing and add user question for feedback
                     const responseData = { ...response, user_question: sanitizedMessage };
                     if (this.isRAGResponse(responseData)) {
@@ -1341,6 +1352,92 @@
                 
                 throw error;
             });
+        },
+
+        startLiveChatPolling: function() {
+            if (isLiveChatActive || liveChatPollingInterval) return;
+            
+            isLiveChatActive = true;
+            lastMessageCheckTime = new Date().toISOString();
+            
+            console.log('Starting live chat polling for agent messages');
+            
+            // Poll for new agent messages every 3 seconds
+            liveChatPollingInterval = setInterval(() => {
+                this.checkForNewAgentMessages();
+            }, 3000);
+            
+            // Initial check
+            this.checkForNewAgentMessages();
+        },
+        
+        stopLiveChatPolling: function() {
+            if (liveChatPollingInterval) {
+                clearInterval(liveChatPollingInterval);
+                liveChatPollingInterval = null;
+            }
+            isLiveChatActive = false;
+            console.log('Stopped live chat polling');
+        },
+        
+        checkForNewAgentMessages: function() {
+            if (!sessionId || !isLiveChatActive) return;
+            
+            const checkTime = lastMessageCheckTime || new Date(Date.now() - 60000).toISOString();
+            
+            fetch(`${config.apiUrl}/api/customer/get-new-messages/${sessionId}?last_check=${encodeURIComponent(checkTime)}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Widget-Origin': window.location.origin
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.has_new_messages) {
+                    data.messages.forEach(message => {
+                        this.displayAgentMessage(message);
+                    });
+                    // Update last check time
+                    lastMessageCheckTime = new Date().toISOString();
+                }
+            })
+            .catch(error => {
+                console.error('Error checking for new agent messages:', error);
+            });
+        },
+        
+        displayAgentMessage: function(message) {
+            // Create agent message with special styling
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'chat-widget-message bot-message agent-message';
+            
+            const bubble = document.createElement('div');
+            bubble.className = 'chat-widget-message-bubble';
+            bubble.style.background = '#dcf8c6'; // Light green for agent messages
+            bubble.style.borderLeft = '3px solid #25d366'; // WhatsApp green border
+            bubble.innerHTML = this.formatMessage(message.content, false);
+            
+            // Add agent label
+            const agentLabel = document.createElement('div');
+            agentLabel.className = 'agent-label';
+            agentLabel.style.cssText = 'font-size: 11px; color: #666; margin-bottom: 5px; font-weight: bold;';
+            agentLabel.textContent = `${message.sender} • ${message.timestamp}`;
+            
+            messageDiv.appendChild(agentLabel);
+            messageDiv.appendChild(bubble);
+            messagesContainer.appendChild(messageDiv);
+            
+            // Store in conversation history
+            conversationHistory.push({
+                text: message.content,
+                sender: 'agent',
+                timestamp: message.timestamp,
+                sessionId: sessionId
+            });
+            
+            this.scrollToBottom();
+            console.log('Displayed new agent message:', message.content.substring(0, 50) + '...');
         },
 
         // Voice synthesis methods
