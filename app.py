@@ -284,11 +284,12 @@ def ask():
         # Determine user identifier (priority: user_id > email > device_id)
         user_identifier = user_id or email or device_id
         
-        # Get or create session ID for fallback
-        if 'session_id' not in session:
-            session['session_id'] = str(uuid.uuid4())
-        
-        session_id = session['session_id']
+        # Use provided session_id or create/get from session
+        session_id = data.get('session_id')
+        if not session_id:
+            if 'session_id' not in session:
+                session['session_id'] = str(uuid.uuid4())
+            session_id = session['session_id']
         
         # Log the request with user context
         if user_identifier:
@@ -305,19 +306,15 @@ def ask():
             device_id=device_id
         )
         
-        if unified_conv.is_native_live_chat_active():
-            # Conversation is in native live chat mode - don't use RAG, just acknowledge messages
-            session_memory_manager.add_user_message(
-                session_id, question, user_identifier, username, email, device_id
-            )
+        if unified_conv.is_live_chat_active():
+            # Conversation is in live chat mode - don't use RAG, just acknowledge messages
+            unified_conv.add_message('user', question, user_identifier, username, 'text', 'live_chat_message')
             
             answer = "Your message has been noted. An agent will review and respond to your message shortly. Thank you for your patience."
-            response_type = 'native_live_chat_active'
+            response_type = 'live_chat_active'
             
-            # Store bot response in memory
-            session_memory_manager.add_ai_message(
-                session_id, answer, user_identifier, username, email, device_id, response_type
-            )
+            # Store bot response
+            unified_conv.add_message('assistant', answer, 'system', 'Assistant', 'text', response_type)
             
             # Get current logo for consistent response format
             current_logo = None
@@ -334,47 +331,39 @@ def ask():
                 'session_info': {
                     'session_id': session_id,
                     'user_identifier': user_identifier,
-                    'mode': 'native_live_chat'
+                    'mode': 'live_chat'
                 }
             })
         
-        # Enhanced live chat transfer detection with comprehensive patterns
+        # Live chat transfer detection with semantic phrase patterns
         live_chat_keywords = [
-            'live chat', 'chat with agent', 'talk to agent', 'human agent', 'speak to human', 'connect to agent',
-            'i want to talk', 'speak with someone', 'customer service', 'support agent', 'real person',
-            'human help', 'agent help', 'call center', 'representative', 'operator', 'staff member',
-            'transfer me', 'escalate', 'human support', 'live support', 'personal assistance',
+            'live chat', 'chat with agent', 'talk to agent', 'talk with agent', 'human agent', 'speak to human', 
+            'connect to agent', 'i want to talk', 'speak with someone', 'customer service', 'support agent', 
+            'real person', 'human help', 'agent help', 'call center', 'representative', 'operator', 
+            'staff member', 'transfer me', 'escalate', 'human support', 'live support', 'personal assistance',
             'can i talk to', 'could you transfer', 'transfer to agent', 'connect me to', 'talk to someone',
             'speak to agent', 'contact agent', 'reach agent', 'get agent', 'agent please'
         ]
         
-        # Additional pattern matching for natural language requests
+        # Semantic pattern matching for natural language requests
         question_lower = question.lower()
         live_chat_patterns = [
             'talk to' in question_lower and 'agent' in question_lower,
+            'talk with' in question_lower and 'agent' in question_lower,
             'transfer' in question_lower and ('agent' in question_lower or 'live' in question_lower),
             'connect' in question_lower and ('agent' in question_lower or 'human' in question_lower),
             'speak' in question_lower and ('agent' in question_lower or 'someone' in question_lower),
             'chat with' in question_lower and ('agent' in question_lower or 'human' in question_lower),
             'can i' in question_lower and 'talk' in question_lower and ('agent' in question_lower or 'someone' in question_lower),
-            'could you' in question_lower and ('transfer' in question_lower or 'connect' in question_lower)
+            'could you' in question_lower and ('transfer' in question_lower or 'connect' in question_lower),
+            'need help' in question_lower and 'agent' in question_lower,
+            'speak to' in question_lower and ('human' in question_lower or 'person' in question_lower)
         ]
         
         is_live_chat_request = any(keyword in question.lower() for keyword in live_chat_keywords) or any(live_chat_patterns)
         
-        # Check if webhook is active
-        active_webhook = WebhookConfig.query.filter_by(is_active=True).first()
-        
-        # NATIVE LIVE CHAT keywords that always trigger native mode regardless of webhook status
-        native_live_chat_keywords = [
-            'talk with agent', 'talk to agent', 'speak to agent', 'native agent', 
-            'transfer to agent', 'connect me to agent', 'human agent'
-        ]
-        
-        is_native_live_chat_request = any(keyword in question.lower() for keyword in native_live_chat_keywords)
-        
-        if is_native_live_chat_request:
-            # Always use NATIVE LIVE CHAT for explicit agent requests - Shows "Transferring to agent" and disables RAG
+        if is_live_chat_request:
+            # LIVE CHAT TRANSFER - Shows "Transferring to agent" and disables RAG
             try:
                 # Create or get unified conversation
                 unified_conv = UnifiedConversation.get_or_create(
@@ -385,19 +374,19 @@ def ask():
                     device_id=device_id
                 )
                 
-                # Set native live chat mode (disables RAG)
-                unified_conv.set_native_live_chat_mode()
+                # Set live chat mode (disables RAG)
+                unified_conv.set_live_chat_mode()
                 
                 # Store the user's request message
-                unified_conv.add_message('user', question, user_identifier, username, 'text', 'native_live_chat_request')
+                unified_conv.add_message('user', question, user_identifier, username, 'text', 'live_chat_request')
                 
                 answer = "🔄 **Transferring to agent...** \n\nI'm connecting you with our customer support team. Your conversation history has been preserved and an agent will be with you shortly to assist with your request."
-                response_type = 'native_live_chat_transfer'
+                response_type = 'live_chat_transfer'
                 
                 # Store bot response
                 unified_conv.add_message('assistant', answer, 'system', 'Assistant', 'text', response_type)
                 
-                logging.info(f"✅ NATIVE LIVE CHAT: Activated for session {session_id} - RAG disabled")
+                logging.info(f"✅ LIVE CHAT: Activated for session {session_id} - RAG disabled")
                 
                 # Get current logo for consistent response format
                 current_logo = None
@@ -414,14 +403,14 @@ def ask():
                     'session_info': {
                         'session_id': session_id,
                         'user_identifier': user_identifier,
-                        'mode': 'native_live_chat'
+                        'mode': 'live_chat'
                     }
                 })
                 
             except Exception as e:
-                logging.error(f"Error activating native live chat: {e}")
+                logging.error(f"Error activating live chat: {e}")
                 answer = "I'll connect you with our customer support team. Please wait while I transfer your chat."
-                response_type = 'native_live_chat_transfer'
+                response_type = 'live_chat_transfer'
                 
                 # Get current logo for consistent response format
                 current_logo = None
@@ -438,59 +427,9 @@ def ask():
                     'session_info': {
                         'session_id': session_id,
                         'user_identifier': user_identifier,
-                        'mode': 'native_live_chat'
+                        'mode': 'live_chat'
                     }
                 })
-                
-        elif is_live_chat_request and active_webhook:
-            # Route to external platform via webhook - WEBHOOK LIVE CHAT
-            try:
-                from webhook_integration import webhook_integration
-                webhook_integration.load_config()
-                
-                # Create webhook payload for live chat transfer
-                webhook_data = {
-                    'user_id': user_identifier or session_id,
-                    'username': username or 'Anonymous User',
-                    'message': question,
-                    'platform': 'live_chat_transfer',
-                    'conversation_id': f'live_{session_id}',
-                    'timestamp': datetime.utcnow().isoformat(),
-                    'metadata': {
-                        'request_type': 'live_chat_transfer',
-                        'original_session': session_id,
-                        'email': email,
-                        'device_id': device_id
-                    }
-                }
-                
-                # Process through webhook
-                result = webhook_integration.process_incoming_message(webhook_data)
-                
-                if result['success']:
-                    answer = "I'm connecting you with a live agent through our external support platform. Please wait a moment while we transfer your chat."
-                    response_type = 'webhook_live_chat_transfer'
-                    
-                    # Add only Live Agent tag for webhook transfers
-                    if user_identifier:
-                        unified_conv = UnifiedConversation.get_or_create(
-                            session_id=session_id,
-                            user_identifier=user_identifier,
-                            username=username,
-                            email=email,
-                            device_id=device_id
-                        )
-                        unified_conv.add_live_agent_tag()
-                else:
-                    # Fallback to standard response if webhook fails
-                    answer = rag_chain.get_answer(question, FAISS_INDEX_FOLDER, session_id, user_identifier, username, email, device_id)
-                    response_type = 'rag_with_ai_tools'
-                    
-            except Exception as e:
-                logging.error(f"Error processing webhook live chat transfer: {e}")
-                # Fallback to standard response
-                answer = rag_chain.get_answer(question, FAISS_INDEX_FOLDER, session_id, user_identifier, username, email, device_id)
-                response_type = 'rag_with_ai_tools'
                 response_type = 'native_live_chat_transfer'
             
         else:

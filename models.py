@@ -140,19 +140,19 @@ class UnifiedConversation(db.Model):
             db.session.commit()
             print(f"🏷️ Added 'Live Agent' tag to session {self.session_id}")
     
-    def set_native_live_chat_mode(self):
-        """Set conversation to native live chat mode (disables RAG)"""
+    def set_live_chat_mode(self):
+        """Set conversation to live chat mode (disables RAG)"""
         current_tags = self.get_tags()
-        if 'Native Live Chat' not in current_tags:
-            current_tags.append('Native Live Chat')
+        if 'Live Chat' not in current_tags:
+            current_tags.append('Live Chat')
             self.set_tags(current_tags)
-            self.status = 'native_live_chat'  # Set special status
+            self.status = 'live_chat'  # Set special status
             db.session.commit()
-            print(f"🔄 Enabled Native Live Chat mode for session {self.session_id}")
+            print(f"🔄 Enabled Live Chat mode for session {self.session_id}")
     
-    def is_native_live_chat_active(self):
-        """Check if conversation is in native live chat mode"""
-        return 'Native Live Chat' in self.get_tags() or self.status == 'native_live_chat'
+    def is_live_chat_active(self):
+        """Check if conversation is in live chat mode"""
+        return 'Live Chat' in self.get_tags() or self.status == 'live_chat'
     
     @classmethod
     def get_or_create(cls, session_id, user_identifier=None, username=None, email=None, device_id=None):
