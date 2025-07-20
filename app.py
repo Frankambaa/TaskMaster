@@ -169,6 +169,12 @@ def test_time_based_greeting():
     from flask import send_from_directory
     return send_from_directory('.', 'test_time_based_greeting.html')
 
+@app.route('/test_feedback_buttons.html')
+def test_feedback_buttons():
+    """Test page for feedback buttons functionality"""
+    from flask import send_from_directory
+    return send_from_directory('.', 'test_feedback_buttons.html')
+
 @app.route('/upload', methods=['POST'])
 def upload_file():
     """Handle file upload"""

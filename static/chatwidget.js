@@ -1791,12 +1791,12 @@
         },
 
         shouldShowFeedback: function(responseData) {
-            // Only show feedback for RAG responses after 3+ conversations
+            // Show feedback for RAG responses only (knowledge base responses)
             if (!responseData || !responseData.response_type) return false;
             if (responseData.response_type !== 'RAG_KNOWLEDGE_BASE') return false;
             
-            // Check conversation count (at least 3 back-and-forth exchanges)
-            return conversationCount >= 3;
+            // Show feedback buttons for all RAG responses 
+            return true;
         },
 
         addFeedbackButtons: function(messageDiv, text, responseData) {
