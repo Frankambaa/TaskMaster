@@ -1844,8 +1844,8 @@
             feedbackDiv.appendChild(thumbsUpBtn);
             feedbackDiv.appendChild(thumbsDownBtn);
             
-            // Insert feedback buttons before the message
-            messageDiv.parentNode.insertBefore(feedbackDiv, messageDiv);
+            // Insert feedback buttons after the message
+            messageDiv.parentNode.insertBefore(feedbackDiv, messageDiv.nextSibling);
         },
 
         submitFeedback: function(responseText, responseData, rating, feedbackDiv) {
