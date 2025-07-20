@@ -411,12 +411,6 @@ deployment/       # Production deployment files
 - July 20, 2025: Fixed UnifiedMessage field mapping errors (content → message_content, sender → sender_type/sender_name)
 - July 20, 2025: Resolved agent portal display issues - now shows all live chat sessions with complete conversation history
 - July 20, 2025: Unified conversation system now maintains single thread when users transfer between chatbot and live agent
-- July 20, 2025: **BIDIRECTIONAL LIVE CHAT COMPLETE**: Fixed critical database commit issue preventing agent message storage
-- July 20, 2025: Added proper db.session.commit() to UnifiedConversation.add_message method for persistent agent messages
-- July 20, 2025: Implemented fully functional bidirectional communication with customer polling and real-time agent message delivery
-- July 20, 2025: **RESOLVED CONVERSATION REACTIVATION**: Added automatic resolved tag removal when users request live chat again
-- July 20, 2025: Enhanced add_live_chat_tag() and set_live_chat_mode() methods to reactivate resolved conversations automatically
-- July 20, 2025: Resolved conversations now seamlessly return to active live chat mode when users request agent assistance again
 - July 20, 2025: **SYSTEM SIMPLIFICATION**: Removed all live chat transfer functionality per user request
 - July 20, 2025: Cleaned up chatwidget.js to contain only pure chatbot RAG functionality
 - July 20, 2025: Simplified agent portal to show only chatbot conversations with clean single-section interface
@@ -433,19 +427,6 @@ deployment/       # Production deployment files
 - July 20, 2025: Fixed "Continue chatting" button to properly remove button container without closing chat widget
 - July 20, 2025: Enhanced click-outside event handling to prevent interference with feedback interactions
 - July 20, 2025: **ADMIN DASHBOARD SIMPLIFICATION**: Removed ElevenLabs Voice Configuration and All Conversations sections from admin panel per user request
-- July 20, 2025: **UNIFIED LIVE CHAT SYSTEM**: Consolidated "Live Agent" and "Live Chat" into single "Live Chat" system for simplicity
-- July 20, 2025: Fixed session ID handling to use provided session_id from API requests for proper conversation continuity
-- July 20, 2025: Removed duplicate "Live Agent" filter from agent portal - now shows unified "Live Chat" filter with orange styling
-- July 20, 2025: Updated all database tags and method names from "Live Agent" to "Live Chat" for consistent terminology
-- July 20, 2025: Verified live chat transfer working correctly with proper acknowledgment responses for follow-up messages
-- July 20, 2025: **ENHANCED AGENT PORTAL**: Added comprehensive live chat management with agent input functionality and resolve system
-- July 20, 2025: Implemented agent message sending capability directly from portal to customers in live chat conversations
-- July 20, 2025: Added "Resolve" button for live chat conversations that marks them as resolved and moves to separate filter
-- July 20, 2025: Created "Resolved" conversation filter (green styling) to view completed live chat sessions
-- July 20, 2025: Enhanced message display with Agent message bubbles (green styling) distinct from User/Bot messages
-- July 20, 2025: Live chat conversations show agent input section and resolve functionality only when active (not resolved)
-- July 20, 2025: Added comprehensive API endpoints: /api/agent/send-message and /api/agent/resolve-conversation
-- July 20, 2025: Cleared all previous conversations and implemented fresh database structure for enhanced system
 
 ## Known Issues
 

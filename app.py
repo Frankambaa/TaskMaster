@@ -181,12 +181,6 @@ def test_live_agent_detection():
     from flask import send_from_directory
     return send_from_directory('.', 'test_live_agent_detection.html')
 
-@app.route('/test_bidirectional_chat.html')
-def test_bidirectional_chat():
-    """Test page for bidirectional live chat functionality"""
-    from flask import send_from_directory
-    return send_from_directory('.', 'test_bidirectional_chat.html')
-
 @app.route('/upload', methods=['POST'])
 def upload_file():
     """Handle file upload"""
@@ -312,39 +306,7 @@ def ask():
             device_id=device_id
         )
         
-        # Live chat transfer detection with semantic phrase patterns
-        live_chat_keywords = [
-            'live chat', 'chat with agent', 'talk to agent', 'talk with agent', 'human agent', 'speak to human', 
-            'connect to agent', 'i want to talk', 'speak with someone', 'customer service', 'support agent', 
-            'real person', 'human help', 'agent help', 'call center', 'representative', 'operator', 
-            'staff member', 'transfer me', 'escalate', 'human support', 'live support', 'personal assistance',
-            'can i talk to', 'could you transfer', 'transfer to agent', 'connect me to', 'talk to someone',
-            'speak to agent', 'contact agent', 'reach agent', 'get agent', 'agent please'
-        ]
-        
-        # Semantic pattern matching for natural language requests
-        question_lower = question.lower()
-        live_chat_patterns = [
-            'talk to' in question_lower and 'agent' in question_lower,
-            'talk with' in question_lower and 'agent' in question_lower,
-            'transfer' in question_lower and ('agent' in question_lower or 'live' in question_lower),
-            'connect' in question_lower and ('agent' in question_lower or 'human' in question_lower),
-            'speak' in question_lower and ('agent' in question_lower or 'someone' in question_lower),
-            'chat with' in question_lower and ('agent' in question_lower or 'human' in question_lower),
-            'can i' in question_lower and 'talk' in question_lower and ('agent' in question_lower or 'someone' in question_lower),
-            'could you' in question_lower and ('transfer' in question_lower or 'connect' in question_lower),
-            'need help' in question_lower and 'agent' in question_lower,
-            'speak to' in question_lower and ('human' in question_lower or 'person' in question_lower)
-        ]
-        
-        is_live_chat_request = any(keyword in question.lower() for keyword in live_chat_keywords) or any(live_chat_patterns)
-
-        # Check if this is a live chat request on a resolved conversation - reactivate it
-        if is_live_chat_request and unified_conv.is_resolved():
-            unified_conv.add_live_chat_tag()  # This will remove resolved tag and reactivate
-            logging.info(f"🔄 REACTIVATED: Resolved conversation {session_id} reactivated for live chat")
-        
-        if unified_conv.is_live_chat_active() and not unified_conv.is_resolved():
+        if unified_conv.is_live_chat_active():
             # Conversation is in live chat mode - don't use RAG, just acknowledge messages
             unified_conv.add_message('user', question, user_identifier, username, 'text', 'live_chat_message')
             
@@ -373,11 +335,46 @@ def ask():
                 }
             })
         
+        # Live chat transfer detection with semantic phrase patterns
+        live_chat_keywords = [
+            'live chat', 'chat with agent', 'talk to agent', 'talk with agent', 'human agent', 'speak to human', 
+            'connect to agent', 'i want to talk', 'speak with someone', 'customer service', 'support agent', 
+            'real person', 'human help', 'agent help', 'call center', 'representative', 'operator', 
+            'staff member', 'transfer me', 'escalate', 'human support', 'live support', 'personal assistance',
+            'can i talk to', 'could you transfer', 'transfer to agent', 'connect me to', 'talk to someone',
+            'speak to agent', 'contact agent', 'reach agent', 'get agent', 'agent please'
+        ]
+        
+        # Semantic pattern matching for natural language requests
+        question_lower = question.lower()
+        live_chat_patterns = [
+            'talk to' in question_lower and 'agent' in question_lower,
+            'talk with' in question_lower and 'agent' in question_lower,
+            'transfer' in question_lower and ('agent' in question_lower or 'live' in question_lower),
+            'connect' in question_lower and ('agent' in question_lower or 'human' in question_lower),
+            'speak' in question_lower and ('agent' in question_lower or 'someone' in question_lower),
+            'chat with' in question_lower and ('agent' in question_lower or 'human' in question_lower),
+            'can i' in question_lower and 'talk' in question_lower and ('agent' in question_lower or 'someone' in question_lower),
+            'could you' in question_lower and ('transfer' in question_lower or 'connect' in question_lower),
+            'need help' in question_lower and 'agent' in question_lower,
+            'speak to' in question_lower and ('human' in question_lower or 'person' in question_lower)
+        ]
+        
+        is_live_chat_request = any(keyword in question.lower() for keyword in live_chat_keywords) or any(live_chat_patterns)
+        
         if is_live_chat_request:
             # LIVE CHAT TRANSFER - Shows "Transferring to agent" and disables RAG
             try:
-                # Set live chat mode (disables RAG) and add tag
-                unified_conv.add_live_chat_tag()
+                # Create or get unified conversation
+                unified_conv = UnifiedConversation.get_or_create(
+                    session_id=session_id,
+                    user_identifier=user_identifier,
+                    username=username,
+                    email=email,
+                    device_id=device_id
+                )
+                
+                # Set live chat mode (disables RAG)
                 unified_conv.set_live_chat_mode()
                 
                 # Store the user's request message
@@ -1890,7 +1887,6 @@ def get_chatbot_conversation_messages(session_id):
                 'message_content': msg.message_content,
                 'sender_type': msg.sender_type,
                 'sender_name': msg.sender_name or msg.sender_type,
-                'response_type': msg.response_type,
                 'created_at': msg.created_at.isoformat() if msg.created_at else '',
                 'timestamp': msg.created_at.strftime('%H:%M:%S') if msg.created_at else ''
             })
@@ -1903,112 +1899,6 @@ def get_chatbot_conversation_messages(session_id):
         
     except Exception as e:
         logging.error(f"Error getting chatbot conversation messages: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@app.route('/api/agent/send-message', methods=['POST'])
-def send_agent_message():
-    """Send message from agent to customer"""
-    try:
-        data = request.get_json()
-        session_id = data.get('session_id')
-        message = data.get('message')
-        
-        if not session_id or not message:
-            return jsonify({'success': False, 'error': 'Missing session_id or message'}), 400
-        
-        # Get the conversation
-        unified_conv = UnifiedConversation.query.filter_by(session_id=session_id).first()
-        if not unified_conv:
-            return jsonify({'success': False, 'error': 'Conversation not found'}), 404
-        
-        # Add agent message to conversation
-        unified_conv.add_message('agent', message, 'agent', 'Agent', 'text', 'agent_response')
-        
-        logging.info(f"✅ Agent message sent to session {session_id}")
-        
-        return jsonify({
-            'success': True, 
-            'message': 'Message sent successfully',
-            'agent_message': {
-                'content': message,
-                'timestamp': datetime.now().strftime('%H:%M:%S'),
-                'sender': 'Agent'
-            }
-        })
-        
-    except Exception as e:
-        logging.error(f"Error sending agent message: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@app.route('/api/customer/get-new-messages/<session_id>', methods=['GET'])
-def get_new_messages_for_customer(session_id):
-    """Get new messages for customer (used by chatwidget to check for agent responses)"""
-    try:
-        from models import UnifiedMessage
-        import datetime
-        
-        # Get last_check_time from query parameters
-        last_check = request.args.get('last_check')
-        if last_check:
-            try:
-                last_check_time = datetime.datetime.fromisoformat(last_check.replace('Z', '+00:00'))
-            except:
-                last_check_time = datetime.datetime.now() - datetime.timedelta(minutes=1)
-        else:
-            last_check_time = datetime.datetime.now() - datetime.timedelta(minutes=1)
-        
-        # Get messages from agents since last check
-        new_messages = UnifiedMessage.query.filter(
-            UnifiedMessage.session_id == session_id,
-            UnifiedMessage.sender_type == 'agent',
-            UnifiedMessage.created_at > last_check_time
-        ).order_by(UnifiedMessage.created_at.asc()).all()
-        
-        # Format messages for customer
-        formatted_messages = []
-        for msg in new_messages:
-            formatted_messages.append({
-                'id': msg.id,
-                'content': msg.message_content,
-                'sender': msg.sender_name or 'Agent',
-                'timestamp': msg.created_at.isoformat() if msg.created_at else '',
-                'type': 'agent_message'
-            })
-        
-        return jsonify({
-            'success': True,
-            'messages': formatted_messages,
-            'has_new_messages': len(formatted_messages) > 0
-        })
-        
-    except Exception as e:
-        logging.error(f"Error getting new messages for customer: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@app.route('/api/agent/resolve-conversation', methods=['POST'])
-def resolve_agent_conversation():
-    """Resolve a live chat conversation"""
-    try:
-        data = request.get_json()
-        session_id = data.get('session_id')
-        
-        if not session_id:
-            return jsonify({'success': False, 'error': 'Missing session_id'}), 400
-        
-        # Get the conversation
-        unified_conv = UnifiedConversation.query.filter_by(session_id=session_id).first()
-        if not unified_conv:
-            return jsonify({'success': False, 'error': 'Conversation not found'}), 404
-        
-        # Resolve the conversation
-        unified_conv.resolve_conversation()
-        
-        logging.info(f"✅ Conversation {session_id} resolved")
-        
-        return jsonify({'success': True, 'message': 'Conversation resolved successfully'})
-        
-    except Exception as e:
-        logging.error(f"Error resolving conversation: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 # ==================== LIVE CHAT ENDPOINTS ====================

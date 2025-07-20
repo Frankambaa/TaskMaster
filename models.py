@@ -100,12 +100,9 @@ class UnifiedConversation(db.Model):
         self.last_activity = datetime.utcnow()
         self.updated_at = datetime.utcnow()
         
-        # Commit the changes to database
-        db.session.commit()
-        
         # Check for live agent requests in user messages
         if sender_type == 'user' and self.detect_live_agent_request(content):
-            self.add_live_chat_tag()
+            self.add_live_agent_tag()
         
         return message
     
@@ -134,59 +131,28 @@ class UnifiedConversation(db.Model):
                 
         return False
     
-    def add_live_chat_tag(self):
-        """Add Live Chat tag to conversation and reactivate if resolved"""
+    def add_live_agent_tag(self):
+        """Add Live Agent tag to conversation"""
         current_tags = self.get_tags()
-        
-        # If conversation was resolved, remove resolved tag and reactivate
-        if 'Resolved' in current_tags:
-            current_tags.remove('Resolved')
-            self.status = 'active'  # Change from resolved back to active
-            print(f"🔄 Reactivating resolved conversation {self.session_id} for live chat")
-        
-        # Add Live Chat tag if not present
-        if 'Live Chat' not in current_tags:
-            current_tags.append('Live Chat')
-            print(f"🏷️ Added 'Live Chat' tag to session {self.session_id}")
-        
-        self.set_tags(current_tags)
-        db.session.commit()
+        if 'Live Agent' not in current_tags:
+            current_tags.append('Live Agent')
+            self.set_tags(current_tags)
+            db.session.commit()
+            print(f"🏷️ Added 'Live Agent' tag to session {self.session_id}")
     
     def set_live_chat_mode(self):
-        """Set conversation to live chat mode (disables RAG) and reactivate if resolved"""
+        """Set conversation to live chat mode (disables RAG)"""
         current_tags = self.get_tags()
-        
-        # If conversation was resolved, remove resolved tag and reactivate
-        if 'Resolved' in current_tags:
-            current_tags.remove('Resolved')
-            print(f"🔄 Reactivating resolved conversation {self.session_id} for live chat")
-        
-        # Add Live Chat tag if not present
         if 'Live Chat' not in current_tags:
             current_tags.append('Live Chat')
-        
-        self.set_tags(current_tags)
-        self.status = 'live_chat'  # Set special status
-        db.session.commit()
-        print(f"🔄 Enabled Live Chat mode for session {self.session_id}")
+            self.set_tags(current_tags)
+            self.status = 'live_chat'  # Set special status
+            db.session.commit()
+            print(f"🔄 Enabled Live Chat mode for session {self.session_id}")
     
     def is_live_chat_active(self):
         """Check if conversation is in live chat mode"""
         return 'Live Chat' in self.get_tags() or self.status == 'live_chat'
-    
-    def resolve_conversation(self):
-        """Mark conversation as resolved"""
-        current_tags = self.get_tags()
-        if 'Resolved' not in current_tags:
-            current_tags.append('Resolved')
-            self.set_tags(current_tags)
-            self.status = 'resolved'
-            db.session.commit()
-            print(f"✅ Resolved conversation {self.session_id}")
-    
-    def is_resolved(self):
-        """Check if conversation is resolved"""
-        return 'Resolved' in self.get_tags() or self.status == 'resolved'
     
     @classmethod
     def get_or_create(cls, session_id, user_identifier=None, username=None, email=None, device_id=None):
